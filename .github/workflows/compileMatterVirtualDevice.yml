@@ -35,9 +35,14 @@ on:
 # =========================================================================
 # PARAMETROS FIJOS PERSISTENTES (VARIABLES DE ENTORNO GLOBALES)
 # Centralizamos aquí los parámetros que cambies rara vez y viajen en el código.
+# Variable env, se ven en todos los steps del script
 # =========================================================================
 env:
-  VERSION_PROYECTO: "1.5.0-stable"    # Variable env, se ve en todo el script
+  VERSION_PROYECTO: "1.5.0-stable"    
+  # WORKING_DIR: "."                         # Modificar si se usa una subcarpeta para contener el proyecto kotlin
+  WORKING_DIR: "Matter_Virtual_Device"     # Modificar si se usa una subcarpeta para contener el proyecto kotlin
+                                           # El punto (.) es buscar el proyecto directamente en la raíz (que es
+                                           # lo que hace gradle por defecto)
 
 # =========================================================================
 # ENTORNOS DE COMPILACIÓN Y PASOS EXECUTADOS POR EL RUNNER
@@ -47,6 +52,16 @@ jobs:
   build:
     # Solicitamos a GitHub un runner limpio basado en una máquina virtual Linux (Ubuntu).
     runs-on: ubuntu-latest
+
+    # -------------------------------------------------------------------
+    # CONFIGURACIÓN GLOBAL DE DEFAULTS
+    # Forzamos a que todos los comandos 'run' de este job se ejecuten de forma
+    # automática dentro de la carpeta fijada arriba en ${{ env.WORKING_DIR }}.
+    # Si no estuviese aquí habría que ponerlo en cada run de Gradle
+    # -------------------------------------------------------------------
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
 
     steps:
       # -------------------------------------------------------------------
@@ -83,6 +98,7 @@ jobs:
       # PASO 4: PERMISOS DE EJECUCIÓN AL WRAPPER DE GRADLE
       # Los sistemas Linux (como el runner) exigen permisos explícitos para
       # poder arrancar scripts binarios ejecutables.
+      # Gracias al default global, Linux buscará './gradlew' dentro de tu WORKING_DIR.
       # -------------------------------------------------------------------
       - name: Otorgar permisos de ejecución a gradlew
         run: chmod +x gradlew
