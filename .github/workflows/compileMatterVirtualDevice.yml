@@ -43,6 +43,8 @@ env:
   WORKING_DIR: "Matter_Virtual_Device"     # Modificar si se usa una subcarpeta para contener el proyecto kotlin
                                            # El punto (.) es buscar el proyecto directamente en la raíz (que es
                                            # lo que hace gradle por defecto)
+  SKIP_JDK_VERSION_CHECK: "true"           # sdkmanager ignorará que estás en JDK 11 y procederá a aceptar las licencias
+                                           # de tu SDK Platform 26 de forma limpia                                    
 
 # =========================================================================
 # ENTORNOS DE COMPILACIÓN Y PASOS EXECUTADOS POR EL RUNNER
