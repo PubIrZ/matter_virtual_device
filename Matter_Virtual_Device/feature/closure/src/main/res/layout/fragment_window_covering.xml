@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <variable
+            name="viewModel"
+            type="com.matter.virtual.device.app.feature.closure.WindowCoveringViewModel" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- appbar -->
+        <include
+            android:id="@+id/appbar"
+            layout="@layout/layout_appbar" />
+        <!-- appbar -->
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="?attr/actionBarSize">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/window_covering_function_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="@dimen/device_item_margin_horizontal"
+                        android:layout_marginTop="@dimen/device_item_margin_top"
+                        android:background="@drawable/menu_item_bg"
+                        android:gravity="center_vertical"
+                        android:paddingStart="@dimen/device_item_padding_start"
+                        android:paddingTop="@dimen/device_item_padding_top"
+                        android:paddingEnd="@dimen/device_item_padding_end"
+                        android:paddingBottom="@dimen/device_item_padding_bottom">
+
+                        <TextView
+                            android:id="@+id/window_covering_window_shade_text"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/window_covering_window_shade"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <TextView
+                            android:id="@+id/window_covering_window_shade_value_text"
+                            android:layout_width="@dimen/device_item_text_width"
+                            android:layout_height="wrap_content"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_value_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/window_covering_window_shade_text" />
+
+                        <SeekBar
+                            android:id="@+id/window_covering_window_shade_seekbar"
+                            android:layout_width="@dimen/device_item_seekbar_width"
+                            android:layout_height="@dimen/device_item_seekbar_height"
+                            android:max="100"
+                            android:min="0"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/window_covering_window_shade_value_text"
+                            app:layout_constraintTop_toBottomOf="@+id/window_covering_window_shade_text" />
+
+                        <TextView
+                            android:id="@+id/window_covering_operational_status_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:textAlignment="center"
+                            android:textSize="@dimen/device_item_value_text_size"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/window_covering_window_shade_seekbar" />
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="20dp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/window_covering_operational_status_text">
+
+                            <androidx.constraintlayout.widget.ConstraintLayout
+                                android:id="@+id/window_covering_open_button_area"
+                                android:layout_width="50dp"
+                                android:layout_height="wrap_content"
+                                app:layout_constraintEnd_toStartOf="@+id/window_covering_close_button_area"
+                                app:layout_constraintHorizontal_chainStyle="spread"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent">
+
+                                <ImageView
+                                    android:id="@+id/window_covering_open_button"
+                                    android:layout_width="30dp"
+                                    android:layout_height="30dp"
+                                    android:contentDescription="@string/description_button"
+                                    android:onClick="@{() -> viewModel.onClickOpenButton()}"
+                                    android:src="@{@drawable/ic_window_open_button}"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent" />
+
+                                <TextView
+                                    android:id="@+id/window_covering_open_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="5dp"
+                                    android:text="@string/window_covering_open"
+                                    android:textAlignment="center"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/window_covering_open_button" />
+                            </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            <androidx.constraintlayout.widget.ConstraintLayout
+                                android:id="@+id/window_covering_close_button_area"
+                                android:layout_width="50dp"
+                                android:layout_height="wrap_content"
+                                app:layout_constraintEnd_toStartOf="@+id/window_covering_pause_button_area"
+                                app:layout_constraintStart_toEndOf="@+id/window_covering_open_button_area"
+                                app:layout_constraintTop_toTopOf="parent">
+
+                                <ImageView
+                                    android:id="@+id/window_covering_close_button"
+                                    android:layout_width="30dp"
+                                    android:layout_height="30dp"
+                                    android:contentDescription="@string/description_button"
+                                    android:onClick="@{() -> viewModel.onClickCloseButton()}"
+                                    android:src="@{@drawable/ic_window_close_button}"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent" />
+
+                                <TextView
+                                    android:id="@+id/window_covering_close_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="5dp"
+                                    android:text="@string/window_covering_close"
+                                    android:textAlignment="center"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/window_covering_close_button" />
+                            </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            <androidx.constraintlayout.widget.ConstraintLayout
+                                android:id="@+id/window_covering_pause_button_area"
+                                android:layout_width="50dp"
+                                android:layout_height="wrap_content"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toEndOf="@+id/window_covering_close_button_area"
+                                app:layout_constraintTop_toTopOf="parent">
+
+                                <ImageView
+                                    android:id="@+id/window_covering_pause_button"
+                                    android:layout_width="30dp"
+                                    android:layout_height="30dp"
+                                    android:contentDescription="@string/description_button"
+                                    android:onClick="@{() -> viewModel.onClickPauseButton()}"
+                                    android:src="@{@drawable/ic_window_pause_button}"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent" />
+
+                                <TextView
+                                    android:id="@+id/window_covering_pause_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="5dp"
+                                    android:text="@string/window_covering_pause"
+                                    android:textAlignment="center"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/window_covering_pause_button" />
+                            </androidx.constraintlayout.widget.ConstraintLayout>
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <include
+                        android:id="@+id/window_covering_battery_layout"
+                        layout="@layout/layout_item_title_value_seekbar" />
+
+                </LinearLayout>
+
+                <!-- Bottom Space -->
+                <include layout="@layout/layout_bottom_space" />
+                <!-- Bottom Space -->
+            </LinearLayout>
+        </ScrollView>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

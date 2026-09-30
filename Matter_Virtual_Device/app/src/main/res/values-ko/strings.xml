@@ -1,0 +1,19 @@
+<resources>
+    <string name="start">시작</string>
+    <string name="save">저장</string>
+
+    <string name="thermostat_mode">온도조절 모드</string>
+    <string name="thermostat_mode_off">꺼짐</string>
+    <string name="thermostat_mode_cool">냉방</string>
+    <string name="thermostat_mode_heat">난방</string>
+    <string name="thermostat_mode_auto">자동</string>
+    <string name="thermostat_set_temperature">온도 설정</string>
+    <string name="thermostat_heating_temperature">난방 온도</string>
+    <string name="thermostat_cooling_temperature">냉방 온도</string>
+
+    <string name="dialog_factory_reset_message">"Matter 디바이스 앱이 초기화 후 종료됩니다. 계속 하시겠습니까?"</string>
+    <string name="dialog_force_factory_reset_message">"마지막 디바이스 등록 절차가 완료되지 않았습니다. Matter 디바이스 앱이 초기화 후 종료됩니다."</string>
+    <string name="dialog_user_factory_reset_message">"디바이스 등록 절차가 완료되지 않았습니다. Matter 디바이스 앱이 초기화 후 종료됩니다. 계속 하시겠습니까?"</string>
+    <string name="dialog_timeout_factory_reset_message">"디바이스 등록 시간이 초과되었습니다. Matter 디바이스 앱이 초기화 후 종료됩니다."</string>
+    <string name="dialog_fabric_removed_factory_reset_message">"Fabric이 삭제되었습니다. Matter 디바이스 앱이 초기화 후 종료됩니다."</string>
+</resources>

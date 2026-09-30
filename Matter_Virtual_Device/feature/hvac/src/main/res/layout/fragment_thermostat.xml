@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <variable
+            name="fragment"
+            type="com.matter.virtual.device.app.feature.hvac.ThermostatFragment" />
+
+        <variable
+            name="viewModel"
+            type="com.matter.virtual.device.app.feature.hvac.ThermostatViewModel" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- appbar -->
+        <include
+            android:id="@+id/appbar"
+            layout="@layout/layout_appbar" />
+        <!-- appbar -->
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="?attr/actionBarSize">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/thermostat_function_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="@dimen/device_item_margin_horizontal"
+                        android:layout_marginTop="@dimen/device_item_margin_top"
+                        android:background="@drawable/menu_item_bg"
+                        android:gravity="center_vertical"
+                        android:paddingStart="@dimen/device_item_padding_start"
+                        android:paddingTop="@dimen/device_item_padding_top"
+                        android:paddingEnd="@dimen/device_item_padding_end"
+                        android:paddingBottom="@dimen/device_item_padding_bottom">
+
+                        <TextView
+                            android:id="@+id/thermostat_temperature_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/temperature"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <TextView
+                            android:id="@+id/thermostat_temperature_celsius_value_text"
+                            android:layout_width="@dimen/device_item_value_text_width"
+                            android:layout_height="wrap_content"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_value_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/thermostat_temperature_text" />
+
+                        <TextView
+                            android:id="@+id/thermostat_temperature_fahrenheit_value_text"
+                            android:layout_width="@dimen/device_item_value_text_width"
+                            android:layout_height="wrap_content"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_value_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/thermostat_temperature_celsius_value_text" />
+
+                        <SeekBar
+                            android:id="@+id/thermostat_temperature_seekbar"
+                            android:layout_width="@dimen/device_item_seekbar_width"
+                            android:layout_height="@dimen/device_item_seekbar_height"
+                            android:contentDescription="@string/description_seekbar"
+                            android:max="50"
+                            android:min="10"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/thermostat_temperature_celsius_value_text"
+                            app:layout_constraintTop_toBottomOf="@+id/thermostat_temperature_text" />
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <include
+                        android:id="@+id/thermostat_system_mode_layout"
+                        layout="@layout/layout_item_title_value_simple_button" />
+
+                    <include
+                        android:id="@+id/fan_control_fan_mode_layout"
+                        layout="@layout/layout_item_title_value_simple_button" />
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="@dimen/device_item_margin_horizontal"
+                        android:layout_marginTop="@dimen/device_item_margin_top"
+                        android:background="@drawable/menu_item_bg"
+                        android:gravity="center_vertical"
+                        android:paddingStart="@dimen/device_item_padding_start"
+                        android:paddingTop="@dimen/device_item_padding_top"
+                        android:paddingEnd="@dimen/device_item_padding_end"
+                        android:paddingBottom="@dimen/device_item_padding_bottom">
+
+                        <TextView
+                            android:id="@+id/humidity_sensor_humidity_text"
+                            android:layout_width="@dimen/device_item_text_width"
+                            android:layout_height="wrap_content"
+                            android:text="@string/humidity"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <TextView
+                            android:id="@+id/humidity_sensor_humidity_percentage_value_text"
+                            android:layout_width="@dimen/device_item_value_text_width"
+                            android:layout_height="wrap_content"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_value_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/humidity_sensor_humidity_text" />
+
+                        <SeekBar
+                            android:id="@+id/humidity_sensor_humidity_seekbar"
+                            android:layout_width="@dimen/device_item_seekbar_width"
+                            android:layout_height="@dimen/device_item_seekbar_height"
+                            android:contentDescription="@string/description_seekbar"
+                            android:max="100"
+                            android:min="0"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/humidity_sensor_humidity_percentage_value_text"
+                            app:layout_constraintTop_toBottomOf="@+id/humidity_sensor_humidity_text" />
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="@dimen/device_item_margin_horizontal"
+                        android:layout_marginTop="@dimen/device_item_margin_top"
+                        android:background="@drawable/menu_item_bg"
+                        android:gravity="center_vertical"
+                        android:paddingStart="@dimen/device_item_padding_start"
+                        android:paddingTop="@dimen/device_item_padding_top"
+                        android:paddingEnd="@dimen/device_item_padding_end"
+                        android:paddingBottom="@dimen/device_item_padding_bottom">
+
+                        <TextView
+                            android:id="@+id/thermostat_set_temperature_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/thermostat_set_temperature"
+                            android:textAlignment="viewStart"
+                            android:textSize="@dimen/device_item_text_size"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_text">
+
+                            <androidx.constraintlayout.widget.ConstraintLayout
+                                android:id="@+id/thermostat_heat_area"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="25dp"
+                                app:layout_constraintEnd_toStartOf="@+id/thermostat_cool_area"
+                                app:layout_constraintHorizontal_chainStyle="spread"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent">
+
+                                <ImageView
+                                    android:id="@+id/thermostat_set_temperature_heating_plus_button"
+                                    android:layout_width="30dp"
+                                    android:layout_height="30dp"
+                                    android:contentDescription="@string/description_button"
+                                    android:onClick="@{() -> viewModel.onClickHeatingPlus()}"
+                                    android:scaleType="centerInside"
+                                    android:src="@drawable/ic_heating_plus_button"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent" />
+
+                                <TextView
+                                    android:id="@+id/thermostat_set_temperature_heating_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:text="@string/thermostat_heating_temperature"
+                                    android:textAlignment="center"
+                                    android:textSize="@dimen/device_item_text_size"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_heating_plus_button" />
+
+                                <TextView
+                                    android:id="@+id/thermostat_set_temperature_heating_celsius_value_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:textAlignment="center"
+                                    android:textSize="@dimen/device_item_value_text_size"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_heating_text" />
+
+                                <TextView
+                                    android:id="@+id/thermostat_set_temperature_heating_fahrenheit_value_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:textAlignment="center"
+                                    android:textSize="@dimen/device_item_value_text_size"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_heating_celsius_value_text" />
+
+                                <ImageView
+                                    android:id="@+id/thermostat_set_temperature_heating_minus_button"
+                                    android:layout_width="30dp"
+                                    android:layout_height="30dp"
+                                    android:layout_marginTop="12dp"
+                                    android:contentDescription="@string/description_button"
+                                    android:onClick="@{() -> viewModel.onClickHeatingMinus()}"
+                                    android:scaleType="centerInside"
+                                    android:src="@drawable/ic_heating_minus_button"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_heating_fahrenheit_value_text" />
+                            </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            <androidx.constraintlayout.widget.ConstraintLayout
+                                android:id="@+id/thermostat_cool_area"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="25dp"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toEndOf="@+id/thermostat_heat_area"
+                                app:layout_constraintTop_toTopOf="parent">
+
+                                <ImageView
+                                    android:id="@+id/thermostat_set_temperature_cooling_plus_button"
+                                    android:layout_width="30dp"
+                                    android:layout_height="30dp"
+                                    android:contentDescription="@string/description_button"
+                                    android:onClick="@{() -> viewModel.onClickCoolingPlus()}"
+                                    android:scaleType="centerInside"
+                                    android:src="@drawable/ic_cooling_plus_button"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent" />
+
+                                <TextView
+                                    android:id="@+id/thermostat_set_temperature_cooling_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:text="@string/thermostat_cooling_temperature"
+                                    android:textAlignment="center"
+                                    android:textSize="@dimen/device_item_text_size"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_cooling_plus_button" />
+
+                                <TextView
+                                    android:id="@+id/thermostat_set_temperature_cooling_celsius_value_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:textAlignment="center"
+                                    android:textSize="@dimen/device_item_value_text_size"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_cooling_text" />
+
+                                <TextView
+                                    android:id="@+id/thermostat_set_temperature_cooling_fahrenheit_value_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:textAlignment="center"
+                                    android:textSize="@dimen/device_item_value_text_size"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_cooling_celsius_value_text" />
+
+                                <ImageView
+                                    android:id="@+id/thermostat_set_temperature_cooling_minus_button"
+                                    android:layout_width="30dp"
+                                    android:layout_height="30dp"
+                                    android:layout_marginTop="12dp"
+                                    android:contentDescription="@string/description_button"
+                                    android:onClick="@{() -> viewModel.onClickCoolingMinus()}"
+                                    android:scaleType="centerInside"
+                                    android:src="@drawable/ic_cooling_minus_button"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintTop_toBottomOf="@+id/thermostat_set_temperature_cooling_fahrenheit_value_text" />
+                            </androidx.constraintlayout.widget.ConstraintLayout>
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <include
+                        android:id="@+id/thermostat_battery_layout"
+                        layout="@layout/layout_item_title_value_seekbar" />
+
+                </LinearLayout>
+                <!-- Bottom Space -->
+                <include layout="@layout/layout_bottom_space" />
+                <!-- Bottom Space -->
+            </LinearLayout>
+        </ScrollView>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

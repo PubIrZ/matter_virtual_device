@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="thermostat_mode">온도조절 모드</string>
+    <string name="thermostat_mode_off">꺼짐</string>
+    <string name="thermostat_mode_cool">냉방</string>
+    <string name="thermostat_mode_heat">난방</string>
+    <string name="thermostat_mode_auto">자동</string>
+    <string name="thermostat_set_temperature">온도 설정</string>
+    <string name="thermostat_heating_temperature">난방 온도</string>
+    <string name="thermostat_cooling_temperature">냉방 온도</string>
+</resources>

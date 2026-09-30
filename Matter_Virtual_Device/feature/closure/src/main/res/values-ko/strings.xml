@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="door_lock_locked">잠김</string>
+    <string name="door_lock_unlocked">잠금 해제됨</string>
+    <string name="door_lock_send_lock_alarm_event">알람 보내기</string>
+
+    <string name="window_covering_window_shade">블라인드</string>
+    <string name="window_covering_open">열림</string>
+    <string name="window_covering_close">닫기</string>
+    <string name="window_covering_pause">일시정지</string>
+    <string name="window_covering_closed">닫힘</string>
+    <string name="window_covering_opening">여는 중\u2026</string>
+    <string name="window_covering_partially_open">일부 열림</string>
+    <string name="window_covering_closing">닫는 중\u2026</string>
+</resources>

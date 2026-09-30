@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media">미디어</string>
+    <string name="speed">속도</string>
+    <string name="keypad">키패드</string>
+</resources>

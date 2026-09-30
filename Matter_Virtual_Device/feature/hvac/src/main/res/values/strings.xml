@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="temperature_celsius_format">%.1f &lt;small>&lt;small>\u2103&lt;/small>&lt;/small></string>
+    <string name="temperature_fahrenheit_format">%.1f &lt;small>&lt;small>\u2109&lt;/small>&lt;/small></string>
+    <string name="humidity_format">%d &lt;small>&lt;small>%%&lt;/small>&lt;/small></string>
+
+    <string name="thermostat_mode">Thermostat mode</string>
+    <string name="thermostat_mode_off">Off</string>
+    <string name="thermostat_mode_cool">Cool</string>
+    <string name="thermostat_mode_heat">Heat</string>
+    <string name="thermostat_mode_auto">Auto</string>
+    <string name="thermostat_set_temperature">Set temperature</string>
+    <string name="thermostat_heating_temperature">Heating temperature</string>
+    <string name="thermostat_cooling_temperature">Cooling temperature</string>
+
+    <string name="fan_control_fan_mode">"Fan mode</string>
+    <string name="fan_control_fan_mode_on">On</string>
+    <string name="fan_control_fan_mode_auto">Auto</string>
+</resources>

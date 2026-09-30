@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media">Media</string>
+    <string name="speed">Speed</string>
+    <string name="keypad">Keypad</string>
+
+    <string name="video_player_state_playing">Playing</string>
+    <string name="video_player_state_paused">Paused</string>
+    <string name="video_player_state_not_playing">Not Playing</string>
+    <string name="video_player_state_buffering">Buffering</string>
+    <string name="video_player_state_unknown">Unknown</string>
+</resources>

@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name" translatable="false">Matter Virtual Device</string>
+    <string name="title_setup" translatable="false">Setup</string>
+    <string name="title_qrcode" translatable="false">QR Code</string>
+
+    <string name="start">Start</string>
+    <string name="save">Save</string>
+    <string name="wifi">Wi-Fi</string>
+    <string name="ble">BLE</string>
+    <string name="wifi_ble">Wi-Fi/BLE</string>
+
+    <string name="thermostat_mode">Thermostat mode</string>
+    <string name="thermostat_mode_off">Off</string>
+    <string name="thermostat_mode_cool">Cool</string>
+    <string name="thermostat_mode_heat">Heat</string>
+    <string name="thermostat_mode_auto">Auto</string>
+    <string name="thermostat_set_temperature">Set temperature</string>
+    <string name="thermostat_heating_temperature">Heating temperature</string>
+    <string name="thermostat_cooling_temperature">Cooling temperature</string>
+
+    <string name="temperature_celsius_format">%.1f &lt;small>&lt;small>\u2103&lt;/small>&lt;/small></string>
+    <string name="temperature_fahrenheit_format">%.1f &lt;small>&lt;small>\u2109&lt;/small>&lt;/small></string>
+    <string name="humidity_format">%d &lt;small>&lt;small>%%&lt;/small>&lt;/small></string>
+
+    <string name="menu_discriminator">Discriminator (Max:4095)</string>
+    <string name="menu_device_name">Device Name</string>
+
+    <string name="dialog_factory_reset_message">"The Matter device app will be reset and closed. Continue?"</string>
+    <string name="dialog_force_factory_reset_message">"The last commissioning was not completed. The Matter device app will be reset and closed."</string>
+    <string name="dialog_user_factory_reset_message">"The commissioning was not completed. The Matter device app will be reset and closed. Continue?"</string>
+    <string name="dialog_timeout_factory_reset_message">"The commissioning timed out. The Matter device app will be reset and closed."</string>
+    <string name="dialog_fabric_removed_factory_reset_message">"The fabric was removed. The Matter device app will be reset and closed."</string>
+</resources>

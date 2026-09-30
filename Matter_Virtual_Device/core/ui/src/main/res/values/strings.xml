@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="description_button" translatable="false">button</string>
+    <string name="description_seekbar" translatable="false">seekbar</string>
+
+    <string name="more_menu_reset" translatable="false">Reset</string>
+
+    <string name="battery">Battery</string>
+    <string name="battery_format" translatable="false">%d &lt;small>&lt;small>%%&lt;/small>&lt;/small></string>
+
+    <string name="cancel">Cancel</string>
+
+    <string name="on_off_switch_power_on">On</string>
+    <string name="on_off_switch_power_off">Off</string>
+
+    <string name="temperature">Temperature</string>
+    <string name="humidity" translatable="false">Humidity</string>
+</resources>

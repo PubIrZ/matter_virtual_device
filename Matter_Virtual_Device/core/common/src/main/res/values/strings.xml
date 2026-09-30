@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="matter_on_off_switch" translatable="false">Matter OnOff Switch</string>
+    <string name="matter_door_lock" translatable="false">Matter Door Lock</string>
+    <string name="matter_window_covering" translatable="false">Matter Window Covering</string>
+    <string name="matter_thermostat" translatable="false">Matter Thermostat</string>
+    <string name="matter_extended_color_light" translatable="false">Matter Extended Color Light</string>
+    <string name="matter_contact_sensor" translatable="false">Matter Contact Sensor</string>
+    <string name="matter_occupancy_sensor" translatable="false">Matter Occupancy Sensor</string>
+    <string name="matter_basic_video_player" translatable="false">Matter Basic Video Player</string>
+    <string name="matter_device" translatable="false">Matter Device</string>
+
+    <string name="dialog_factory_reset_message">"The Matter device app will be reset and closed. Continue?"</string>
+    <string name="dialog_force_factory_reset_message">"The last commissioning was not completed. The Matter device app will be reset and closed."</string>
+    <string name="dialog_user_factory_reset_message">"The commissioning was not completed. The Matter device app will be reset and closed. Continue?"</string>
+    <string name="dialog_timeout_factory_reset_message">"The commissioning timed out. The Matter device app will be reset and closed."</string>
+    <string name="dialog_fabric_removed_factory_reset_message">"The fabric was removed. The Matter device app will be reset and closed."</string>
+</resources>

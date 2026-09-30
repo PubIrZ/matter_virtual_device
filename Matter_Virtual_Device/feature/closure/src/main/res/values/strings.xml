@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="door_lock_locked">Locked</string>
+    <string name="door_lock_unlocked">Unlocked</string>
+    <string name="door_lock_send_lock_alarm_event">Send Alarm</string>
+
+    <string name="window_covering_window_shade">Window shade</string>
+    <string name="window_covering_open">Open</string>
+    <string name="window_covering_close">Close</string>
+    <string name="window_covering_pause">Pause</string>
+    <string name="window_covering_closed">Closed</string>
+    <string name="window_covering_opening">Opening\u2026</string>
+    <string name="window_covering_partially_open">Partially open</string>
+    <string name="window_covering_closing">Closing\u2026</string>
+    <string name="window_covering_window_shade_format" translatable="false">%d &lt;small>&lt;small>%%&lt;/small>&lt;/small></string>
+</resources>

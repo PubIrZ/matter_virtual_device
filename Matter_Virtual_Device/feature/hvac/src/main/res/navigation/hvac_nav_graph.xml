@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/thermostatFragment"
+    android:id="@+id/hvac_nav_graph">
+    <fragment
+        android:id="@+id/thermostatFragment"
+        android:name="com.matter.virtual.device.app.feature.hvac.ThermostatFragment"
+        android:label="ThermostatFragment"
+        tools:layout="@layout/fragment_thermostat">
+        <argument
+            android:name="setting"
+            app:argType="string" />
+        <deepLink app:uri="android-app://com.matter.virtual.device.app.feature.hvac/thermostatFragment/{setting}" />
+    </fragment>
+</navigation>
