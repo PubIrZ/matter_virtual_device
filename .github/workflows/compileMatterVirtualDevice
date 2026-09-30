@@ -1,0 +1,124 @@
+# # =========================================================================
+# # NOMBRE DEL WORKFLOW DE COMPILACIÓN
+# # Se mostrará con este título en la pestaña "Actions" de tu repositorio.
+# # =========================================================================
+# <name: Integración Continua (Compilación)
+# # El trigger se activa al hacer push/pull sobre la rama principal (el trigger vigila cambios en cualquier punto de la rama)
+# # (en particular se activará cuando el bot del unzip termine el push de subir los archivos descomprimidos)
+# on:
+#   push:
+#     branches: [ "main" ]  # Ejecuta este workflow cada vez que alguien suba código "definitivo" (push) a la rama main
+#   pull_request:
+#     branches: [ "main" ]  # Ejecuta este workflow cuando alguien proponga cambios a través de un Pull Request dirigido hacia la rama main
+
+
+# =========================================================================
+# NOMBRE DEL WORKFLOW DE COMPILACIÓN
+# Se mostrará con este título en la pestaña "Actions" de tu repositorio.
+# =========================================================================
+name: Compilación Manual del Proyecto
+
+# =========================================================================
+# TRIGGER MANUAL CON EL ÚNICO INPUT INTERACTIVO REQUERIDO
+# Mantenemos exclusivamente el checkbox para forzar el borrado de la caché.
+# Los demás parámetros técnicos quedan fijos de fondo de forma persistente.
+# =========================================================================
+on:
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Marcar para FORZAR el borrado de la caché y compilar en limpio desde cero'
+        required: false
+        type: boolean
+        default: false
+
+# =========================================================================
+# PARAMETROS FIJOS PERSISTENTES (VARIABLES DE ENTORNO GLOBALES)
+# Centralizamos aquí los parámetros que cambies rara vez y viajen en el código.
+# =========================================================================
+env:
+  VERSION_PROYECTO: "1.5.0-stable"    # Variable env, se ve en todo el script
+
+# =========================================================================
+# ENTORNOS DE COMPILACIÓN Y PASOS EXECUTADOS POR EL RUNNER
+# Configura el entorno base heredado: JDK 11, Android SDK API 26 y NDK r22b.
+# =========================================================================
+jobs:
+  build:
+    # Solicitamos a GitHub un runner limpio basado en una máquina virtual Linux (Ubuntu).
+    runs-on: ubuntu-latest
+
+    steps:
+      # -------------------------------------------------------------------
+      # PASO 1: ACCIÓN DE CHECKOUT (DESCARGA DEL REPOSITORIO)
+      # Clona el código de tu rama principal dentro del entorno del runner.
+      # -------------------------------------------------------------------
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      # -------------------------------------------------------------------
+      # PASO 2: CONFIGURACIÓN DE JAVA JDK 11 (CON CACHÉ CONDICIONAL)
+      # Evalúa si marcaste el checkbox interactivo al darle al botón en la web.
+      # Si está marcado, apaga la caché para este build; si no, usa la persistente.
+      # -------------------------------------------------------------------
+      - name: Configurar Java JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
+
+      # -------------------------------------------------------------------
+      # PASO 3: CONFIGURACIÓN DEL ANDROID SDK Y EL NDK EXACTO
+      # Descarga y asocia la plataforma API 26 junto al NDK 22.1.7171670 (r22b).
+      # Mapea automáticamente variables críticas del sistema como ANDROID_HOME.
+      # -------------------------------------------------------------------
+      - name: Configurar Android SDK y NDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 26
+          ndk-version: 22.1.7171670
+
+      # -------------------------------------------------------------------
+      # PASO 4: PERMISOS DE EJECUCIÓN AL WRAPPER DE GRADLE
+      # Los sistemas Linux (como el runner) exigen permisos explícitos para
+      # poder arrancar scripts binarios ejecutables.
+      # -------------------------------------------------------------------
+      - name: Otorgar permisos de ejecución a gradlew
+        run: chmod +x gradlew
+
+      # -------------------------------------------------------------------
+      # PASO 5: DIAGNÓSTICO NATIVO DE LA VERSIÓN DE KOTLIN
+      # Le pedimos directamente a Gradle que escanee sus plugins cargados
+      # y nos pinte en pantalla la versión de Kotlin exacta del proyecto.
+      # -------------------------------------------------------------------
+      - name: Consultar versión de Kotlin detectada por Gradle
+        run: ./gradlew buildEnvironment
+
+      # -------------------------------------------------------------------
+      # PASO 6: EJECUCIÓN DE LA COMPILACIÓN CON PARÁMETROS PERSISTENTES
+      # - Mapeamos la variante leyendo la variable FIJA de los Ajustes web: vars.MI_VARIANTE_WEB
+      # - Mapeamos la versión leyendo el parámetro FIJO de la sección env: env.VERSION_PROYECTO
+      # -------------------------------------------------------------------
+      - name: Compilar con Gradle
+        run: |
+          ./gradlew ${{ vars.MI_VARIANTE_WEB || 'assembleDebug' }} \   # Usamos una variante de compilación para indicar la tarea que pedimos a gradlew que compile
+                    -PversionName=${{ env.VERSION_PROYECTO }}          # -P: Sirve para inyectar una propiedad Gradle personalizada desde la línea de comandos hacia los build.gradle.
+                                                                       # versionName=...: Crea o sobrescribe una variable llamada versionName en Gradle 
+
+      # -------------------------------------------------------------------
+      # PASO 7: CAPTURA Y SUBIDA DE ARCHIVOS DE SALIDA (ARTIFACTS)
+      # Recoge todas las carpetas 'build' creadas de forma recursiva, incluyendo APKs, reportes y logs.
+      # La línea 'if: always()' garantiza que este paso se ejecute SIEMPRE,
+      # incluso si el paso 6 (Gradle) falla por errores en el código fuente.
+      # -------------------------------------------------------------------
+      - name: Guardar archivos de salida generados (Outputs & Logs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: output-compilacion  # El nombre que tendrá el archivo comprimido en la web Github
+          path: |
+            **/build/outputs/apks/
+            **/build/reports/
+            **/build/outputs/logs/
+          if-no-files-found: warn   # Te avisará con un warning en la consola si las carpetas estaban vacías
