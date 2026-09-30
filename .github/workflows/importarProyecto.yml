@@ -1,0 +1,90 @@
+# =========================================================================
+# name: NOMBRE DEL WORKFLOW
+# El nombre que verás en la pestaña "Actions" dentro de tu repositorio.
+# =========================================================================
+name: Importar Proyecto Automáticamente
+
+# =========================================================================
+# TRIGGER (EVENTO DESENCADENANTE)
+# Define el evento trigger que inicia este Workflow en GitHub Actions
+#
+# Nota: Por restricciones de GitHub, aquí la ruta debe ir en texto plano.
+# =========================================================================
+on:
+  push:
+    paths:
+      # El workflow solo se ejecuta si se hace un push (se sube/modifica) este 
+      # archivo con el nombre específico.
+      # Nota: Usamos variables globales despues, pero aquí Git exige la ruta 
+      # exacta porque no tiene acceso a las variables. 
+      - 'importProject/newProject.zip'
+      
+# =========================================================================
+# VARIABLES DE ENTORNO GLOBALES (ENVIRONMENT VARIABLES)
+# Centralizamos los valores aquí para que los comandos de abajo los reutilicen.
+# =========================================================================
+env:
+  TARGET_DIR: "importProject"       
+  ZIP_FILE_NAME: "newProject.zip"
+
+# =========================================================================
+# JOBS Y STEPS
+# Bloque de tareas secuenciales que procesará el runner.
+# =========================================================================
+jobs:
+  unzip-file:
+    # Solicitamos a GitHub un runner basado en una máquina virtual Linux (Ubuntu).
+    runs-on: ubuntu-latest
+
+    steps:
+      # -------------------------------------------------------------------
+      # PASO 1: ACCIÓN DE CHECKOUT (DESCARGA DEL REPOSITORIO)
+      # Hacemos un checkout del código para clonar el repositorio dentro del runner.
+      #
+      # La máquina virtual Linux del step nace vacía, este comando de GitHub (checkout) 
+      # copia tu repositorio dentro de esta máquina virtual para que Linux pueda tratar
+      # el archivo .zip
+      # -------------------------------------------------------------------
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      # -------------------------------------------------------------------
+      # PASO 2: LÓGICA DE DESCOMPRESIÓN Y RENOMBRADO
+      # Ejecución de comandos de consola (shell scripts) en el runner (en la máquina virtual)
+      # -------------------------------------------------------------------
+      - name: Descomprimir el archivo ZIP
+        run: |
+          # unzip -o: Extrae el contenido y sobrescribe los ficheros existentes.
+          # -d .: Destino fijado en el directorio raíz del repositorio.
+          unzip -o ${{ env.TARGET_DIR }}/${{ env.ZIP_FILE_NAME }} -d .
+          
+          # mv: Renombramos el archivo original añadiendo el sufijo ".imported".
+          # Así dejamos constancia visual en GitHub de que ya se ha procesado.
+          mv ${{ env.TARGET_DIR }}/${{ env.ZIP_FILE_NAME }} ${{ env.TARGET_DIR }}/${{ env.ZIP_FILE_NAME }}.imported
+
+      # -------------------------------------------------------------------
+      # PASO 3: GIT COMMIT Y PUSH AUTOMÁTICO
+      # Sincroniza los ficheros extraídos del runner de vuelta en GitHub.
+      # -------------------------------------------------------------------
+      - name: Guardar cambios en el repositorio
+        run: |
+          # 1. Autenticación: Configuramos los datos del Bot oficial de GitHub Actions.
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                 
+          # 2. Stage: Indexamos todos los ficheros y directorios nuevos extraídos del ZIP.
+          git add .
+          
+          # 3. Commit (Confirmar cambios en local)
+          # Nota: En local significa que agrupa los archivos que se han modificado y los registra en el historial de Git, pero 
+          #       solo en el entorno local donde se está ejecutando el código (la maquina virtual/runner en este caso)
+          # El flag "[skip ci]" evita que este push vuelva a disparar el workflow de nuevo tras este commit (y se quede el proceso en bucle).
+          # El operador "|| echo" evita que el job falle si el ZIP no traía cambios.
+          git commit -m "Descompresión automática de '${{ env.TARGET_DIR }}/${{ env.ZIP_FILE_NAME }}' [skip ci]" || echo "No hay cambios en el zip, no se hace commit"
+          
+          # 4. Push: Subimos el commit al repositorio de GitHub: Sincroniza el historial local (la maquina virtual/runner en este caso) con el repositorio de GitHub en la nube
+          # Para que 'git push' funcione, el repositorio necesita dar permiso de escritura a los bots, es decir:
+          # --> Activar en la sección 'Workflow permissions' la opción "Read and write permissions" en la 
+          #     pestaña Settings -> Actions -> General de tu repositorio
+          # Si Git comprueba tu historial local, y ve que no hay ningún commit (no hay cambios) la tarea push finaliza diciendo "Everything up-to-date" (Todo actualizado)
+          git push
