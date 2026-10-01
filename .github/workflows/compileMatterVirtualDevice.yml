@@ -74,16 +74,15 @@ jobs:
         uses: actions/checkout@v4
 
       # -------------------------------------------------------------------
-      # PASO 2: CONFIGURACIÓN DE JAVA JDK 11 (CON CACHÉ CONDICIONAL)
-      # Evalúa si marcaste el checkbox interactivo al darle al botón en la web.
-      # Si está marcado, apaga la caché para este build; si no, usa la persistente.
+      # PASO 2: INSTALACIÓN INICIAL DE JAVA 17
+      # Necesario exclusivamente para que las herramientas del SDK de Android 
+      # (sdkmanager) no arrojen errores de LinkageError al validar licencias.
       # -------------------------------------------------------------------
-      - name: Configurar Java JDK 11
+      - name: Configurar Java JDK 17 (Para herramientas de Android)
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
-          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
 
       # -------------------------------------------------------------------
       # PASO 3: CONFIGURACIÓN DEL ANDROID SDK Y EL NDK EXACTO
@@ -97,7 +96,19 @@ jobs:
           ndk-version: 22.1.7171670
 
       # -------------------------------------------------------------------
-      # PASO 4: PERMISOS DE EJECUCIÓN AL WRAPPER DE GRADLE
+      # PASO 4: DOWNGRADE SEGURO A JAVA JDK 11 (TU ENTORNO REQUERIDO)
+      # Modificamos el entorno de la máquina virtual para restaurar Java 11.
+      # Activamos aquí tu caché condicional para agilizar tus futuros builds.
+      # -------------------------------------------------------------------
+      - name: Configurar Java JDK 11 (Para compilar tu proyecto)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle'
+
+      # -------------------------------------------------------------------
+      # PASO 5: PERMISOS DE EJECUCIÓN AL WRAPPER DE GRADLE
       # Los sistemas Linux (como el runner) exigen permisos explícitos para
       # poder arrancar scripts binarios ejecutables.
       # Gracias al default global, Linux buscará './gradlew' dentro de tu WORKING_DIR.
@@ -106,7 +117,7 @@ jobs:
         run: chmod +x gradlew
 
       # -------------------------------------------------------------------
-      # PASO 5: DIAGNÓSTICO NATIVO DE LA VERSIÓN DE KOTLIN
+      # PASO 6: DIAGNÓSTICO NATIVO DE LA VERSIÓN DE KOTLIN
       # Le pedimos directamente a Gradle que escanee sus plugins cargados
       # y nos pinte en pantalla la versión de Kotlin exacta del proyecto.
       # -------------------------------------------------------------------
@@ -114,7 +125,7 @@ jobs:
         run: ./gradlew buildEnvironment
 
       # -------------------------------------------------------------------
-      # PASO 6: EJECUCIÓN DE LA COMPILACIÓN CON PARÁMETROS PERSISTENTES
+      # PASO 7: EJECUCIÓN DE LA COMPILACIÓN CON PARÁMETROS PERSISTENTES
       # - Mapeamos la variante leyendo la variable FIJA de los Ajustes web: vars.MI_VARIANTE_WEB
       # - Mapeamos la versión leyendo el parámetro FIJO de la sección env: env.VERSION_PROYECTO
       # -------------------------------------------------------------------
@@ -125,7 +136,7 @@ jobs:
                                                                        # versionName=...: Crea o sobrescribe una variable llamada versionName en Gradle 
 
       # -------------------------------------------------------------------
-      # PASO 7: CAPTURA Y SUBIDA DE ARCHIVOS DE SALIDA (ARTIFACTS)
+      # PASO 8: CAPTURA Y SUBIDA DE ARCHIVOS DE SALIDA (ARTIFACTS)
       # Recoge todas las carpetas 'build' creadas de forma recursiva, incluyendo APKs, reportes y logs.
       # La línea 'if: always()' garantiza que este paso se ejecute SIEMPRE,
       # incluso si el paso 6 (Gradle) falla por errores en el código fuente.
