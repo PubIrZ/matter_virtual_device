@@ -99,16 +99,17 @@ jobs:
       # -------------------------------------------------------------------
       # PASO 3: CONFIGURACIÓN DEL ANDROID SDK Y EL NDK EXACTO (SINTAXIS V3 --setup-android@v3--)
       # Forzamos la aceptación automática de licencias para que el bot no se detenga.
-      # Usamos el parámetro unificado 'packages' para descargar la API 26 y el NDK.
+      # Usamos el parámetro unificado 'packages' y su nomenclatura para descargar la API 26 y el NDK.
       # -------------------------------------------------------------------
       - name: Configurar Android SDK y NDK
         uses: android-actions/setup-android@v3
         with:
           accept-android-sdk-licenses: true
           packages: |
-            platforms;android-26
-            ndk;22.1.7171670
-            
+            - platforms;android-26
+            - ndk;22.1.7171670
+          #packages: '["platforms;android-26", "ndk;22.1.7171670"]'  <--- Nomenclatura alternativa 
+          
       # -------------------------------------------------------------------
       # PASO 4: DOWNGRADE SEGURO A JAVA JDK 11 (TU ENTORNO REQUERIDO)
       # Modificamos el entorno de la máquina virtual para restaurar Java 11.
