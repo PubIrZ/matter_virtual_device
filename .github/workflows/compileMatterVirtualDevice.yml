@@ -159,18 +159,20 @@ jobs:
       # -------------------------------------------------------------------
       - name: Consultar versión de Kotlin detectada por Gradle
         run: ./gradlew buildEnvironment
-
+        
       # -------------------------------------------------------------------
       # PASO 7: EJECUCIÓN DE LA COMPILACIÓN CON PARÁMETROS PERSISTENTES
-      # - Mapeamos la variante leyendo la variable FIJA de los Ajustes web: vars.MI_VARIANTE_WEB
+      # - Mapeamos la variante leyendo la variable FIJA de los Ajustes web: vars.BUILD_VARIANT
       # - Mapeamos la versión leyendo el parámetro FIJO de la sección env: env.VERSION_PROYECTO
       # -------------------------------------------------------------------
       - name: Compilar con Gradle
         run: |
-          ./gradlew ${{ vars.MI_VARIANTE_WEB || 'assembleDebug' }} \   # Usamos una variante de compilación para indicar la tarea que pedimos a gradlew que compile
-                    -PversionName=${{ env.VERSION_PROYECTO }}          # -P: Sirve para inyectar una propiedad Gradle personalizada desde la línea de comandos hacia los build.gradle.
-                                                                       # versionName=...: Crea o sobrescribe una variable llamada versionName en Gradle 
-
+          # 1. Usamos una variante de compilación para indicar la tarea que pedimos a gradlew que compile.
+          # 2. El flag -P sirve para inyectar una variable Gradle personalizada desde la línea de comandos hacia los build.gradle.
+          # 3. '-PversionName=...' crea o sobrescribe una variable Gradle llamada versionName.
+          ./gradlew ${{ vars.BUILD_VARIANT || 'assembleDebug' }} \
+                    -PversionName=${{ env.VERSION_PROYECTO }}
+                    
       # -------------------------------------------------------------------
       # PASO 8: CAPTURA Y SUBIDA DE ARCHIVOS DE SALIDA (ARTIFACTS)
       # Recoge todas las carpetas 'build' creadas de forma recursiva, incluyendo APKs, reportes y logs.
