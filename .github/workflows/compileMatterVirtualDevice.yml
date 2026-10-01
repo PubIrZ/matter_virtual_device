@@ -100,19 +100,39 @@ jobs:
       # Modificamos el entorno de la máquina virtual para restaurar Java 11.
       # Activamos aquí tu caché condicional para agilizar tus futuros builds.
       # -------------------------------------------------------------------
-      - name: Configurar Java JDK 11 (Para compilar tu proyecto)
+      - name: Configurar Java JDK 11
         uses: actions/setup-java@v4
         with:
           java-version: '11'
+          # =======================================================================
+          # NOTA ARQUITECTURA DISTRIBUCIÓN:
+          # Elegimos 'temurin' (Eclipse Adoptium) por ser la distribución recomendada
+          # de GitHub para la action 'setup-java', ya que con ella la caché de Gradle se
+          # integra de forma nativa con esta distribución. 
+          #
+          # Alternativas válidas si Gradle da errores heredados de compatibilidad: 
+          # 'zulu' (Azul Systems, recomendada para entornos Android clásicos),
+          # 'corretto' (Amazon), 'microsoft' o 'liberica'.
+          # =====================================================================          
           distribution: 'temurin'
-          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle'
-
+          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
+          
       # -------------------------------------------------------------------
       # PASO 5: PERMISOS DE EJECUCIÓN AL WRAPPER DE GRADLE
       # Los sistemas Linux (como el runner) exigen permisos explícitos para
       # poder arrancar scripts binarios ejecutables.
       # Gracias al default global, Linux buscará './gradlew' dentro de tu WORKING_DIR.
       # -------------------------------------------------------------------
+      # 
+      # NOTA DIDACTICA SOBRE EL GRADLE WRAPPER (gradlew):
+      # Usamos el script ejecutable './gradlew' del propio proyecto en lugar de
+      # acciones como 'setup-gradle' porque el Wrapper encapsula la versión exacta 
+      # de Gradle necesaria, garantizando la compatibilidad con Java 11.
+      # El Wrapper es un script autoejecutable que ya lleva dentro la versión exacta 
+      # de Gradle que necesita la aplicación. Es el propio Wrapper el que se descarga 
+      # su motor de ejecución de Gradle (en ~/.gradle/) y compila el código.
+      # (el runner ~/.gradle/ = /home/runner/.gradle/)
+      # =======================================================================      
       - name: Otorgar permisos de ejecución a gradlew
         run: chmod +x gradlew
 
