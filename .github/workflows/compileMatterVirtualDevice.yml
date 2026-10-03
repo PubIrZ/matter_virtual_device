@@ -153,13 +153,107 @@ jobs:
         run: chmod +x gradlew
 
       # -------------------------------------------------------------------
-      # PASO 6: DIAGNÓSTICO NATIVO DE LA VERSIÓN DE KOTLIN
+      # PASO 6a: DIAGNÓSTICO NATIVO DE LA VERSIÓN DE KOTLIN
       # Le pedimos directamente a Gradle que escanee sus plugins cargados
       # y nos pinte en pantalla la versión de Kotlin exacta del proyecto.
       # -------------------------------------------------------------------
       - name: Consultar versión de Kotlin detectada por Gradle
         run: ./gradlew buildEnvironment
-        
+
+      # -------------------------------------------------------------------
+      # PASO 6b: DIAGNÓSTICO INTERMEDIO - ANÁLISIS DINÁMICO DE HOJA DE RUTA JAR
+      # Descubre de forma automatizada la carpeta de librerías leyendo el archivo
+      # build.gradle.kts, audita TODOS los archivos .jar presentes en ella de golpe
+      # y vuelca el reporte detallado de referencias cruzadas con tu código.
+      # -------------------------------------------------------------------
+      - name: Auditar referencias cruzadas con librerías JAR
+        run: |
+          python3 -c '
+          import os, zipfile, re
+
+          # 1. Localizar de forma dinámica el archivo build.gradle.kts principal
+          gradle_file = None
+          for root, dirs, files in os.walk("."):
+              if "build.gradle.kts" in files and "app" in root:
+                  gradle_file = os.path.join(root, "build.gradle.kts")
+                  break
+
+          if not gradle_file:
+              print("❌ No se localizó el archivo build.gradle.kts del módulo app.")
+              exit(1)
+
+          print(f"📄 Analizando archivo de configuración: {gradle_file}")
+          
+          # 2. Leer build.gradle.kts para auto-descubrir el directorio de los JARs (fileTree)
+          libs_dir_name = "libs" # Valor por defecto seguro
+          with open(gradle_file, "r", encoding="utf-8") as g:
+              content = g.read()
+              # Buscamos patrones como "dir" to "nombre_carpeta"
+              match = re.search(r"\"dir\"\s+to\s+\"([^\"]+)\"", content)
+              if match:
+                  libs_dir_name = match.group(1)
+          
+          # Construimos la ruta física real hacia esa carpeta de librerías
+          app_dir = os.path.dirname(gradle_file)
+          target_libs_path = os.path.join(app_dir, libs_dir_name)
+
+          if not os.path.exists(target_libs_path):
+              print(f"🔍 [Aviso] La carpeta auto-descubierta {target_libs_path} no existe físicamente en el repositorio.")
+              exit(0)
+
+          print(f"📁 Directorio de librerías auto-descubierto con éxito: {target_libs_path}")
+          
+          # 3. Escanear TODOS los archivos .jar que vivan en esa carpeta descubierta
+          all_jars = [os.path.join(target_libs_path, f) for f in os.listdir(target_libs_path) if f.endswith(".jar")]
+          
+          if not all_jars:
+              print("❌ No se encontraron archivos .jar dentro de la carpeta de soporte.")
+              exit(0)
+
+          print(f"📦 Total de archivos JAR detectados para auditoría masiva: {[os.path.basename(j) for j in all_jars]}")
+          
+          # 4. Mapear los paquetes lógicos de TODOS los JARs encontrados
+          packages_map = {} # Estructura: {"chip.platform": "AndroidPlatform.jar"}
+          for jar in all_jars:
+              jar_name = os.path.basename(jar)
+              with zipfile.ZipFile(jar, "r") as z:
+                  for name in z.namelist():
+                      if name.endswith(".class"):
+                          parts = name.split("/")
+                          if len(parts) > 1:
+                              pkg = ".".join(parts[:-1])
+                              # Vinculamos qué paquete pertenece a qué archivo físico JAR
+                              packages_map[pkg] = jar_name
+
+          print("-" * 70)
+          print("📊 REPORTE DE REFERENCIAS CRUZADAS ENCONTRADAS EN TU CÓDIGO:")
+          print("-" * 70)
+
+          # 5. Rastrear esas firmas en tus ficheros de código de desarrollo (.kt o .java)
+          matches_count = 0
+          for root, dirs, files in os.walk("."):
+              if "build" in root or ".gradle" in root:
+                  continue
+              for f in files:
+                  if f.endswith((".kt", ".java")):
+                      file_path = os.path.join(root, f)
+                      try:
+                          with open(file_path, "r", encoding="utf-8") as src:
+                              for line_num, line in enumerate(src, 1):
+                                  for pkg, origin_jar in packages_map.items():
+                                      if pkg in line and not line.strip().startswith("//"):
+                                          print(f"• File: {file_path} (Línea {line_num})")
+                                          print(f"  ↳ Origen: Proveniente del archivo [{origin_jar}]")
+                                          print(f"  ↳ Código: {line.strip()}\n")
+                                          matches_count += 1
+                      except Exception:
+                          pass
+
+          print("-" * 70)
+          print(f"✅ Auditoría finalizada. Se detectaron {matches_count} llamadas reales de tu código hacia el catálogo completo de JARs.")
+          print("=============================================================")
+          '
+      
       # -------------------------------------------------------------------
       # PASO 7: EJECUCIÓN DE LA COMPILACIÓN CON PARÁMETROS PERSISTENTES
       # - Mapeamos la variante leyendo la variable FIJA de los Ajustes web: vars.BUILD_VARIANT
@@ -170,8 +264,10 @@ jobs:
           # 1. Usamos una variante de compilación para indicar la tarea que pedimos a gradlew que compile.
           # 2. El flag -P sirve para inyectar una variable Gradle personalizada desde la línea de comandos hacia los build.gradle.
           # 3. '-PversionName=...' crea o sobrescribe una variable Gradle llamada versionName.
+          # 4. Añadimos '--profile' para forzar a Gradle a generar el reporte HTML de rendimiento interactivo (en la carpeta **/build/reports/profile/).
           ./gradlew ${{ vars.BUILD_VARIANT || 'assembleDebug' }} \
-                    -PversionName=${{ env.VERSION_PROYECTO }}
+                    -PversionName=${{ env.VERSION_PROYECTO }} \
+                    --profile
                     
       # -------------------------------------------------------------------
       # PASO 8: CAPTURA Y SUBIDA DE LOGS Y REPORTS TÉCNICOS
