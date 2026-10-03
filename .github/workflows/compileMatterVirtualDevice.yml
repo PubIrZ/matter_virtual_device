@@ -174,18 +174,32 @@ jobs:
                     -PversionName=${{ env.VERSION_PROYECTO }}
                     
       # -------------------------------------------------------------------
-      # PASO 8: CAPTURA Y SUBIDA DE ARCHIVOS DE SALIDA (ARTIFACTS)
-      # Recoge todas las carpetas 'build' creadas de forma recursiva, incluyendo APKs, reportes y logs.
-      # La línea 'if: always()' garantiza que este paso se ejecute SIEMPRE,
-      # incluso si el paso 6 (Gradle) falla por errores en el código fuente.
+      # PASO 8: CAPTURA Y SUBIDA DE LOGS Y REPORTS TÉCNICOS
+      # Recoge de forma recursiva todos los reports de rendimiento e informes.
+      # Usamos 'if: always()' para asegurar que este ZIP se genere SIEMPRE,
+      # permitiéndote auditar los logs incluso si la compilación falló.
       # -------------------------------------------------------------------
-      - name: Guardar archivos de salida generados (Outputs & Logs)
+      - name: Guardar Informes de Compilación (Logs & Reports)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: output-compilacion  # El nombre que tendrá el archivo comprimido en la web Github
+          name: reports-and-compilacion-logs  # ZIP reports-and-compilacion-logs
           path: |
-            **/build/outputs/apks/
             **/build/reports/
             **/build/outputs/logs/
-          if-no-files-found: warn   # Te avisará con un warning en la consola si las carpetas estaban vacías
+          if-no-files-found: warn    # Avisará con un warning si no hay reports/logs
+
+      # -------------------------------------------------------------------
+      # PASO 9: CAPTURA Y SUBIDA DE LOS ARCHIVOS APK
+      # Busca cualquier archivo .apk generado de forma recursiva en el proyecto.
+      # Se ejecuta solo si la compilación tuvo éxito (success).
+      # -------------------------------------------------------------------
+      - name: Guardar la Aplicación Compilada (Solo APK)
+        if: success()
+        uses: actions/upload-artifact@v5
+        with:
+          name: app-virtual-device-apk  # ZIP app-virtual-device-apk
+          path: "**/*.apk"
+          if-no-files-found: error      # Si no encuentra el APK, el workflow marcará error
+
+          
