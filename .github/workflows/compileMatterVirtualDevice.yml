@@ -193,10 +193,37 @@ jobs:
                            \n            )\
                            \n        }"
 
-          # 3. Inyectamos el texto estructurado usando awk con la variable cargada
+          # 3. Inyectamos el texto estructurado usando awk con VARIANT_CONTENT
+          #    Se inyecta el código en la llave de cierre final de buildTypes
+          # - /buildTypes \{/ ➔ Despierta el rastreador e inicializa la pila a 1.
+          # - gsub(/{/, "{") ➔ Cuenta las aperturas en la línea y las suma al balance.
+          # - gsub(/\}/, "}") ➔ Cuenta los cierres en la línea y los resta al balance.
+          # - balance == 0 ➔ Encontró el fin absoluto de buildTypes. Inyecta tu bloque.
           awk -v block="$VARIANT_CONTENT" '
-            /jniLibs.keepDebugSymbols.add/ { print; flag=1; next }
-            flag && /\}/ { print block; flag=0; next }
+            # 1. Localizamos el inicio de buildTypes. Lo imprimimos intacto e iniciamos la pila.
+            /buildTypes \{/ { print; tracking=1; balance=1; next }
+            
+            tracking {
+              # Clonamos la línea en una variable temporal para contar sin alterar el texto original
+              line_copy = $0
+              open_braces = gsub(/\{/, "{", line_copy)
+              close_braces = gsub(/\}/, "}", line_copy)
+              
+              balance += (open_braces - close_braces)
+              
+              if (balance == 0) {
+                # Al llegar a cero, la línea actual contiene el "}" de buildTypes.
+                # Para inyectar ANTES de ese cierre, volcamos primero tu bloque en memoria.
+                print block
+                
+                # Ahora imprimimos la línea original intacta (que contiene el "}" de cierre con su sangría real)
+                print $0
+                tracking=0
+                next
+              }
+            }
+            
+            # Imprime de forma normal cualquier línea que no cumpla las condiciones anteriores
             { print }
           ' app/build.gradle.kts > app/build.gradle.kts.tmp
           
