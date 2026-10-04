@@ -186,6 +186,7 @@ jobs:
           VARIANT_CONTENT="\n        create(\"debugUsage\") {\
                            \n            initWith(getByName(\"debug\"))\
                            \n            isMinifyEnabled = true\
+                           \n            matchingFallbacks.add(\"debug\")\
                            \n            proguardFiles(\
                            \n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\
                            \n                \"proguard-rules.pro\",\
