@@ -161,7 +161,7 @@ jobs:
         run: ./gradlew buildEnvironment
 
       # -------------------------------------------------------------------
-      # PASO 6: DIAGNÓSTICO INTERMEDIO - CONDICIONAL INTELIGENTE
+      # PASO 6b: DIAGNÓSTICO INTERMEDIO - CONDICIONAL INTELIGENTE
       # Gracias a 'if: vars.BUILD_VARIANT == ...', este paso completo se saltará 
       # de forma transparente a menos que actives explícitamente la auditoría en la web.
       # -------------------------------------------------------------------
@@ -178,7 +178,7 @@ jobs:
           -dontobfuscate
           -dontshrink
           -dontoptimize
-          -printusage build/outputs/reports/uso_real_jar.txt
+          -printusage build/outputs/reports/usageJARs_ProGuardR8.txt
           EOF
           echo "✅ Archivo app/proguard-usage-rules.pro creado con éxito."
           
@@ -355,6 +355,7 @@ jobs:
           path: |
             **/build/reports/
             **/build/outputs/logs/
+            **/build/outputs/reports/
           if-no-files-found: warn    # Avisará con un warning si no hay reports/logs
 
       # -------------------------------------------------------------------
