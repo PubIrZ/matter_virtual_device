@@ -178,7 +178,7 @@ jobs:
           -dontobfuscate
           -dontshrink
           -dontoptimize
-          -printusage build/outputs/reports/usageJARs_ProGuardR8.txt
+          -printusage build/outputs/mapping/debugUsage/usageJARs_ProGuardR8.txt
           EOF
           echo "✅ Archivo app/proguard-usage-rules.pro creado con éxito."
           
@@ -356,6 +356,7 @@ jobs:
             **/build/reports/
             **/build/outputs/logs/
             **/build/outputs/reports/
+            **/build/outputs/mapping/
           if-no-files-found: warn    # Avisará con un warning si no hay reports/logs
 
       # -------------------------------------------------------------------
