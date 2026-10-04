@@ -161,7 +161,51 @@ jobs:
         run: ./gradlew buildEnvironment
 
       # -------------------------------------------------------------------
-      # PASO 6b: DIAGNÓSTICO INTERMEDIO - ANÁLISIS DINÁMICO DE HOJA DE RUTA JAR
+      # PASO 6: DIAGNÓSTICO INTERMEDIO - CONDICIONAL INTELIGENTE
+      # Gracias a 'if: vars.BUILD_VARIANT == ...', este paso completo se saltará 
+      # de forma transparente a menos que actives explícitamente la auditoría en la web.
+      # -------------------------------------------------------------------
+      - name: Inyectar configuración de análisis estático debugUsage
+        if: vars.BUILD_VARIANT == 'assembleDebugUsage'
+        run: |
+          echo "============================================================="
+          echo "⚡ INICIANDO INYECCIÓN DINÁMICA EN EL SERVER..."
+          echo "============================================================="
+          
+          # 1. Creamos el archivo de reglas proguard-usage-rules.pro en la carpeta del módulo app
+          cat << 'EOF' > app/proguard-usage-rules.pro
+          # Reglas de Auditoría Estática Autogeneradas por GitHub Actions
+          -dontobfuscate
+          -dontshrink
+          -dontoptimize
+          -printusage build/outputs/reports/uso_real_jar.txt
+          EOF
+          echo "✅ Archivo app/proguard-usage-rules.pro creado con éxito."
+          
+          # 2. Inyectamos la build variant debugUsage dentro del bloque buildTypes de build.gradle.kts
+          VARIANT_CONTENT="\n        create(\"debugUsage\") {\
+                           \n            initWith(getByName(\"debug\"))\
+                           \n            isMinifyEnabled = true\
+                           \n            proguardFiles(\
+                           \n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\
+                           \n                \"proguard-rules.pro\",\
+                           \n                \"proguard-usage-rules.pro\"\
+                           \n            )\
+                           \n        }"
+
+          # 3. Inyectamos el texto estructurado usando awk con la variable cargada
+          awk -v block="$VARIANT_CONTENT" '
+            /jniLibs.keepDebugSymbols.add/ { print; flag=1; next }
+            flag && /\}/ { print block; flag=0; next }
+            { print }
+          ' app/build.gradle.kts > app/build.gradle.kts.tmp
+          
+          mv app/build.gradle.kts.tmp app/build.gradle.kts
+          echo "✅ Estructura debugUsage acoplada con éxito en build.gradle.kts."
+          echo "============================================================="
+          
+      # -------------------------------------------------------------------
+      # PASO 6c: DIAGNÓSTICO INTERMEDIO - ANÁLISIS DINÁMICO DE HOJA DE RUTA JAR
       # Descubre de forma automatizada la carpeta de librerías leyendo el archivo
       # build.gradle.kts, audita TODOS los archivos .jar presentes en ella de golpe
       # y vuelca el reporte detallado de referencias cruzadas con tu código.
