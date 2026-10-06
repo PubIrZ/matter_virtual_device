@@ -1,0 +1,8 @@
+C:\Users\SAPuser\Desktop\Github\jdk21\bin\javap -v -cp ./AndroidPlatform.jar chip.platform.ChipWiFiCallback
+ChipWiFiCallback.class
+  Last modified 26 sept 2023; size 176 bytes
+  SHA-256 checksum 725093fae4197e10f150b0c705a11cafbf7a845fcfd1ea373f98c9cac1e68674
+  Compiled from "ChipWiFiCallback.java"
+public interface chip.platform.ChipWiFiCallback
+  minor version: 0
+  major version: 52
