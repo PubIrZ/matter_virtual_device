@@ -341,10 +341,14 @@ jobs:
                     -PversionName=${{ env.VERSION_PROYECTO }} \
                     --profile
 
+
+
+
       # -------------------------------------------------------------------
       # PASO 7.5: INYECCIÓN DE ACCESO DIRECTO VISUAL AL PROFILE REPORT
       # Localiza el archivo HTML dinámico generado por la bandera '--profile'
-      # y lo publica en la interfaz web de GitHub Actions usando Job Summaries.
+      # (HTML de rendimiento) y lo publica en la interfaz web de GitHub Actions      
+      # usando Job Summaries.
       # -------------------------------------------------------------------
       - name: Crear Acceso Directo al Reporte de Rendimiento
         if: always()
@@ -359,6 +363,9 @@ jobs:
           if [ -n "\$PROFILE_HTML" ]; then
             echo "📊 Reporte localizado en: \$PROFILE_HTML"
             
+            # Extraemos el nombre base en una variable aislada para evitar el error de token '('
+            FILE_NAME=\((basename "\)PROFILE_HTML")
+            
             # 1. Copiamos el archivo a una ruta predecible y fija para que GitHub lo exponga como Artifact independiente
             mkdir -p app/build/outputs/profile_directo
             cp "\$PROFILE_HTML" app/build/outputs/profile_directo/index.html
@@ -367,7 +374,7 @@ jobs:
             echo "### 📊 Diagnóstico Interactivo de Gradle" >> \$GITHUB_STEP_SUMMARY
             echo "¡Tu reporte de rendimiento e interactividad de tareas ya está listo!" >> \$GITHUB_STEP_SUMMARY
             echo "Puedes consultarlo de forma directa haciendo clic en el apartado de descargas o abriendo el visualizador." >> \$GITHUB_STEP_SUMMARY
-            echo "• **Archivo original:** \`$(basename $PROFILE_HTML)\`" >> \$GITHUB_STEP_SUMMARY
+            echo "• **Archivo original:** \`$FILE_NAME\`" >> \$GITHUB_STEP_SUMMARY
           else
             echo "⚠️ No se generó ningún reporte de perfilado HTML en esta ejecución."
             echo "### ⚠️ Aviso de Perfilado" >> \$GITHUB_STEP_SUMMARY
