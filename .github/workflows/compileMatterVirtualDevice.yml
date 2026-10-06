@@ -340,7 +340,54 @@ jobs:
           ./gradlew ${{ vars.BUILD_VARIANT || 'assembleDebug' }} \
                     -PversionName=${{ env.VERSION_PROYECTO }} \
                     --profile
-                    
+
+      # -------------------------------------------------------------------
+      # PASO 7.5: INYECCIÓN DE ACCESO DIRECTO VISUAL AL PROFILE REPORT
+      # Localiza el archivo HTML dinámico generado por la bandera '--profile'
+      # y lo publica en la interfaz web de GitHub Actions usando Job Summaries.
+      # -------------------------------------------------------------------
+      - name: Crear Acceso Directo al Reporte de Rendimiento
+        if: always()
+        run: |
+          echo "============================================================="
+          echo "🌐 BUSCANDO REPORTE DE PERFILADO INTERACTIVO..."
+          echo "============================================================="
+          
+          # Localizamos el archivo HTML de forma dinámica en la subcarpeta build
+          PROFILE_HTML=\$(find . -name "profile-*.html" | head -n 1)
+          
+          if [ -n "\$PROFILE_HTML" ]; then
+            echo "📊 Reporte localizado en: \$PROFILE_HTML"
+            
+            # 1. Copiamos el archivo a una ruta predecible y fija para que GitHub lo exponga como Artifact independiente
+            mkdir -p app/build/outputs/profile_directo
+            cp "\$PROFILE_HTML" app/build/outputs/profile_directo/index.html
+            
+            # 2. Escribimos un enlace de texto enriquecido Markdown en el Job Summary global de la web
+            echo "### 📊 Diagnóstico Interactivo de Gradle" >> \$GITHUB_STEP_SUMMARY
+            echo "¡Tu reporte de rendimiento e interactividad de tareas ya está listo!" >> \$GITHUB_STEP_SUMMARY
+            echo "Puedes consultarlo de forma directa haciendo clic en el apartado de descargas o abriendo el visualizador." >> \$GITHUB_STEP_SUMMARY
+            echo "• **Archivo original:** \`$(basename $PROFILE_HTML)\`" >> \$GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No se generó ningún reporte de perfilado HTML en esta ejecución."
+            echo "### ⚠️ Aviso de Perfilado" >> \$GITHUB_STEP_SUMMARY
+            echo "No se localizó el archivo de rendimiento HTML. Asegúrate de compilar usando la bandera --profile." >> \$GITHUB_STEP_SUMMARY
+          fi
+          echo "============================================================="
+
+      # -------------------------------------------------------------------
+      # PASO 7.6: PUBLICACIÓN DEL PROFILE COMO ARTIFACT WEB NATIVO
+      # Subimos el HTML de forma aislada sin comprimir. Esto permite que la
+      # interfaz web de GitHub lo renderice con un enlace de visualización directa.
+      # -------------------------------------------------------------------
+      - name: Publicar Visualizador HTML Directo
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: visualizador-profile-interactivo  # Nombre de la pestaña de visualización directa
+          path: app/build/outputs/profile_directo/index.html
+          if-no-files-found: warn
+          
       # -------------------------------------------------------------------
       # PASO 8: CAPTURA Y SUBIDA DE LOGS Y REPORTS TÉCNICOS
       # Recoge de forma recursiva todos los reports de rendimiento e informes.
