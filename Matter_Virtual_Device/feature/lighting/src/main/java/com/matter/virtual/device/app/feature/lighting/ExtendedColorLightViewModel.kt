@@ -50,49 +50,45 @@ constructor(
   }
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : ExtendedColorLight
+  // CODELAB Level 3
   // The current status of the on/off. The boolean value is used by the [ExtendedColorLightFragment]
   // to react to update ui.
   // -----------------------------------------------------------------------------------
-  private val _onOff: StateFlow<Boolean> = getOnOffFlowUseCase()
-  val onOff: LiveData<Boolean>
-    get() = _onOff.asLiveData()
+  
+  // TODO 1: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : ExtendedColorLight
+  // CODELAB Level 3
   // The current status of the color level. The int value is used by the
   // [ExtendedColorLightFragment]
   // to react to update ui.
   // -----------------------------------------------------------------------------------
-  private val _level: StateFlow<Int> = getLevelFlowUseCase()
-  val level: LiveData<Int>
-    get() = _level.asLiveData()
+  
+  // TODO 2: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : ExtendedColorLight
+  // CODELAB Level 3
   // The current status of the color. The enum value is used by the [ExtendedColorLightFragment]
   // to react to update ui.
   // -----------------------------------------------------------------------------------
-  private val _currentHue: StateFlow<Int> = getCurrentHueFlowUseCase()
-  private val _currentSaturation: StateFlow<Int> = getCurrentSaturationFlowUseCase()
-  val currentColor: LiveData<HsvColor> =
-    combine(_currentHue, _currentSaturation) { currentHue, currentSaturation ->
-        HsvColor(currentHue, currentSaturation)
-      }
-      .asLiveData()
+  
+  // TODO 3: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : ExtendedColorLight
+  // CODELAB Level 3
   // The current status of the color temperature. The int value is used by the
   // [ExtendedColorLightFragment]
   // to react to update ui.
   // -----------------------------------------------------------------------------------
-  private val _colorTemperature: StateFlow<Int> = getColorTemperatureFlowUseCase()
-  val colorTemperature: LiveData<Int>
-    get() = _colorTemperature.asLiveData()
+  
+  // TODO 4: Paste or write code below
+
   // ===================================================================================
 
   override fun onCleared() {
@@ -102,20 +98,13 @@ constructor(
 
   fun onClickButton() {
     // ===================================================================================
-    // [CODELAB] Get cluster value : ExtendedColorLight
+    // CODELAB Level 3
     // Triggered by the "On/Off" button in the [ExtendedColorLightFragment]
     // [SetOnOffUseCase] will update the boolean value of the new on/off status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      Timber.d("current value = ${_onOff.value}")
-      if (_onOff.value) {
-        Timber.d("set value = false")
-        setOnOffUseCase(false)
-      } else {
-        Timber.d("set value = true")
-        setOnOffUseCase(true)
-      }
-    }
+    
+    // TODO 5: Paste or write code below
+    
     // ===================================================================================
   }
 }

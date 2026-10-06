@@ -34,17 +34,18 @@ class VideoPlayerFragment :
 
     /** OnOff layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : VideoPlayer
+    // CODELAB Level 2
     // [ButtonData] Observer on the current on/off status and react on the fragment's UI.
     // [OnClickListener] Trigger the processing for updating new on/off state of the virtual device.
+    // TODO 1 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    binding.videoPlayerOnOffLayout.buttonData =
-      ButtonData(
-        onOff = viewModel.onOff,
-        onText = R.string.on_off_switch_power_on,
-        offText = R.string.on_off_switch_power_off
-      )
-    binding.videoPlayerOnOffLayout.button.setOnClickListener { viewModel.onClickButton() }
+    //binding.videoPlayerOnOffLayout.buttonData =
+    //  ButtonData(
+    //    onOff = viewModel.onOff,
+    //    onText = R.string.on_off_switch_power_on,
+    //    offText = R.string.on_off_switch_power_off
+    //  )
+    //binding.videoPlayerOnOffLayout.button.setOnClickListener { viewModel.onClickButton() }
     // ===================================================================================
 
     /** State layout */
@@ -59,32 +60,35 @@ class VideoPlayerFragment :
 
   override fun setupObservers() {
     // ===================================================================================
-    // [CODELAB] Observe cluster value : VideoPlayer
+    // CODELAB Level 2
     // Observer on the current playback status and react on the fragment's UI.
+    // TODO 2 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModel.playbackState.observe(viewLifecycleOwner) { state ->
-      val stateText = convertPlaybackStateToString(state)
-      Timber.d("playbackState:$state($stateText)")
-      binding.videoPlayerStateLayout.valueText.text = stateText
-    }
+    //viewModel.playbackState.observe(viewLifecycleOwner) { state ->
+    //  val stateText = convertPlaybackStateToString(state)
+    //  Timber.d("playbackState:$state($stateText)")
+    //  binding.videoPlayerStateLayout.valueText.text = stateText
+    //}
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : VideoPlayer
+    // CODELAB Level 2
     // Observer on the current playback speed and react on the fragment's UI.
+    // TODO 3 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModel.playbackSpeed.observe(viewLifecycleOwner) { speed ->
-      binding.videoPlayerSpeedLayout.valueText.text = speed.toString()
-    }
+    //viewModel.playbackSpeed.observe(viewLifecycleOwner) { speed ->
+    //  binding.videoPlayerSpeedLayout.valueText.text = speed.toString()
+    //}
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : VideoPlayer
+    // CODELAB Level 2
     // Observer on the current key code and react on the fragment's UI.
+    // TODO 4 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModel.keyCode.observe(viewLifecycleOwner) { keyCode ->
-      binding.videoPlayerKeypadLayout.valueText.text = keyCode.value
-    }
+    //viewModel.keyCode.observe(viewLifecycleOwner) { keyCode ->
+    //  binding.videoPlayerKeypadLayout.valueText.text = keyCode.value
+    //}
     // ===================================================================================
   }
 

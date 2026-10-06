@@ -95,13 +95,13 @@ class MainFragment : Fragment() {
           val itemList =
             listOf(
               Device.OnOffSwitch,        // Sample
-              Device.OccupancySensor,    // Level 1 (8+ mins)
-              Device.ContactSensor,      // Level 2 (8+ mins)
-              Device.VideoPlayer,        // Level 2 (10+ mins)
-              Device.DoorLock,           // Level 3 (15+ mins)
-              Device.ExtendedColorLight, // Level 3 (15+ mins)
-              Device.WindowCovering,     // Level 4 (17+ mins)
-              Device.Thermostat,         // Level 5 (20+ mins)
+          //    Device.OccupancySensor,    // Level 1 (8+ mins)
+          //    Device.ContactSensor,      // Level 2 (8+ mins)
+          //    Device.VideoPlayer,        // Level 2 (10+ mins)
+          //    Device.DoorLock,           // Level 3 (15+ mins)
+          //    Device.ExtendedColorLight, // Level 3 (15+ mins)
+          //    Device.WindowCovering,     // Level 4 (17+ mins)
+          //    Device.Thermostat,         // Level 5 (20+ mins)
             )
           // ===================================================================================
 

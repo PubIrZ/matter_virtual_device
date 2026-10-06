@@ -44,43 +44,47 @@ constructor(
   }
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : VideoPlayer
+  // CODELAB Level 2
   // The current status of the on/off. The boolean value is used by the [VideoPlayerFragment]
   // to react to update fragment's UI.
+  // TODO 1 : Uncomment the following code blocks
   // -----------------------------------------------------------------------------------
-  private val _onOff: StateFlow<Boolean> = getOnOffFlowUseCase()
-  val onOff: LiveData<Boolean>
-    get() = _onOff.asLiveData()
+  //private val _onOff: StateFlow<Boolean> = getOnOffFlowUseCase()
+  //val onOff: LiveData<Boolean>
+  //  get() = _onOff.asLiveData()
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : VideoPlayer
+  // CODELAB Level 2
   // The current status of the playback state. The int value is used by the [VideoPlayerFragment]
   // to react to update fragment's UI.
+  // TODO 2 : Uncomment the following code blocks
   // -----------------------------------------------------------------------------------
-  private val _playbackState: StateFlow<Int> = getPlaybackStateFlowUseCase()
-  val playbackState: LiveData<Int>
-    get() = _playbackState.asLiveData()
+  //private val _playbackState: StateFlow<Int> = getPlaybackStateFlowUseCase()
+  //val playbackState: LiveData<Int>
+  //  get() = _playbackState.asLiveData()
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : VideoPlayer
+  // CODELAB Level 2
   // The current status of the playback speed. The int value is used by the [VideoPlayerFragment]
   // to react to update fragment's UI.
+  // TODO 3 : Uncomment the following code blocks
   // -----------------------------------------------------------------------------------
-  private val _playbackSpeed: StateFlow<Int> = getPlaybackSpeedFlowUseCase()
-  val playbackSpeed: LiveData<Int>
-    get() = _playbackSpeed.asLiveData()
+  //private val _playbackSpeed: StateFlow<Int> = getPlaybackSpeedFlowUseCase()
+  //val playbackSpeed: LiveData<Int>
+  //  get() = _playbackSpeed.asLiveData()
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : VideoPlayer
+  // CODELAB Level 2
   // The current status of the key code. The enum value is used by the [VideoPlayerFragment]
   // to react to update fragment's UI.
+  // TODO 4 : Uncomment the following code blocks
   // -----------------------------------------------------------------------------------
-  private val _keyCode: StateFlow<KeyCode> = getKeyCodeStateFlowUseCase()
-  val keyCode: LiveData<KeyCode>
-    get() = _keyCode.asLiveData()
+  //private val _keyCode: StateFlow<KeyCode> = getKeyCodeStateFlowUseCase()
+  //val keyCode: LiveData<KeyCode>
+  //  get() = _keyCode.asLiveData()
   // ===================================================================================
 
   override fun onCleared() {
@@ -90,20 +94,21 @@ constructor(
 
   fun onClickButton() {
     // ===================================================================================
-    // [CODELAB] Get cluster value : VideoPlayer
+    // CODELAB Level 2
     // Triggered by the "On/Off" button in the [VideoPlayerFragment]
     // [SetOnOffUseCase] will update the boolean value of the new on/off status.
+    // TODO 5 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      Timber.d("current value = ${_onOff.value}")
-      if (_onOff.value) {
-        Timber.d("set value = false")
-        setOnOffUseCase(false)
-      } else {
-        Timber.d("set value = true")
-        setOnOffUseCase(true)
-      }
-    }
+    //viewModelScope.launch {
+    //  Timber.d("current value = ${_onOff.value}")
+    //  if (_onOff.value) {
+    //    Timber.d("set value = false")
+    //    setOnOffUseCase(false)
+    //  } else {
+    //    Timber.d("set value = true")
+    //    setOnOffUseCase(true)
+    //  }
+    //}
     // ===================================================================================
   }
 }

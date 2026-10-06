@@ -33,6 +33,8 @@ class ColorControlManagerStub @Inject constructor(private val deviceApp: DeviceA
 
   override fun initAttributeValue(endpoint: Int) {
     Timber.d("endpoint:$endpoint")
+    deviceApp.setCurrentHue(endpoint, 0)
+    deviceApp.setCurrentSaturation(endpoint, 0)
   }
 
   override fun handleEnhancedColorModeChanged(value: Int) {

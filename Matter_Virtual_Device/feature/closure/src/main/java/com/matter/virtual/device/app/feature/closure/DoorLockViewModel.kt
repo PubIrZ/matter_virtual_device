@@ -52,24 +52,23 @@ constructor(
     }
   }
   // ===================================================================================
-  // [CODELAB] Get cluster value : DoorLock
+  // CODELAB Level 3
   // The current status of the lock. The boolean value is used by the [DoorLockFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _lockState: StateFlow<Boolean> = getLockStateFlowUseCase()
-  val lockState: LiveData<Boolean>
-    get() = _lockState.asLiveData()
+  
+  // TODO 1: Paste or write code below
+
   // ==============================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : DoorLock
+  // CODELAB Level 3
   // The current status of the battery. The int value is used by the [DoorLockFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _batteryStatus: MutableStateFlow<Int> =
-    getBatPercentRemainingUseCase() as MutableStateFlow<Int>
-  val batteryStatus: LiveData<Int>
-    get() = _batteryStatus.asLiveData()
+  
+  // TODO 2: Paste or write code below
+
   // ==============================================================================
 
   override fun onCleared() {
@@ -79,64 +78,54 @@ constructor(
 
   fun onClickButton() {
     // ===================================================================================
-    // [CODELAB] Get cluster value : DoorLock
+    // CODELAB Level 3
     // Triggered by the "Lock" button in the [DoorLockFragment]
     // [SetLockStateUseCase] will update the boolean value of the new lock status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      Timber.d("current lockState value = ${_lockState.value}")
-      if (_lockState.value == LOCK_STATE_LOCKED) {
-        Timber.d("set value = unlocked")
-        setLockStateUseCase(LOCK_STATE_UNLOCKED)
-      } else {
-        Timber.d("set value = locked")
-        setLockStateUseCase(LOCK_STATE_LOCKED)
-      }
-    }
+    
+    // TODO 3: Paste or write code below
+
     // ==============================================================================
   }
 
   fun onClickSendLockAlarmEventButton() {
     Timber.d("Hit")
     // ===================================================================================
-    // [CODELAB] Get cluster value : DoorLock
+    // CODELAB Level 3
     // Triggered by the "Send Alarm" button in the [DoorLockFragment]
     // [SendLockAlarmEventUseCase] will send alarm event.
     // [SetLockStateUseCase] will update the boolean value of the unlock status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      if (!_lockState.value) {
-        // if lockState == locked, send alarm event and change the lockState to unlocked
-        sendLockAlarmEventUseCase()
-        setLockStateUseCase(LOCK_STATE_UNLOCKED)
-      }
-    }
+    
+    // TODO 4: Paste or write code below
+
     // ==============================================================================
   }
 
   fun updateBatterySeekbarProgress(progress: Int) {
     // ===================================================================================
-    // [CODELAB] Get cluster value : DoorLock
+    // CODELAB Level 3
     // Triggered by the "Battery" seekbar in the [DoorLockFragment]
     // [batteryStatus] store the current status of the battery to indicate the progress.
     // -----------------------------------------------------------------------------------
-    _batteryStatus.value = progress
+    
+    // TODO 5: Paste or write code below
+    
     // ==============================================================================
   }
 
   fun updateBatteryStatusToCluster(progress: Int) {
     Timber.d("progress:$progress")
     // ===================================================================================
-    // [CODELAB] Get cluster value : DoorLock
+    // CODELAB Level 3
     // Triggered by the "Battery" seekbar in the [DoorLockFragment]
     // [updateBatterySeekbarProgress] update the current status of the battery to indicate the
     // progress.
     // [SetBatPercentRemainingUseCase] will update the int value of the new battery status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      updateBatterySeekbarProgress(progress)
-      setBatPercentRemainingUseCase(progress)
-    }
+    
+    // TODO 6: Paste or write code below
+    
     // ==============================================================================
   }
 

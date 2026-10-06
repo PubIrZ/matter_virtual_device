@@ -54,27 +54,24 @@ constructor(
   private val _operationalStatus: StateFlow<Int> = getOperationalStatusFlowUseCase()
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : WindowCovering
+  // CODELAB Level 4
   // The current status of the position/operation. The enum value is used by the
   // [WindowCoveringFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  val windowCoveringStatus: LiveData<WindowCoveringStatus> =
-    combine(_currentPosition, _operationalStatus) { currentPosition, operationalStatus ->
-        WindowCoveringStatus(currentPosition, operationalStatus)
-      }
-      .asLiveData()
+  
+  // TODO 1: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : WindowCovering
+  // CODELAB Level 4
   // The current status of the battery. The int value is used by the [WindowCoveringFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _batteryStatus: MutableStateFlow<Int> =
-    getBatPercentRemainingUseCase() as MutableStateFlow<Int>
-  val batteryStatus: LiveData<Int>
-    get() = _batteryStatus.asLiveData()
+  
+  // TODO 2: Paste or write code below
+
   // ===================================================================================
 
   override fun onCleared() {
@@ -84,80 +81,76 @@ constructor(
 
   fun stopMotion(percentage: Int) {
     // ===================================================================================
-    // [CODELAB] Get cluster value : WindowCovering
+    // CODELAB Level 4
     // Triggered by the "WindowShade" seekbar in the [WindowCoveringFragment]
     // [SetTargetPositionUseCase] will update the int value of the new target position status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      Timber.d("Target position = $percentage")
-      setTargetPositionUseCase(percentage)
-    }
+    
+    // TODO 3: Paste or write code below
+
     // ===================================================================================
   }
 
   fun onClickOpenButton() {
     // ===================================================================================
-    // [CODELAB] Get cluster value : WindowCovering
+    // CODELAB Level 4
     // Triggered by the "Open" button in the [fragment_window_covering.xml]
     // [SetTargetPositionUseCase] will update the int value of the open position (100) status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      Timber.d("Target position = 100")
-      setTargetPositionUseCase(100)
-    }
+    
+    // TODO 4: Paste or write code below
+
     // ===================================================================================
   }
 
   fun onClickCloseButton() {
     // ===================================================================================
-    // [CODELAB] Get cluster value : WindowCovering
+    // CODELAB Level 4
     // Triggered by the "Close" button in the [fragment_window_covering.xml]
     // [SetTargetPositionUseCase] will update the int value of the close position (0) status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch { setTargetPositionUseCase(0) }
+    
+    // TODO 5: Paste or write code below
+
     // ===================================================================================
   }
 
   fun onClickPauseButton() {
     // ===================================================================================
-    // [CODELAB] Get cluster value : WindowCovering
+    // CODELAB Level 4
     // Triggered by the "Pause" button in the [fragment_window_covering.xml]
     // [SetTargetPositionUseCase] will update the int value of the pause position status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      Timber.d(
-        "current position = ${_currentPosition.value}, target position: ${_targetPosition.value}"
-      )
-      if (_currentPosition.value != _targetPosition.value) {
-        setTargetPositionUseCase(_currentPosition.value)
-      }
-    }
+    
+    // TODO 6: Paste or write code below
+
     // ===================================================================================
   }
 
   fun updateBatterySeekbarProgress(progress: Int) {
     // ===================================================================================
-    // [CODELAB] Get cluster value : WindowCovering
+    // CODELAB Level 4
     // Triggered by the "Battery" seekbar in the [WindowCoveringFragment]
     // [batteryStatus] store the current status of the battery to indicate the progress.
     // -----------------------------------------------------------------------------------
-    _batteryStatus.value = progress
+    
+    // TODO 7: Paste or write code below
+
     // ===================================================================================
   }
 
   fun updateBatteryStatusToCluster(progress: Int) {
     Timber.d("progress:$progress")
     // ===================================================================================
-    // [CODELAB] Get cluster value : WindowCovering
+    // CODELAB Level 4
     // Triggered by the "Battery" seekbar in the [WindowCoveringFragment]
     // [updateBatterySeekbarProgress] update the current status of the battery to indicate the
     // progress.
     // [SetBatPercentRemainingUseCase] will update the int value of the new battery status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      updateBatterySeekbarProgress(progress)
-      setBatPercentRemainingUseCase(progress)
-    }
+    
+    // TODO 8: Paste or write code below
+    
     // ===================================================================================
   }
 }

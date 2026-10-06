@@ -36,62 +36,66 @@ class ContactSensorFragment :
 
     /** Occupancy layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ContactSensor
+    // CODELAB Level 2
     // Trigger the processing for updating new contact state of the virtual device.
+    // TODO 1 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    binding.contactButton.setOnClickListener { viewModel.onClickButton() }
+    //binding.contactButton.setOnClickListener { viewModel.onClickButton() }
     // ===================================================================================
 
     /** Battery layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ContactSensor
+    // CODELAB Level 2
     // [onProgressChanged] will update the fragment's UI via viewmodel livedata
     // [onStopTrackingTouch] will trigger the processing for updating new battery state of the
     // virtual device.
+    // TODO 2 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    binding.contactSensorBatteryLayout.titleText.text = getString(R.string.battery)
-    binding.contactSensorBatteryLayout.seekbarData = SeekbarData(progress = viewModel.batteryStatus)
-    binding.contactSensorBatteryLayout.seekbar.setOnSeekBarChangeListener(
-      object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-          viewModel.updateBatterySeekbarProgress(progress)
-        }
-
-        override fun onStartTrackingTouch(seekBar: SeekBar) {}
-
-        override fun onStopTrackingTouch(seekBar: SeekBar) {
-          viewModel.updateBatteryStatusToCluster(seekBar.progress)
-        }
-      }
-    )
+    //binding.contactSensorBatteryLayout.titleText.text = getString(R.string.battery)
+    //binding.contactSensorBatteryLayout.seekbarData = SeekbarData(progress = viewModel.batteryStatus)
+    //binding.contactSensorBatteryLayout.seekbar.setOnSeekBarChangeListener(
+    //  object : SeekBar.OnSeekBarChangeListener {
+    //    override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+    //      viewModel.updateBatterySeekbarProgress(progress)
+    //    }
+    //
+    //    override fun onStartTrackingTouch(seekBar: SeekBar) {}
+    //
+    //    override fun onStopTrackingTouch(seekBar: SeekBar) {
+    //      viewModel.updateBatteryStatusToCluster(seekBar.progress)
+    //    }
+    //  }
+    //)
     // ===================================================================================
   }
 
   override fun setupObservers() {
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ContactSensor
+    // CODELAB Level 2
     // Observer on the current contact status and react on the fragment's UI.
+    // TODO 3 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModel.stateValue.observe(viewLifecycleOwner) {
-      if (it) {
-        binding.contactValueText.text = getString(R.string.contact_state_close)
-        binding.contactButton.setImageResource(R.drawable.ic_unoccupied)
-      } else {
-        binding.contactValueText.text = getString(R.string.contact_state_open)
-        binding.contactButton.setImageResource(R.drawable.ic_occupied)
-      }
-    }
+    //viewModel.stateValue.observe(viewLifecycleOwner) {
+    //  if (it) {
+    //    binding.contactValueText.text = getString(R.string.contact_state_close)
+    //    binding.contactButton.setImageResource(R.drawable.ic_unoccupied)
+    //  } else {
+    //    binding.contactValueText.text = getString(R.string.contact_state_open)
+    //    binding.contactButton.setImageResource(R.drawable.ic_occupied)
+    //  }
+    //}
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ContactSensor
+    // CODELAB Level 2
     // Observer on the current battery status and react on the fragment's UI.
+    // TODO 4 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModel.batteryStatus.observe(viewLifecycleOwner) {
-      val text: String = getString(R.string.battery_format, it)
-      binding.contactSensorBatteryLayout.valueText.text =
-        Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
-    }
+    //viewModel.batteryStatus.observe(viewLifecycleOwner) {
+    //  val text: String = getString(R.string.battery_format, it)
+    //  binding.contactSensorBatteryLayout.valueText.text =
+    //    Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
+    //}
     // ===================================================================================
   }
 

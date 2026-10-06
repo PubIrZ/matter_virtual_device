@@ -47,24 +47,14 @@ class ThermostatFragment :
     binding.thermostatSystemModeLayout.button.setOnClickListener { showSystemModePopup() }
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // [onProgressChanged] will update the fragment's UI via viewmodel livedata
     // [onStopTrackingTouch] will trigger the processing for updating new temperature state of the
     // virtual device.
     // -----------------------------------------------------------------------------------
-    binding.thermostatTemperatureSeekbar.setOnSeekBarChangeListener(
-      object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-          viewModel.updateTemperatureSeekbarProgress(progress)
-        }
+    
+    // TODO 1: Paste or write code below
 
-        override fun onStartTrackingTouch(seekBar: SeekBar) {}
-
-        override fun onStopTrackingTouch(seekBar: SeekBar) {
-          viewModel.updateTemperatureToCluster(seekBar.progress)
-        }
-      }
-    )
     // ===================================================================================
 
     /** Fan mode layout */
@@ -74,152 +64,91 @@ class ThermostatFragment :
 
     /** Humidity Sensor layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // [onProgressChanged] will update the fragment's UI via viewmodel livedata
     // [onStopTrackingTouch] will trigger the processing for updating new humidity state of the
     // virtual device.
     // -----------------------------------------------------------------------------------
-    binding.humiditySensorHumiditySeekbar.setOnSeekBarChangeListener(
-      object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-          viewModel.updateHumiditySeekbarProgress(progress)
-        }
+    
+    // TODO 2: Paste or write code below
 
-        override fun onStartTrackingTouch(seekBar: SeekBar) {}
-
-        override fun onStopTrackingTouch(seekBar: SeekBar) {
-          viewModel.updateHumidityToCluster(seekBar.progress)
-        }
-      }
-    )
     // ===================================================================================
 
     /** Battery layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // [onProgressChanged] will update the fragment's UI via viewmodel livedata
     // [onStopTrackingTouch] will trigger the processing for updating new battery state of the
     // virtual device.
     // -----------------------------------------------------------------------------------
-    binding.thermostatBatteryLayout.titleText.text = getString(R.string.battery)
-    binding.thermostatBatteryLayout.seekbarData = SeekbarData(progress = viewModel.batteryStatus)
-    binding.thermostatBatteryLayout.seekbar.setOnSeekBarChangeListener(
-      object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-          viewModel.updateBatterySeekbarProgress(progress)
-        }
+    
+    // TODO 3: Paste or write code below
 
-        override fun onStartTrackingTouch(seekBar: SeekBar) {}
-
-        override fun onStopTrackingTouch(seekBar: SeekBar) {
-          viewModel.updateBatteryStatusToCluster(seekBar.progress)
-        }
-      }
-    )
     // ===================================================================================
   }
 
   override fun setupObservers() {
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Observer on the current temperature status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.temperature.observe(viewLifecycleOwner) {
-      val celsiusTemp: Float = it.toFloat() / 100
+    
+    // TODO 4: Paste or write code below
 
-      val celsiusText: String = getString(R.string.temperature_celsius_format, celsiusTemp)
-      binding.thermostatTemperatureCelsiusValueText.text =
-        Html.fromHtml(celsiusText, Html.FROM_HTML_MODE_LEGACY)
-
-      val fahrenheitTemp: Float = it.toFloat() / 100 * 9 / 5 + 32
-      val fahrenheitText: String = getString(R.string.temperature_fahrenheit_format, fahrenheitTemp)
-      binding.thermostatTemperatureFahrenheitValueText.text =
-        Html.fromHtml(fahrenheitText, Html.FROM_HTML_MODE_LEGACY)
-
-      binding.thermostatTemperatureSeekbar.progress = celsiusTemp.toInt()
-    }
     // ==========================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Observer on the current fan mode status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.fanMode.observe(viewLifecycleOwner) {
-      Timber.d("fanMode:$it")
-      this.fanMode = it
-      binding.fanControlFanModeLayout.valueText.text = convertFanModeToString(it)
-    }
+    
+    // TODO 5: Paste or write code below
+
     // ==========================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Observer on the current heating setpoint and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.occupiedHeatingSetpoint.observe(viewLifecycleOwner) {
-      val celsiusTemp: Float = it.toFloat() / 100
+    
+    // TODO 6: Paste or write code below
 
-      val celsiusText: String = getString(R.string.temperature_celsius_format, celsiusTemp)
-      binding.thermostatSetTemperatureHeatingCelsiusValueText.text =
-        Html.fromHtml(celsiusText, Html.FROM_HTML_MODE_LEGACY)
-
-      val fahrenheitTemp: Float = it.toFloat() / 100 * 9 / 5 + 32
-      val fahrenheitText: String = getString(R.string.temperature_fahrenheit_format, fahrenheitTemp)
-      binding.thermostatSetTemperatureHeatingFahrenheitValueText.text =
-        Html.fromHtml(fahrenheitText, Html.FROM_HTML_MODE_LEGACY)
-    }
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Observer on the current cooling setpoint and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.occupiedCoolingSetpoint.observe(viewLifecycleOwner) {
-      val celsiusTemp: Float = it.toFloat() / 100
+    
+    // TODO 7: Paste or write code below
 
-      val celsiusText: String = getString(R.string.temperature_celsius_format, celsiusTemp)
-      binding.thermostatSetTemperatureCoolingCelsiusValueText.text =
-        Html.fromHtml(celsiusText, Html.FROM_HTML_MODE_LEGACY)
-
-      val fahrenheitTemp: Float = it.toFloat() / 100 * 9 / 5 + 32
-      val fahrenheitText: String = getString(R.string.temperature_fahrenheit_format, fahrenheitTemp)
-      binding.thermostatSetTemperatureCoolingFahrenheitValueText.text =
-        Html.fromHtml(fahrenheitText, Html.FROM_HTML_MODE_LEGACY)
-    }
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Observer on the current system mode status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.systemMode.observe(viewLifecycleOwner) {
-      Timber.d("systemMode:$it")
-      this.systemMode = it
-      binding.thermostatSystemModeLayout.valueText.text = convertSystemModeToString(it)
-    }
+    
+    // TODO 8: Paste or write code below
+
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Observer on the current humidity status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.humidity.observe(viewLifecycleOwner) {
-      val humidity: Int = it / 100
-      val humidityText: String = getString(R.string.humidity_format, humidity)
-      binding.humiditySensorHumidityPercentageValueText.text =
-        Html.fromHtml(humidityText, Html.FROM_HTML_MODE_LEGACY)
-      binding.humiditySensorHumiditySeekbar.progress = humidity
-    }
+    
+    // TODO 9: Paste or write code below
+
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Observer on the current battery status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.batteryStatus.observe(viewLifecycleOwner) {
-      val text: String = getString(R.string.battery_format, it)
-      binding.thermostatBatteryLayout.valueText.text =
-        Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
-    }
+    
+    // TODO 10: Paste or write code below
+
     // ===================================================================================
   }
 
@@ -247,18 +176,12 @@ class ThermostatFragment :
       )
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Trigger the processing for setting system mode.
     // -----------------------------------------------------------------------------------
-    AlertDialog.Builder(requireContext())
-      .setTitle(R.string.thermostat_mode)
-      .setSingleChoiceItems(modeList, convertSystemModeToIndex(this.systemMode)) { dialog, which ->
-        Timber.d("Thermostat mode set $which(${modeList[which]})")
-        viewModel.setSystemMode(convertIndexToSystemMode(which))
-        dialog.dismiss()
-      }
-      .setNegativeButton(R.string.cancel, null)
-      .show()
+    
+    // TODO 11: Paste or write code below
+
     // ===================================================================================
   }
 
@@ -271,18 +194,12 @@ class ThermostatFragment :
       )
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : Thermostat
+    // CODELAB Level 5
     // Trigger the processing for setting fan mode.
     // -----------------------------------------------------------------------------------
-    AlertDialog.Builder(requireContext())
-      .setTitle(R.string.fan_control_fan_mode)
-      .setSingleChoiceItems(modeList, convertFanModeToIndex(this.fanMode)) { dialog, which ->
-        Timber.d("Fan mode set $which(${modeList[which]})")
-        viewModel.setFanMode(convertIndexToFanMode(which))
-        dialog.dismiss()
-      }
-      .setNegativeButton(R.string.cancel, null)
-      .show()
+    
+    // TODO 12: Paste or write code below
+    
     // ===================================================================================
   }
 

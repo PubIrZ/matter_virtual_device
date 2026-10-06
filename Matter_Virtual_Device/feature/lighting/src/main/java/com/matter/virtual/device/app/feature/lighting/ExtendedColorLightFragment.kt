@@ -42,17 +42,13 @@ class ExtendedColorLightFragment :
 
     /** OnOff layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ExtendedColorLight
+    // CODELAB Level 3
     // [ButtonData] Observer on the current on/off status and react on the fragment's UI.
     // [OnClickListener] Trigger the processing for updating new on/off state of the virtual device.
     // -----------------------------------------------------------------------------------
-    binding.extendedColorLightOnOffLayout.buttonData =
-      ButtonData(
-        onOff = viewModel.onOff,
-        onText = R.string.on_off_switch_power_on,
-        offText = R.string.on_off_switch_power_off
-      )
-    binding.extendedColorLightOnOffLayout.button.setOnClickListener { viewModel.onClickButton() }
+    
+    // TODO 1: Paste or write code below
+
     // ===================================================================================
 
     /** Color layout */
@@ -63,60 +59,30 @@ class ExtendedColorLightFragment :
 
   override fun setupObservers() {
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ExtendedColorLight
+    // CODELAB Level 3
     // Observer on the current color level status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.level.observe(viewLifecycleOwner) {
-      // Min: 2(1%), Max: 255(100%)
-      val level: Int = (it.toFloat() / 100 * 255).toInt()
-      Timber.d("Level: $it")
+    
+    // TODO 2: Paste or write code below
 
-      // If level value is 0, user can't distinguish the color.
-      // So, set it to half value + half of Max.
-      binding.extendedColorLightColorLayout.colorBoard.drawable?.alpha = level / 2 + 127
-    }
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ExtendedColorLight
+    // CODELAB Level 3
     // Observer on the current color status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.currentColor.observe(viewLifecycleOwner) { hsvColor ->
-      val rgbColor: Int =
-        ColorControlUtil.hue2rgb(
-          hsvColor.currentHue.toFloat(),
-          hsvColor.currentSaturation.toFloat()
-        )
+    
+    // TODO 3: Paste or write code below
 
-      Timber.d("currentHue:${hsvColor.currentHue},currentSaturation:${hsvColor.currentSaturation}")
-      Timber.d("Color: #${Integer.toHexString(rgbColor)}")
-
-      var level: Int? = binding.extendedColorLightColorLayout.colorBoard.drawable?.alpha
-      if (level == null) level = 255
-      Timber.d("level: $level")
-
-      binding.extendedColorLightColorLayout.colorBoard.setImageDrawable(
-        BitmapDrawable(resources, ColorControlUtil.colorBoard(rgbColor))
-      )
-    }
     // ===================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : ExtendedColorLight
+    // CODELAB Level 3
     // Observer on the current color temperature status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.colorTemperature.observe(viewLifecycleOwner) {
-      // Min: 2580k(2577k), Max: 7050k(7042k)
-      val colorTemperature: Int = 1000000 / it
-      val rgbColor: Int = ColorControlUtil.kelvin2rgb(colorTemperature)
-
-      Timber.d("Color Temperature: $colorTemperature $it")
-      Timber.d("Color: #${Integer.toHexString(rgbColor)}")
-
-      binding.extendedColorLightColorLayout.colorBoard.setImageDrawable(
-        BitmapDrawable(resources, ColorControlUtil.colorBoard(rgbColor))
-      )
-    }
+    
+    // TODO 4: Paste or write code below
+    
     // ===================================================================================
   }
 

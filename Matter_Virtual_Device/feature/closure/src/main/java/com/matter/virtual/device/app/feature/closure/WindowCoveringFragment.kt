@@ -38,108 +38,46 @@ class WindowCoveringFragment :
 
     /** Window shade layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : WindowCovering
+    // CODELAB Level 4
     // [onProgressChanged] will update the fragment's UI via viewmodel livedata
     // [onStopTrackingTouch] will trigger the processing for updating new WindowShade state of the
     // virtual device.
     // -----------------------------------------------------------------------------------
-    binding.windowCoveringWindowShadeSeekbar.setOnSeekBarChangeListener(
-      object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-          val targetPercentage = seekBar.progress
-          val text: String =
-            getString(R.string.window_covering_window_shade_format, targetPercentage)
-          val percentageTextView = binding.windowCoveringWindowShadeValueText
-          percentageTextView.text = Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
-        }
+    
+    // TODO 1: Paste or write code below
 
-        override fun onStartTrackingTouch(seekBar: SeekBar) {}
-
-        override fun onStopTrackingTouch(seekBar: SeekBar) {
-          viewModel.stopMotion(seekBar.progress)
-        }
-      }
-    )
     // =======================================================================================================
 
     /** Battery layout */
     // ===================================================================================
-    // [CODELAB] Observe cluster value : WindowCovering
+    // CODELAB Level 4
     // [onProgressChanged] will update the fragment's UI via viewmodel livedata
     // [onStopTrackingTouch] will trigger the processing for updating new battery state of the
     // virtual device.
     // -----------------------------------------------------------------------------------
-    binding.windowCoveringBatteryLayout.titleText.text = getString(R.string.battery)
-    binding.windowCoveringBatteryLayout.seekbarData =
-      SeekbarData(progress = viewModel.batteryStatus)
-    binding.windowCoveringBatteryLayout.seekbar.setOnSeekBarChangeListener(
-      object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-          viewModel.updateBatterySeekbarProgress(progress)
-        }
+    
+    // TODO 2: Paste or write code below
 
-        override fun onStartTrackingTouch(seekBar: SeekBar) {}
-
-        override fun onStopTrackingTouch(seekBar: SeekBar) {
-          viewModel.updateBatteryStatusToCluster(seekBar.progress)
-        }
-      }
-    )
     // =======================================================================================================
   }
 
   override fun setupObservers() {
     // ===================================================================================
-    // [CODELAB] Observe cluster value : WindowCovering
+    // CODELAB Level 4
     // Observer on the current position/operation status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.windowCoveringStatus.observe(viewLifecycleOwner) { status ->
-      Timber.d(
-        "currentPosition:${status.currentPosition},operationalStatus:${status.operationalStatus}"
-      )
-      binding.windowCoveringWindowShadeSeekbar.progress = status.currentPosition
+    
+    // TODO 3: Paste or write code below
 
-      val text: String =
-        getString(R.string.window_covering_window_shade_format, status.currentPosition)
-      binding.windowCoveringWindowShadeValueText.text =
-        Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
-
-      when (status.operationalStatus) {
-        0 -> {
-          when (status.currentPosition) {
-            0 -> {
-              binding.windowCoveringOperationalStatusText.setText(R.string.window_covering_closed)
-            }
-            100 -> {
-              binding.windowCoveringOperationalStatusText.setText(R.string.window_covering_open)
-            }
-            else -> {
-              binding.windowCoveringOperationalStatusText.setText(
-                R.string.window_covering_partially_open
-              )
-            }
-          }
-        }
-        1 -> {
-          binding.windowCoveringOperationalStatusText.setText(R.string.window_covering_opening)
-        }
-        2 -> {
-          binding.windowCoveringOperationalStatusText.setText(R.string.window_covering_closing)
-        }
-        else -> {}
-      }
-    }
     // =======================================================================================================
 
     // ===================================================================================
-    // [CODELAB] Observe cluster value : WindowCovering
+    // CODELAB Level 4
     // Observer on the current battery status and react on the fragment's UI.
     // -----------------------------------------------------------------------------------
-    viewModel.batteryStatus.observe(viewLifecycleOwner) {
-      val text: String = getString(R.string.battery_format, it)
-      binding.windowCoveringBatteryLayout.valueText.text =
-        Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
-    }
+    
+    // TODO 4: Paste or write code below
+    
     // =======================================================================================================
   }
 

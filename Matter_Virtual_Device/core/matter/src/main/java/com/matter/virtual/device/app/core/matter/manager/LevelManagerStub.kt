@@ -25,6 +25,10 @@ class LevelManagerStub @Inject constructor(private val deviceApp: DeviceApp) : L
     deviceApp.setCurrentLevel(MatterConstants.DEFAULT_ENDPOINT, valueToMatter)
   }
 
+  override fun initAttributeValue(endpoint: Int) {
+    setCurrentLevel(0)
+  }
+
   // This function setting the level from the matter sever to the app
   override fun handleLevelChanged(value: Int) {
     val valueForApp = (value / (2.54)).roundToInt()

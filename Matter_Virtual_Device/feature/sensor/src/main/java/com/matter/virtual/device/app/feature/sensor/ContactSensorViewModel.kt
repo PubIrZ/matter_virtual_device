@@ -42,24 +42,26 @@ constructor(
   }
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : ContactSensor
+  // CODELAB Level 2
   // The current status of the contact. The boolean value is used by the [ContactSensorFragment]
   // to react to update ui.
+  // TODO 1 : Uncomment the following code blocks
   // -----------------------------------------------------------------------------------
-  private val _stateValue: StateFlow<Boolean> = getStateValueFlowUseCase()
-  val stateValue: LiveData<Boolean>
-    get() = _stateValue.asLiveData()
+  //private val _stateValue: StateFlow<Boolean> = getStateValueFlowUseCase()
+  //val stateValue: LiveData<Boolean>
+  //  get() = _stateValue.asLiveData()
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : ContactSensor
+  // CODELAB Level 2
   // The current status of the battery. The int value is used by the [ContactSensorFragment]
   // to react to update fragment's UI.
+  // TODO 2 : Uncomment the following code blocks
   // -----------------------------------------------------------------------------------
-  private val _batteryStatus: MutableStateFlow<Int> =
-    getBatPercentRemainingUseCase() as MutableStateFlow<Int>
-  val batteryStatus: LiveData<Int>
-    get() = _batteryStatus.asLiveData()
+  //private val _batteryStatus: MutableStateFlow<Int> =
+  //  getBatPercentRemainingUseCase() as MutableStateFlow<Int>
+  //val batteryStatus: LiveData<Int>
+  //  get() = _batteryStatus.asLiveData()
   // ===================================================================================
 
   override fun onCleared() {
@@ -69,46 +71,49 @@ constructor(
 
   fun onClickButton() {
     // ===================================================================================
-    // [CODELAB] Get cluster value : ContactSensor
+    // CODELAB Level 2
     // Triggered by the "Contact" button in the [ContactSensorFragment]
     // [SetStateValueUseCase] will update the boolean value of the new contact status.
+    // TODO 3 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      Timber.d("current value = ${_stateValue.value}")
-      if (_stateValue.value) {
-        Timber.d("set value = false")
-        setStateValueUseCase(false)
-      } else {
-        Timber.d("set value = true")
-        setStateValueUseCase(true)
-      }
-    }
+    //viewModelScope.launch {
+    //  Timber.d("current value = ${_stateValue.value}")
+    //  if (_stateValue.value) {
+    //    Timber.d("set value = false")
+    //    setStateValueUseCase(false)
+    //  } else {
+    //    Timber.d("set value = true")
+    //    setStateValueUseCase(true)
+    //  }
+    //}
     // ===================================================================================
   }
 
   fun updateBatterySeekbarProgress(progress: Int) {
     // ===================================================================================
-    // [CODELAB] Get cluster value : ContactSensor
+    // CODELAB Level 2
     // Triggered by the "Battery" seekbar in the [ContactSensorFragment]
     // [batteryStatus] store the current status of the battery to indicate the progress.
+    // TODO 4 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    _batteryStatus.value = progress
+    //_batteryStatus.value = progress
     // ===================================================================================
   }
 
   fun updateBatteryStatusToCluster(progress: Int) {
     Timber.d("progress:$progress")
     // ===================================================================================
-    // [CODELAB] Get cluster value : ContactSensor
+    // CODELAB Level 2
     // Triggered by the "Battery" seekbar in the [ContactSensorFragment]
     // [updateBatterySeekbarProgress] update the current status of the battery to indicate the
     // progress.
     // [SetBatPercentRemainingUseCase] will update the int value of the new battery status.
+    // TODO 5 : Uncomment the following code blocks
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      updateBatterySeekbarProgress(progress)
-      setBatPercentRemainingUseCase(progress)
-    }
+    //viewModelScope.launch {
+    //  updateBatterySeekbarProgress(progress)
+    //  setBatPercentRemainingUseCase(progress)
+    //}
     // ===================================================================================
   }
 }

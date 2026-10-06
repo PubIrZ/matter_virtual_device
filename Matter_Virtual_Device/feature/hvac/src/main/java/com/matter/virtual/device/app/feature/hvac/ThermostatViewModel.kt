@@ -66,76 +66,73 @@ constructor(
     }
   }
   // ===================================================================================
-  // [CODELAB] Get cluster value : Thermostat
+  // CODELAB Level 5
   // The current status of the temperature. The int value is used by the [ThermostatFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _temperature: MutableStateFlow<Int> =
-    getLocalTemperatureUseCase() as MutableStateFlow<Int>
-  val temperature: LiveData<Int>
-    get() = _temperature.asLiveData()
+  
+  // TODO 1: Paste or write code below
+  
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : Thermostat
+  // CODELAB Level 5
   // The current status of the humidity. The int value is used by the [ThermostatFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _humidity: MutableStateFlow<Int> =
-    getRelativeHumidityUseCase() as MutableStateFlow<Int>
-  val humidity: LiveData<Int>
-    get() = _humidity.asLiveData()
+  
+  // TODO 2: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : Thermostat
+  // CODELAB Level 5
   // The current status of the system mode. The enum value is used by the [ThermostatFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _systemMode: StateFlow<ThermostatSystemMode> = getSystemModeFlowUseCase()
-  val systemMode: LiveData<ThermostatSystemMode>
-    get() = _systemMode.asLiveData()
+  
+  // TODO 3: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : Thermostat
+  // CODELAB Level 5
   // The current status of the fan mode. The enum value is used by the [ThermostatFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _fanMode: StateFlow<FanControlFanMode> = getFanModeFlowUseCase()
-  val fanMode: LiveData<FanControlFanMode>
-    get() = _fanMode.asLiveData()
+  
+  // TODO 4: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : Thermostat
+  // CODELAB Level 5
   // The current status of the cooling setpoint. The int value is used by the [ThermostatFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _occupiedCoolingSetpoint: StateFlow<Int> = getOccupiedCoolingSetpointFlowUseCase()
-  val occupiedCoolingSetpoint: LiveData<Int>
-    get() = _occupiedCoolingSetpoint.asLiveData()
+  
+  // TODO 5: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : Thermostat
+  // CODELAB Level 5
   // The current status of the heating setpoint. The int value is used by the [ThermostatFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _occupiedHeatingSetpoint: StateFlow<Int> = getOccupiedHeatingSetpointFlowUseCase()
-  val occupiedHeatingSetpoint: LiveData<Int>
-    get() = _occupiedHeatingSetpoint.asLiveData()
+  
+  // TODO 6: Paste or write code below
+
   // ===================================================================================
 
   // ===================================================================================
-  // [CODELAB] Get cluster value : Thermostat
+  // CODELAB Level 5
   // The current status of the battery. The int value is used by the [ThermostatFragment]
   // to react to update fragment's UI.
   // -----------------------------------------------------------------------------------
-  private val _batteryStatus: MutableStateFlow<Int> =
-    getBatPercentRemainingUseCase() as MutableStateFlow<Int>
-  val batteryStatus: LiveData<Int>
-    get() = _batteryStatus.asLiveData()
+  
+  // TODO 7: Paste or write code below
+
   // ===================================================================================
 
   override fun onCleared() {
@@ -145,168 +142,167 @@ constructor(
 
   fun updateHumiditySeekbarProgress(progress: Int) {
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Humidity" seekbar in the [ThermostatFragment]
     // [humidity] store the current status of the humidity to indicate the progress.
     // -----------------------------------------------------------------------------------
-    _humidity.value = progress * 100
+    
+    // TODO 8: Paste or write code below
+
     // ===================================================================================
   }
 
   fun updateHumidityToCluster(progress: Int) {
     Timber.d("progress:$progress")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Humidity" seekbar in the [ThermostatFragment]
     // [updateHumiditySeekbarProgress] update the current status of the humidity to indicate the
     // progress.
     // [SetRelativeHumidityUseCase] will update the int value of the new humidity status. ([0...100]
     // * 100)
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      updateHumiditySeekbarProgress(progress)
-      setRelativeHumidityUseCase(progress * 100)
-    }
+    
+    // TODO 9: Paste or write code below
+
     // ===================================================================================
   }
 
   fun updateTemperatureSeekbarProgress(progress: Int) {
     Timber.d("progress:$progress")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Temperature" seekbar in the [ThermostatFragment]
     // [temperature] store the current status of the temperature to indicate the progress.
     // -----------------------------------------------------------------------------------
-    _temperature.value = progress * 100
+    
+    // TODO 10: Paste or write code below
+
     // ===================================================================================
   }
 
   fun updateTemperatureToCluster(progress: Int) {
     Timber.d("progress:$progress")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Temperature" seekbar in the [ThermostatFragment]
     // [updateTemperatureSeekbarProgress] update the current status of the temperature to indicate
     // the progress.
     // [SetLocalTemperatureUseCase] will update the int value of the new temperature status.
     // ([value] * 100)
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      updateTemperatureSeekbarProgress(progress)
-      setLocalTemperatureUseCase(progress * 100)
-    }
+    
+    // TODO 11: Paste or write code below
+
     // ====================================================================================
   }
 
   fun updateBatterySeekbarProgress(progress: Int) {
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Battery" seekbar in the [ThermostatFragment]
     // [batteryStatus] store the current status of the battery to indicate the progress.
     // -----------------------------------------------------------------------------------
-    _batteryStatus.value = progress
+    
+    // TODO 12: Paste or write code below
+
     // ====================================================================================
   }
 
   fun updateBatteryStatusToCluster(progress: Int) {
     Timber.d("progress:$progress")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Battery" seekbar in the [ThermostatFragment]
     // [updateBatterySeekbarProgress] update the current status of the battery to indicate the
     // progress.
     // [SetBatPercentRemainingUseCase] will update the int value of the new battery status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      updateBatterySeekbarProgress(progress)
-      setBatPercentRemainingUseCase(progress)
-    }
+    
+    // TODO 13: Paste or write code below
+
     // ====================================================================================
   }
 
   fun setSystemMode(systemMode: ThermostatSystemMode) {
     Timber.d("systemMode:$systemMode")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "SystemMode" popup in the [ThermostatFragment]
     // [SetSystemModeUseCase] will update the enum value of the new system mode status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch { setSystemModeUseCase(systemMode) }
+    
+    // TODO 14: Paste or write code below
+
     // ====================================================================================
   }
 
   fun setFanMode(fanMode: FanControlFanMode) {
     Timber.d("fanMode:$fanMode")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "FanMode" popup in the [ThermostatFragment]
     // [SetFanModeUseCase] will update the enum value of the new fan mode status.
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch { setFanModeUseCase(fanMode) }
+    
+    // TODO 15: Paste or write code below
+
     // ====================================================================================
   }
 
   fun onClickHeatingPlus() {
     Timber.d("Hit")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Heating Plus" button in the [fragment_thermostat.xml]
     // [SetOccupiedHeatingSetpointUseCase] will update the int value of the +1 degree. ([degree] *
     // 100)
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      val nextValue = _occupiedHeatingSetpoint.value + 100
-      Timber.d("current value = ${_occupiedHeatingSetpoint.value} set value = $nextValue")
-      setOccupiedHeatingSetpointUseCase(nextValue)
-    }
+    
+    // TODO 16: Paste or write code below
+
     // ====================================================================================
   }
 
   fun onClickHeatingMinus() {
     Timber.d("Hit")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Heating Minus" button in the [fragment_thermostat.xml]
     // [SetOccupiedHeatingSetpointUseCase] will update the int value of the -1 degree. ([degree] *
     // 100)
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      val nextValue = _occupiedHeatingSetpoint.value - 100
-      Timber.d("current value = ${_occupiedHeatingSetpoint.value} set value = $nextValue")
-      setOccupiedHeatingSetpointUseCase(nextValue)
-    }
+    
+    // TODO 17: Paste or write code below
+
     // ====================================================================================
   }
 
   fun onClickCoolingPlus() {
     Timber.d("Hit")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Cooling Plus" button in the [fragment_thermostat.xml]
     // [SetOccupiedCoolingSetpointUseCase] will update the int value of the +1 degree. ([degree] *
     // 100)
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      val nextValue = _occupiedCoolingSetpoint.value + 100
-      Timber.d("current value = ${_occupiedCoolingSetpoint.value} set value = $nextValue")
-      setOccupiedCoolingSetpointUseCase(nextValue)
-    }
+    
+    // TODO 18: Paste or write code below
+
     // ====================================================================================
   }
 
   fun onClickCoolingMinus() {
     Timber.d("Hit")
     // ===================================================================================
-    // [CODELAB] Get cluster value : Thermostat
+    // CODELAB Level 5
     // Triggered by the "Cooling Minus" button in the [fragment_thermostat.xml]
     // [SetOccupiedCoolingSetpointUseCase] will update the int value of the -1 degree. ([degree] *
     // 100)
     // -----------------------------------------------------------------------------------
-    viewModelScope.launch {
-      val nextValue = _occupiedCoolingSetpoint.value - 100
-      Timber.d("current value = ${_occupiedCoolingSetpoint.value} set value = $nextValue")
-      setOccupiedCoolingSetpointUseCase(nextValue)
-    }
+    
+    // TODO 19: Paste or write code below
+    
     // ====================================================================================
   }
 }
