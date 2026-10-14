@@ -77,6 +77,17 @@ constructor(
       object : DeviceAppCallback {
         override fun onClusterInit(app: DeviceApp, clusterId: Int, endpoint: Int) {
           Timber.d("onClusterInit():clusterId:$clusterId,endpoint:$endpoint")
+
+//INSERT BEGIN
+          val currentDeviceType = matterSettings.device.deviceTypeId.toInt()
+
+          // FILTRADO DINÁMICO: Si el cluster no corresponde al dispositivo seleccionado, nos lo saltamos
+          if (!isClusterValidForDevice(clusterId, currentDeviceType)) {
+            Timber.w("Cluster ID $clusterId bloqueado dinámicamente para el Device Type ID $currentDeviceType")
+            return
+          }
+//INSERT END
+		  
           when (clusterId) {
             Clusters.ClusterId_KeypadInput ->
               app.setKeypadInputManager(endpoint, keypadInputManagerStub)
@@ -233,6 +244,146 @@ constructor(
 
     deviceApp.postServerInit(matterSettings.device.deviceTypeId.toInt())
   }
+
+//INSERT BEGIN
+  /**
+  * Filtra dinámicamente qué clusters se permiten inicializar en base a la especificación Matter 1.6
+  */
+  private fun isClusterValidForDevice(clusterId: Int, deviceTypeId: Int): Boolean {
+      // Definición de los Cluster Requirements obligatorios de cada Device Type IDs según la librería de dispositivos de Matter 1.6
+      // https://leconiot.com/matter/1.0/device_library.html
+	  return when (deviceTypeId) {
+          
+          // =================================================================
+          // ILUMINACIÓN Y ACTUADORES (Lighting & Actuators)
+          // =================================================================
+          0x0100 -> { // On/Off Light
+              clusterId == Clusters.ClusterId_OnOff || 
+          }
+          0x0101 -> { // Dimmable Light
+              clusterId == Clusters.ClusterId_OnOff || 
+              clusterId == Clusters.ClusterId_LevelControl
+          }
+          0x010C -> { // Color Temperature Light
+              // clusterId == Clusters.ClusterId_Groups ||			 // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster) 
+			  // clusterId == Clusters.ClusterId_Scenes ||           // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster)
+              clusterId == Clusters.ClusterId_OnOff ||
+              clusterId == Clusters.ClusterId_LevelControl || 
+              clusterId == Clusters.ClusterId_ColorControl
+          }
+          0x010D -> { // Extended Color Light (ExtendedColorLight)   
+              // clusterId == Clusters.ClusterId_Groups ||			 // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster) 
+			  // clusterId == Clusters.ClusterId_Scenes ||           // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster)
+              clusterId == Clusters.ClusterId_OnOff || 
+              clusterId == Clusters.ClusterId_LevelControl || 
+              clusterId == Clusters.ClusterId_ColorControl
+			  
+          }
+  
+          // =================================================================
+          // INTERRUPTORES Y CONTROLADORES (Switches & Controllers)
+          // Nota: Los controladores suelen usar estos clusters como *Clients*, 
+          // pero si tu dispositivo virtual expone atributos locales (Server), 
+          // se restringen a su respectivo nivel de control.
+          // =================================================================
+          0x0103 -> { // On/Off Light Switch   ( OnOffLightSwitch )
+		      // Aunque el ID sea de un interruptor simple, le permitimos adquirir el LevelControl		  
+              clusterId == Clusters.ClusterId_OnOff
+			  clusterId == Clusters.ClusterId_LevelControl           // Adicionado para probar sin añadir el dispositivo
+          }
+          0x0104 -> { // Dimmer Switch         ( DimmerSwitch )
+              clusterId == Clusters.ClusterId_OnOff || 
+              clusterId == Clusters.ClusterId_LevelControl
+          }
+          0x0105 -> { // Color Dimmer Switch 
+              clusterId == Clusters.ClusterId_OnOff || 
+              clusterId == Clusters.ClusterId_LevelControl || 
+              clusterId == Clusters.ClusterId_ColorControl
+          }
+  
+          // =================================================================
+          // CLIMATIZACIÓN Y CONFORT (HVAC / Smart Energy)
+          // =================================================================
+          0x0301 -> { // Thermostat            ( Thermostat ) 
+              clusterId == Clusters.ClusterId_Thermostat || 
+              clusterId == Clusters.ClusterId_TemperatureMeasurement
+          }
+          0x0302 -> { // Fan Control 
+              clusterId == Clusters.ClusterId_OnOff || 
+              clusterId == Clusters.ClusterId_FanControl
+          }
+  
+          // =================================================================
+          // CIERRES Y ACCESOS (Closures)
+          // =================================================================
+          0x000A -> { // Door Lock             ( DoorLock )          // Cerradura inteligente
+              clusterId == Clusters.ClusterId_DoorLock
+          }
+          0x0202 -> { // Window Covering       ( WindowCovering )    // Persianas / Cortinas motorizadas)
+              clusterId == Clusters.ClusterId_WindowCovering
+          }
+  
+          // =================================================================
+          // SENSORES (Sensors)
+          // =================================================================
+          0x0015 -> { // Contact Sensor        ( ContactSensor )
+              clusterId == Clusters.ClusterId_BooleanState           // Habitual en sensores binarios (FALSE=open or no contact /  TRUE=closed or contac)
+          }
+          0x0107 -> { // Occupancy Sensor      ( OccupancySensor )
+              clusterId == Clusters.ClusterId_OccupancySensing
+          }
+          0x030C -> { // Temperature Sensor
+              clusterId == Clusters.ClusterId_TemperatureMeasurement
+          }
+          0x030F -> { // Humidity Sensor
+              clusterId == Clusters.ClusterId_RelativeHumidityMeasurement
+          }
+  
+          // =================================================================
+          // DISPOSITIVOS MULTIMEDIA (Media / Video Player)
+          // =================================================================
+          0x0028 -> { // Basic Video Player    (VideoPlayer) // Smart TV / Smart Box
+		      clusterId == Clusters.ClusterId_OnOff ||
+			  clusterId == Clusters.ClusterId_MediaPlayback ||
+              clusterId == Clusters.ClusterId_KeypadInput
+
+          }
+  
+          0x0023 -> { // Castin Video Player    (CastingVideoPlayer) // Smart TV (Streaming) / Smart Box (Streaming)
+		      clusterId == Clusters.ClusterId_OnOff ||
+			  clusterId == Clusters.ClusterId_MediaPlayback ||
+              clusterId == Clusters.ClusterId_KeypadInput
+              //clusterId == Clusters.ClusterId_ContentLauncher      // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster)
+			  
+              //clusterId == Clusters.ClusterId_LowPower ||
+              //clusterId == Clusters.ClusterId_Channel  ||  
+              //clusterId == Clusters.ClusterId_WakeOnLan ||
+              //clusterId == Clusters.ClusterId_MediaInput			  
+          }
+	  
+		  
+          // =================================================================
+          // FILTRO COMPLEMENTARIO (Fallback / Default)
+          // =================================================================
+          else -> {
+              // Clusters transversales a todos los dispositivos en Matter (ej: Infraestructura)
+              val isInfrastructureCluster = clusterId == Clusters.ClusterId_NetworkCommissioning || 
+                                            clusterId == Clusters.ClusterId_PowerSource
+              
+              if (isInfrastructureCluster) {
+                  true
+              } else {
+                  // Si añades prototipos dinámicos custom no mapeados arriba, 
+                  // Timber registrará una alerta para que decidas si bloquearlo o no.
+                  Timber.w("DeviceType desconocido ($deviceTypeId). Permitiendo cluster $clusterId de forma preventiva.")
+                  true 
+              }
+          }
+      }
+  }
+
+//INSERT END
+
 
   fun stop() {
     chipAppServer?.stopApp()
