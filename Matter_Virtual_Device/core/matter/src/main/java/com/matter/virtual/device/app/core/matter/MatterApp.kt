@@ -258,7 +258,7 @@ constructor(
           // ILUMINACIÓN Y ACTUADORES (Lighting & Actuators)
           // =================================================================
           0x0100 -> { // On/Off Light
-              clusterId == Clusters.ClusterId_OnOff || 
+              clusterId == Clusters.ClusterId_OnOff 
           }
           0x0101 -> { // Dimmable Light
               clusterId == Clusters.ClusterId_OnOff || 
