@@ -288,7 +288,7 @@ constructor(
           // =================================================================
           0x0103 -> { // On/Off Light Switch   ( OnOffLightSwitch )
 		      // Aunque el ID sea de un interruptor simple, le permitimos adquirir el LevelControl		  
-              clusterId == Clusters.ClusterId_OnOff
+              clusterId == Clusters.ClusterId_OnOff ||
 			  clusterId == Clusters.ClusterId_LevelControl           // Adicionado para probar sin añadir el dispositivo
           }
           0x0104 -> { // Dimmer Switch         ( DimmerSwitch )
