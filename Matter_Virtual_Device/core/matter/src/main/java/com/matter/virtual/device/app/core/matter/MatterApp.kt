@@ -76,18 +76,28 @@ constructor(
     deviceApp.setCallback(
       object : DeviceAppCallback {
         override fun onClusterInit(app: DeviceApp, clusterId: Int, endpoint: Int) {
-          Timber.d("onClusterInit():clusterId:$clusterId,endpoint:$endpoint")
-
-//INSERT BEGIN
+          
           val currentDeviceType = matterSettings.device.deviceTypeId.toInt()
+          
+          val clusterHex = "0x${clusterId.toString(16).uppercase()}"
+          val deviceTypeHex = "0x${currentDeviceType.toString(16).uppercase()}"
 
-          // FILTRADO DINÁMICO: Si el cluster no corresponde al dispositivo seleccionado, nos lo saltamos
+          // MENSAJE DE INSPECCIÓN: Captura el momento exacto en el que el .so invoca el clúster
+          Timber.i("🔍 INSPECCIÓN JNI :: El binario (.so) solicitó inicializar el Cluster $clusterHex en el Endpoint $endpoint")
+
+          // FILTRADO DINÁMICO: Evaluamos si el clúster es legal para este Device Type ID
           if (!isClusterValidForDevice(clusterId, currentDeviceType)) {
-            Timber.w("Cluster ID $clusterId bloqueado dinámicamente para el Device Type ID $currentDeviceType")
-            return
+             Timber.w("❌ AUDITORÍA :: Device Type $deviceTypeHex -> Cluster $clusterHex BLOQUEADO dinámicamente")
+             return
+          } else {
+             Timber.w("✅ AUDITORÍA :: Device Type $deviceTypeHex -> Cluster $clusterHex ACTIVADO dinámicamente")
           }
-//INSERT END
-		  
+
+          // * Registrar el "ManagerStub" que expone la lógica de negocio de cada clúster del dispositivo virtual.
+          //      Los métodos tipo "set[Clúster]Manager()" actúan como funciones de registro de la interfaz JNI de DeviceApp (SDK nativo).
+          //      Estas pasarelas asocian las implementaciones en Kotlin ("Stubs") con el motor de ejecución en C++, delegando 
+          //      en la aplicación el procesamiento local de los comandos RPC entrantes desde la red Matter.
+          // * Inicializar los atributos del modelo de datos y publicar el estado del servidor en la red mediante "initAttributeValue()".
           when (clusterId) {
             Clusters.ClusterId_KeypadInput ->
               app.setKeypadInputManager(endpoint, keypadInputManagerStub)
@@ -158,7 +168,6 @@ constructor(
             }
           }
         }
-
         override fun onEvent(event: Int) {
           Timber.d("onEvent():event:$event")
 
@@ -216,9 +225,12 @@ constructor(
       matterSettings.discriminator
     )
 
+    Timber.d("🚀 AUDITORÍA MATTER :: Fase 1: Ejecutando deviceApp.preServerInit()...")
     deviceApp.preServerInit()
 
     chipAppServer = ChipAppServer()
+    
+    Timber.d("🚀 AUDITORÍA MATTER :: Fase 2: Ejecutando chipAppServer.startAppWithDelegate(). Se levanta la red.")
     chipAppServer?.startAppWithDelegate(
       object : ChipAppServerDelegate {
         override fun onCommissioningSessionStarted() {
@@ -242,148 +254,63 @@ constructor(
       }
     )
 
-    deviceApp.postServerInit(matterSettings.device.deviceTypeId.toInt())
+    val targetDeviceType = matterSettings.device.deviceTypeId.toInt()
+    Timber.d("🚀 AUDITORÍA MATTER :: Fase 3: Ejecutando deviceApp.postServerInit() para Device ID: 0x${targetDeviceType.toString(16).uppercase()}")
+    deviceApp.postServerInit(targetDeviceType)
   }
 
-//INSERT BEGIN
   /**
-  * Filtra dinámicamente qué clusters se permiten inicializar en base a la especificación Matter 1.6
-  */
+   * Filtra dinámicamente qué clústeres son válidos según las especificaciones de la librería Matter 1.6
+   */
   private fun isClusterValidForDevice(clusterId: Int, deviceTypeId: Int): Boolean {
-      // Definición de los Cluster Requirements obligatorios de cada Device Type IDs según la librería de dispositivos de Matter 1.6
-      // https://leconiot.com/matter/1.0/device_library.html
-	  return when (deviceTypeId) {
-          
-          // =================================================================
-          // ILUMINACIÓN Y ACTUADORES (Lighting & Actuators)
-          // =================================================================
-          0x0100 -> { // On/Off Light
-              clusterId == Clusters.ClusterId_OnOff 
-          }
-          0x0101 -> { // Dimmable Light
-              clusterId == Clusters.ClusterId_OnOff || 
-              clusterId == Clusters.ClusterId_LevelControl
-          }
-          0x010C -> { // Color Temperature Light
-              // clusterId == Clusters.ClusterId_Groups ||			 // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster) 
-			  // clusterId == Clusters.ClusterId_Scenes ||           // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster)
-              clusterId == Clusters.ClusterId_OnOff ||
-              clusterId == Clusters.ClusterId_LevelControl || 
-              clusterId == Clusters.ClusterId_ColorControl
-          }
-          0x010D -> { // Extended Color Light (ExtendedColorLight)   
-              // clusterId == Clusters.ClusterId_Groups ||			 // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster) 
-			  // clusterId == Clusters.ClusterId_Scenes ||           // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster)
-              clusterId == Clusters.ClusterId_OnOff || 
-              clusterId == Clusters.ClusterId_LevelControl || 
-              clusterId == Clusters.ClusterId_ColorControl
-			  
-          }
-  
-          // =================================================================
-          // INTERRUPTORES Y CONTROLADORES (Switches & Controllers)
-          // Nota: Los controladores suelen usar estos clusters como *Clients*, 
-          // pero si tu dispositivo virtual expone atributos locales (Server), 
-          // se restringen a su respectivo nivel de control.
-          // =================================================================
-          0x0103 -> { // On/Off Light Switch   ( OnOffLightSwitch )
-		      // Aunque el ID sea de un interruptor simple, le permitimos adquirir el LevelControl		  
-              clusterId == Clusters.ClusterId_OnOff ||
-			  clusterId == Clusters.ClusterId_LevelControl           // Adicionado para probar sin añadir el dispositivo
-          }
-          0x0104 -> { // Dimmer Switch         ( DimmerSwitch )
-              clusterId == Clusters.ClusterId_OnOff || 
-              clusterId == Clusters.ClusterId_LevelControl
-          }
-          0x0105 -> { // Color Dimmer Switch 
-              clusterId == Clusters.ClusterId_OnOff || 
-              clusterId == Clusters.ClusterId_LevelControl || 
-              clusterId == Clusters.ClusterId_ColorControl
-          }
-  
-          // =================================================================
-          // CLIMATIZACIÓN Y CONFORT (HVAC / Smart Energy)
-          // =================================================================
-          0x0301 -> { // Thermostat            ( Thermostat ) 
-              clusterId == Clusters.ClusterId_Thermostat || 
-              clusterId == Clusters.ClusterId_TemperatureMeasurement
-          }
-          0x0302 -> { // Fan Control 
-              clusterId == Clusters.ClusterId_OnOff || 
-              clusterId == Clusters.ClusterId_FanControl
-          }
-  
-          // =================================================================
-          // CIERRES Y ACCESOS (Closures)
-          // =================================================================
-          0x000A -> { // Door Lock             ( DoorLock )          // Cerradura inteligente
-              clusterId == Clusters.ClusterId_DoorLock
-          }
-          0x0202 -> { // Window Covering       ( WindowCovering )    // Persianas / Cortinas motorizadas)
-              clusterId == Clusters.ClusterId_WindowCovering
-          }
-  
-          // =================================================================
-          // SENSORES (Sensors)
-          // =================================================================
-          0x0015 -> { // Contact Sensor        ( ContactSensor )
-              clusterId == Clusters.ClusterId_BooleanState           // Habitual en sensores binarios (FALSE=open or no contact /  TRUE=closed or contac)
-          }
-          0x0107 -> { // Occupancy Sensor      ( OccupancySensor )
-              clusterId == Clusters.ClusterId_OccupancySensing
-          }
-          0x030C -> { // Temperature Sensor
-              clusterId == Clusters.ClusterId_TemperatureMeasurement
-          }
-          0x030F -> { // Humidity Sensor
-              clusterId == Clusters.ClusterId_RelativeHumidityMeasurement
-          }
-  
-          // =================================================================
-          // DISPOSITIVOS MULTIMEDIA (Media / Video Player)
-          // =================================================================
-          0x0028 -> { // Basic Video Player    (VideoPlayer) // Smart TV / Smart Box
-		      clusterId == Clusters.ClusterId_OnOff ||
-			  clusterId == Clusters.ClusterId_MediaPlayback ||
-              clusterId == Clusters.ClusterId_KeypadInput
+    return when (deviceTypeId) {
+        // =================================================================
+        // INTERRUPTOR ON/OFF ESTÁNDAR (0x0103)
+        // =================================================================
+        0x0103 -> {
+            clusterId == Clusters.ClusterId_OnOff
+        }
 
-          }
-  
-          0x0023 -> { // Castin Video Player    (CastingVideoPlayer) // Smart TV (Streaming) / Smart Box (Streaming)
-		      clusterId == Clusters.ClusterId_OnOff ||
-			  clusterId == Clusters.ClusterId_MediaPlayback ||
-              clusterId == Clusters.ClusterId_KeypadInput
-              //clusterId == Clusters.ClusterId_ContentLauncher      // Es obligatorio pero NO esta previsto en la aplicación (NO hay Manager en app\core\data\repository\cluster)
-			  
-              //clusterId == Clusters.ClusterId_LowPower ||
-              //clusterId == Clusters.ClusterId_Channel  ||  
-              //clusterId == Clusters.ClusterId_WakeOnLan ||
-              //clusterId == Clusters.ClusterId_MediaInput			  
-          }
-	  
-		  
-          // =================================================================
-          // FILTRO COMPLEMENTARIO (Fallback / Default)
-          // =================================================================
-          else -> {
-              // Clusters transversales a todos los dispositivos en Matter (ej: Infraestructura)
-              val isInfrastructureCluster = clusterId == Clusters.ClusterId_NetworkCommissioning || 
-                                            clusterId == Clusters.ClusterId_PowerSource
-              
-              if (isInfrastructureCluster) {
-                  true
-              } else {
-                  // Si añades prototipos dinámicos custom no mapeados arriba, 
-                  // Timber registrará una alerta para que decidas si bloquearlo o no.
-                  Timber.w("DeviceType desconocido ($deviceTypeId). Permitiendo cluster $clusterId de forma preventiva.")
-                  true 
-              }
-          }
-      }
+        // =================================================================
+        // MAPEO DEL POOL DINÁMICO (Resto del catálogo del proyecto)
+        // =================================================================
+        0x0100 -> clusterId == Clusters.ClusterId_OnOff // On/Off Light
+        0x0101 -> clusterId == Clusters.ClusterId_OnOff || clusterId == Clusters.ClusterId_LevelControl // Dimmable Light
+        0x010C, 0x010D -> { // Color Temperature & Extended Color Light
+            clusterId == Clusters.ClusterId_OnOff || 
+            clusterId == Clusters.ClusterId_LevelControl || 
+            clusterId == Clusters.ClusterId_ColorControl
+        }
+        0x0301 -> clusterId == Clusters.ClusterId_Thermostat || clusterId == Clusters.ClusterId_TemperatureMeasurement // Thermostat
+        0x0202 -> clusterId == Clusters.ClusterId_WindowCovering // Window Covering
+        0x000A -> clusterId == Clusters.ClusterId_DoorLock // Door Lock
+        0x0015 -> clusterId == Clusters.ClusterId_BooleanState // Contact Sensor
+        0x0106 -> clusterId == Clusters.ClusterId_OccupancySensing // Occupancy Sensor
+        0x0028 -> { // Video Player / Smart TV
+            clusterId == Clusters.ClusterId_KeypadInput ||
+            clusterId == Clusters.ClusterId_WakeOnLan ||
+            clusterId == Clusters.ClusterId_MediaInput ||
+            clusterId == Clusters.ClusterId_ContentLauncher ||
+            clusterId == Clusters.ClusterId_LowPower ||
+            clusterId == Clusters.ClusterId_MediaPlayback ||
+            clusterId == Clusters.ClusterId_Channel
+        }
+
+        // =================================================================
+        // INFRAESTRUCTURA GENERAL REQUERIDA (Siempre activos)
+        // =================================================================
+        else -> {
+            val isInfrastructureCluster = clusterId == Clusters.ClusterId_NetworkCommissioning || 
+                                          clusterId == Clusters.ClusterId_PowerSource
+            if (isInfrastructureCluster) {
+                true
+            } else {
+                Timber.w("DeviceType secundario no indexado ($deviceTypeId). Permitiendo cluster $clusterId preventivamente.")
+                false
+            }
+        }
+    }
   }
-
-//INSERT END
-
 
   fun stop() {
     chipAppServer?.stopApp()
@@ -394,17 +321,17 @@ constructor(
   }
 
   fun addDeviceEventCallback(deviceEventCallback: MatterDeviceEventCallback) {
-    Timber.d("Hit")
+    Timber.d("Hit - ORI")
     if (!this.deviceEventCallbackList.contains(deviceEventCallback)) {
-      Timber.d("Add")
+      Timber.d("Add - ORI")
       this.deviceEventCallbackList.add(deviceEventCallback)
     }
   }
 
   fun removeDeviceEventCallback(deviceEventCallback: MatterDeviceEventCallback) {
-    Timber.d("Hit")
+    Timber.d("Hit ORI")
     if (this.deviceEventCallbackList.contains(deviceEventCallback)) {
-      Timber.d("Remove")
+      Timber.d("Remove - ORI")
       this.deviceEventCallbackList.remove(deviceEventCallback)
     }
   }
