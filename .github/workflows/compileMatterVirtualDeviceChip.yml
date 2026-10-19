@@ -10,9 +10,9 @@ on:
         required: false
         type: boolean
         default: false  
-  push:              # y tb se dispara automáticamente al modificar el script
-    paths:
-      - 'Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh' 
+#  push:              # y tb se dispara automáticamente al modificar el script
+#    paths:
+#      - 'Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh' 
 
 
 # =========================================================================
