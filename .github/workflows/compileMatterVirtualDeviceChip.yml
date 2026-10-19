@@ -10,9 +10,9 @@ on:
         required: false
         type: boolean
         default: false  
-#  push:              # y tb se dispara automáticamente al modificar el script
-#    paths:
-#      - 'Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh' 
+  #push:              # y tb se dispara automáticamente al modificar el script
+  #  paths:
+  #    - 'Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh' 
 
 
 # =========================================================================
@@ -52,10 +52,10 @@ jobs:
           python-version: '3.11'
 
       # 4. Dependencias nativas de Ubuntu necesarias para compilar Matter
-      - name: Install System Dependencies
+      - name: Install Ubuntu Dependencies in the Runner
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config ninja-build libglib2.0-dev libdbus-1-dev git unzip curl file
+          sudo apt-get install -y build-essential pkg-config ninja-build libglib2.0-dev libdbus-1-dev git unzip curl file dos2unix
 
       # 5. Aceptar licencias e instalar SDK de Android Platform 26
       - name: Setup Android SDK 26
@@ -149,7 +149,7 @@ jobs:
           cd matter-sdk
           git submodule update --init --recursive --depth 1
           
-      ## 11. Ejecución directa y lineal del script de compilación
+      ## Ejecución directa y lineal del script de compilación
       #- name: Run Matter Compilation Script
       #  shell: bash
       #  env:
@@ -165,7 +165,7 @@ jobs:
       #    # Ejecución directa del proceso de compilación
       #    ./build_Matter_Virtual_Device_CHIP.sh
           
-          
+       
           
       # =========================================================================
       # MOTOR NATIVO DE COMPILACIÓN DINÁMICA CON CAPACIDAD DE ESCUCHA EN VIVO
@@ -222,9 +222,13 @@ jobs:
             SCRIPT_SOURCE="Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh"
             SCRIPT_TARGET="matter-sdk/build_Matter_Virtual_Device_CHIP.sh"
 
-            if [ -f "$SCRIPT_SOURCE" ]; then
-              # 🔥 LIMPIEZA PREVENTIVA DESDE EL YAML ANTES DE ARRANCAR EL SCRIPT
-              dos2unix "$SCRIPT_SOURCE" || sed -i 's/\r$//' "$SCRIPT_SOURCE"
+            if [ -f "$SCRIPT_SOURCE" ]; then            
+              # 🔥 Limpiar los caracteres de retorno de linea de Windows en el Script antes de arrancarlo
+              # Si dos2unix falla, ejecuta el sed de Linux sin abortar el workflow (se prefiee dos2unix porque guarda el cambio en disco)
+              dos2unix "$SCRIPT_SOURCE" 2>/dev/null || sed -i 's/\r$//' "$SCRIPT_SOURCE" || true
+              
+              # 🔥 BLINDAJE DE RUTA: Forzamos la creación de la carpeta por si acaso el Checkout del SDK de Matter falló o nos lo saltamos 
+              mkdir -p matter-sdk
               
               # Copiamos el script protegiendo el flujo
               cp -f "$SCRIPT_SOURCE" "$SCRIPT_TARGET"
@@ -335,11 +339,6 @@ jobs:
           path: |
             matter-sdk/examples/virtual-device-app/android/App/app/libs/*.jar
           compression-level: 3
-
-
-
-
-
 
 
 
