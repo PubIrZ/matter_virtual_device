@@ -93,7 +93,7 @@ jobs:
           # 'corretto' (Amazon), 'microsoft' o 'liberica'.
           # =====================================================================          
           distribution: 'temurin'
-          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
+          #cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
           
           
       # 8. Parche de los enlaces simbólicos para el NDK r25c, para asegurar la compatibilidad con Matter 1.3
@@ -138,6 +138,7 @@ jobs:
 
       # 10. Descarga del SDK del proyecto CHIP (Matter) Oficial, brach 1.3
       - name: Checkout Upstream SDK Matter brach 1.3
+        if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
         run: |
           PATH_project="/project-chip/connectedhomeip.git"
           URL_github="https://github.com${PATH_project}"
