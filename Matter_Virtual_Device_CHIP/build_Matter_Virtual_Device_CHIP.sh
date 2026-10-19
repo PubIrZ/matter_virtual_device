@@ -138,6 +138,14 @@ echo ""
 echo "========================================================================="
 
 # =========================================================================
+# 🧹 LIMPIEZA ATÓMICA DE CÓDIGO FUENTE (EVITA ACUMULACIÓN ENTRE INTENTOS DEL BUCLE)
+# =========================================================================
+echo "INFRA: Limpiando parches de texto residuales del intento de compilación anterior..."
+# Forzamos a Git a restaurar cualquier BUILD.gn alterado en el SDK de Matter antes de aplicar los nuevos sed
+git reset --hard HEAD --quiet || true
+git clean -fd --quiet || true
+
+# =========================================================================
 # 🔥 LIMPIEZA CONDICIONAL DE CACHÉ LOCAL (ANTES DE COMPILAR / ACTIVAR)
 # Nota: No afecta scripts/activate.sh (el script de activación de Matter, ya que
 #       Pigweed no guarda su entorno dentro de out/)
@@ -211,6 +219,54 @@ find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
 echo "INFRA: Ninja reanudará la compilación de forma incremental..."
 #ninja -C out/virtual-device-app
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
+
+# =========================================================================
+# 📊 TELEMETRÍA AVANZADA: COMPARATIVA DE TÉCNICAS DE EXTRACCIÓN DE REQUISITOS
+# =========================================================================
+echo ""
+# 1. Definimos y creamos de forma segura la ruta destino mapeada en el upload-artifact de tu YAML
+REPORT_TARGET_DIR="examples/virtual-device-app/android/App/app/build/outputs/reports"
+mkdir -p "$REPORT_TARGET_DIR"
+
+echo "========================================================================="
+echo "🔬 TÉCNICA 1: ANALIZADOR DE DEPENDENCIAS ATÓMICAS DE GN (NINJA MAP)"
+echo "========================================================================="
+if [ -d "out" ]; then
+    # Escaneamos los mapas .ninja.d, filtramos rutas relativas, limpiamos nombres de archivos
+    # y ordenamos de forma única para obtener la huella dactilar exacta del compilador.
+    find out/ -name "*.ninja.d" -exec cat {} + 2>/dev/null | \
+    tr ' ' '\n' | \
+    grep -v '^out/' | \
+    grep '/' | \
+    sed 's|/[^/]*$||' | \
+    sort -u > "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || true
+
+    echo "🎯 TÉCNICA 1: Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" 2>/dev/null || echo '0') carpetas críticas en el SDK."
+    echo "📋 El reporte físico se ha guardado en: $REPORT_TARGET_DIR/carpetas_esenciales_gn.txt"
+    echo "Top 20 carpetas indispensables leídas:"
+    echo "-------------------------------------------------------------------------"
+    head -n 20 "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || echo "⚠️ Archivo vacío."
+else
+    echo "❌ Error: La carpeta out/ no existe. GN no generó mapas de compilación."
+fi
+echo "========================================================================="
+echo ""
+
+echo "============================================================================"
+echo "📂 TÉCNICA 2: CARPETAS FUENTE DEL SDK MODIFICADAS POR PARCHES SED (GIT STATUS)"
+echo "============================================================================"
+# Preguntamos a Git qué directorios contienen archivos modificados "al vuelo" por los sed de nuestra compilación
+git status --porcelain 2>/dev/null | grep "M " | awk '{print $2}' | sed 's|/[^/]*$||' | sort -u > "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" || true
+
+echo "🎯 TÉCNICA 2: Localizadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" 2>/dev/null || echo '0') carpetas parchadas por sed."
+echo "📋 El reporte físico se ha guardado en: $REPORT_TARGET_DIR/carpetas_modificadas_git.txt"
+echo "Top 20 de carpetas modificadas por sed:"
+echo "-------------------------------------------------------------------------"
+head -n 20 "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" || echo "⚠️ Git no reporta archivos modificados."
+echo "========================================================================="
+echo ""
+
+
 
 # =========================================================================
 # 🚀 OPTIMIZACIÓN POST-COMPILACIÓN (LLVM-STRIP)
