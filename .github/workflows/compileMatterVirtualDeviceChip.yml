@@ -1,0 +1,340 @@
+name: Build Matter Virtual Device Chip Project Branch 1.3 - (Iterativo)
+# JDK 11 & NDK 23.2.8568313 (r23c)
+
+
+on:
+  workflow_dispatch: # Permite ejecución manual
+    inputs:
+      clear_cache:
+        description: 'Marcar para FORZAR el borrado de la caché y compilar en limpio desde cero'
+        required: false
+        type: boolean
+        default: false  
+  push:              # y tb se dispara automáticamente al modificar el script
+    paths:
+      - 'Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh' 
+
+
+# =========================================================================
+# PARAMETROS FIJOS PERSISTENTES (VARIABLES DE ENTORNO GLOBALES)
+# Centralizamos aquí los parámetros que cambies rara vez y viajen en el código.
+# Variable env, se ven en todos los steps del script
+# =========================================================================
+#env:
+#  SKIP_JDK_VERSION_CHECK: "true"           # sdkmanager ignorará que estás en JDK 11 y procederá a aceptar las licencias
+#                                           # de tu SDK Platform 26 de forma limpia   
+                                           
+                                           
+jobs:
+  build_Matter_Virtual_Device_Chip:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout selectivo: Descarga solo el script sh de tu repositorio para ahorrar tiempo
+      - name: Checkout Local Compilation Script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh
+          sparse-checkout-cone-mode: false
+
+      # 2. Descarga del SDK de Matter Oficial
+      - name: Checkout Upstream Matter SDK
+        run: |
+          PATH_project="/project-chip/connectedhomeip.git"
+          URL_github="https://github.com${PATH_project}"
+          echo "INFRA: Descargando el SDK de Project-CHIP v1.3 desde la ruta: ${URL_github}"
+          
+          # Clonamos de forma aislada en una subcarpeta privada para proteger el script de compilación
+          git clone --depth 1 --branch v1.3-branch "${URL_github}" matter-sdk
+          cd matter-sdk
+          git submodule update --init --recursive --depth 1
+
+      # 3. Configuración del entorno (Java 17 recomendado para herramientas Android modernas y Gradle)
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 4. Configuración del Android NDK r25c requerido
+      - name: Set up Android NDK r25c
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: 'r25c'
+
+      # 5. Configuración de Python estable para los scripts de compilación de Matter
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 6. Dependencias del sistema necesarias para compilar Matter
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config ninja-build libglib2.0-dev libdbus-1-dev git unzip curl file
+
+      # 7. Aceptar licencias e instalar SDK de Android Platform 26
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          # IMPORTANTE: Se usa barra (/) en lugar de punto y coma (;)
+          packages: 'platforms/android-26' 
+          #packages: platforms;android-26
+
+      # -------------------------------------------------------------------
+      # PASO 4: DOWNGRADE SEGURO A JAVA JDK 11 (TU ENTORNO REQUERIDO)
+      # Modificamos el entorno de la máquina virtual para restaurar Java 11.
+      # Activamos aquí tu caché condicional para agilizar tus futuros builds.
+      # -------------------------------------------------------------------
+      - name: Configurar Java JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          # =======================================================================
+          # NOTA ARQUITECTURA DISTRIBUCIÓN:
+          # Elegimos 'temurin' (Eclipse Adoptium) por ser la distribución recomendada
+          # de GitHub para la action 'setup-java', ya que con ella la caché de Gradle se
+          # integra de forma nativa con esta distribución. 
+          #
+          # Alternativas válidas si Gradle da errores heredados de compatibilidad: 
+          # 'zulu' (Azul Systems, recomendada para entornos Android clásicos),
+          # 'corretto' (Amazon), 'microsoft' o 'liberica'.
+          # =====================================================================          
+          distribution: 'temurin'
+          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
+          
+          
+      # 8. Parche estructural del NDK para compatibilidad con Matter 1.3
+      - name: Patch NDK Directory Structure
+        run: |
+          echo "=== PATCH NDK DIRECTORY TREE FOR LIBC++ ==="
+          NDK_PATH="${{ steps.setup-ndk.outputs.ndk-path }}"
+          
+          # In NDK versions r23 through r25, Google changed how the NDK layout handles the Shared C++ runtime library (libc++_shared.so).
+          # 1. Recreamos la ruta física esperada por el viejo script de Matter 1.3's build system     
+          TARGET_STL_DIR_32="$NDK_PATH/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a"
+          TARGET_STL_DIR_64="$NDK_PATH/sources/cxx-stl/llvm-libc++/libs/arm64-v8a"
+          mkdir -p "$TARGET_STL_DIR_32"
+          mkdir -p "$TARGET_STL_DIR_64"
+          
+          # 2. Localizamos la ruta real donde el NDK r25 aloja el archivo binario nativo libc++_shared.so
+          REAL_SO_32="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi/libc++_shared.so"
+          REAL_SO_64="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so"
+          
+          # 3. Forzamos enlaces simbólicos cruzados (Symlinks) para engañar al motor de Ninja
+          ln -s "$REAL_SO_32" "$TARGET_STL_DIR_32/libc++_shared.so"
+          ln -s "$REAL_SO_64" "$TARGET_STL_DIR_64/libc++_shared.so"
+          echo "SUCCESS: Enlaces simbólicos de libc++_shared.so creados con éxito."
+          
+      # 9. Inyección y configuración de la herramienta ZAP de Matter
+      - name: Inject Pre-built ZAP Tools
+        run: |
+          ZAP_ASSET="/project-chip/zap/releases/download/v2024.03.29/zap-linux-x64.zip"
+          curl -L --retry 5 --retry-delay 5 --fail "https://github.com${ZAP_ASSET}" -o zap.zip        
+
+          sudo mkdir -p /usr/local/share/zap
+          sudo unzip -o -q zap.zip -d /usr/local/share/zap
+          if [ -d "/usr/local/share/zap/zap-linux-x64" ]; then
+              sudo cp -r /usr/local/share/zap/zap-linux-x64/* /usr/local/share/zap/
+              sudo rm -rf /usr/local/share/zap/zap-linux-x64
+          fi
+          sudo ln -sf /usr/local/share/zap/zap-cli /usr/local/bin/zap-cli
+          sudo ln -sf /usr/local/share/zap/zap-cli /usr/local/bin/zap
+          sudo chmod +x /usr/local/bin/zap*
+          if [ -f "matter-sdk/scripts/setup/zap.json" ]; then echo '{"packages": []}' > matter-sdk/scripts/setup/zap.json; fi
+          echo "ZAP_INSTALL_PATH=/usr/local/bin" >> $GITHUB_ENV
+
+      ## 10. Ejecución directa y lineal del script de compilación
+      #- name: Run Matter Compilation Script
+      #  shell: bash
+      #  env:
+      #    ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+      #    ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      #    ZAP_INSTALL_PATH: /usr/local/bin
+      #  run: |
+      #    # Copiar el script descargado hacia el SDK de Matter
+      #    cp -f Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh matter-sdk/
+      #    cd matter-sdk
+      #    chmod +x build_Matter_Virtual_Device_CHIP.sh
+      #    
+      #    # Ejecución directa del proceso de compilación
+      #    ./build_Matter_Virtual_Device_CHIP.sh
+          
+          
+          
+      # =========================================================================
+      # 3. MOTOR NATIVO DE COMPILACIÓN DINÁMICA CON CAPACIDAD DE ESCUCHA EN VIVO
+      # =========================================================================
+      - name: Run Infinite Loop Compiler with Git Polling (Direct Native Host)
+        shell: bash
+        env:
+          #ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          #ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          #ANDROID_HOME: ${{ steps.setup-android.outputs.sdk-path }}
+          #ZAP_INSTALL_PATH: /usr/local/bin
+          #GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ## 🔥 PASAMOS EL FLAG DE LIMPIEZA AL ENTORNO DEL BUCLE PARA QUE LO PUEDA LEER EL SCRIPT
+          #FORCE_CLEAR_CACHE: ${{ github.event.inputs.clear_cache }} 
+          ## 🔥 INYECCIÓN DE LAS VARIABLES DE ENTORNO DE GITHUB PARA QUE LAS PUEDA LEER EL SCRIPT
+          #GITHUB_WORKSPACE: ${{ github.workspace }}
+          #GITHUB_REPOSITORY: ${{ github.repository }}
+          #GITHUB_REF_NAME: ${{ github.ref_name }}
+          #GITHUB_SHA: ${{ github.sha }}
+          #GITHUB_RUN_ID: ${{ github.run_id }}
+          # Solo pasamos a través de env las variables de entorno que creamos CUSTOM aquí, el resto de 
+          # variable están ya en el environment del actions ($GITHUB_ENV) y se refrescan
+          # en el propio script sh de compilación en cada ejecución del bucle.         
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_CLEAR_CACHE: ${{ github.event.inputs.clear_cache }}                    
+        run: |
+          # 1. Configuración de Git en el host runner para evitar bloqueos y fallos de identidad
+          git config --global --add safe.directory "${{ github.workspace }}"
+          git config --global user.name "GitHub Actions Debugger"
+          git config --global user.email "actions@github.com"
+          
+          # Guardamos el Hash del commit actual con el que arrancó el pipeline nativo
+          LAST_HASH=$(git rev-parse HEAD)
+          echo "INFRA NATIVA: Monitor activo. Commit inicial: $LAST_HASH"
+
+          # Contrador de seguridad para evitar consumir las 6 horas si olvidas apagarlo (Límite: ~2 horas)
+          MAX_ATTEMPTS=500 
+          ATTEMPT_COUNT=0
+
+          # =========================================================================
+          # BUCLE DE CONTROL PRINCIPAL (Mantiene la máquina virtual viva en el host)
+          # =========================================================================
+          while [ $ATTEMPT_COUNT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT_COUNT=$((ATTEMPT_COUNT + 1))
+            
+            echo "================================================================================================"
+            echo "INFRA NATIVA: (Intento $ATTEMPT_COUNT) Sincronizando script y lanzando compilación..."
+            echo "================================================================================================"
+            
+            # Aseguramos estar en la raíz del espacio de trabajo de GitHub
+            cd "${{ github.workspace }}"
+            
+            # Buscamos el script utilizando la ruta exacta del sparse-checkout
+            SCRIPT_SOURCE="Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh"
+            SCRIPT_TARGET="matter-sdk/build_Matter_Virtual_Device_CHIP.sh"
+
+            if [ -f "$SCRIPT_SOURCE" ]; then
+              # 🔥 LIMPIEZA PREVENTIVA DESDE EL YAML ANTES DE ARRANCAR EL SCRIPT
+              dos2unix "$SCRIPT_SOURCE" || sed -i 's/\r$//' "$SCRIPT_SOURCE"
+              
+              # Copiamos el script protegiendo el flujo
+              cp -f "$SCRIPT_SOURCE" "$SCRIPT_TARGET"
+              
+              # Entramos a la carpeta aislada del SDK de Matter para ejecutar el script nativamente
+              cd matter-sdk
+              chmod +x build_Matter_Virtual_Device_CHIP.sh
+
+              echo "Executing: ./build_Matter_Virtual_Device_CHIP.sh"
+              # Ejecutamos tu script de compilación nativo directo en el host
+              if ./build_Matter_Virtual_Device_CHIP.sh; then
+                echo "SUCCESS: ¡Compilación nativa completada con éxito rotundo!"
+                break # Rompe el bucle infinito principal y pasa al paso final de subir los artefactos
+              else
+                echo "❌ ERROR: La compilación nativa ha fallado en algún punto del proceso."
+              fi
+            else
+              echo "❌ ERROR CRÍTICO: No se encontró el script en '$SCRIPT_SOURCE'."
+              echo "Verifica que la estructura de carpetas en tu PC sea exactamente esa."
+            fi
+
+            echo "====================================================================================================="
+            echo "📡 MODO ESCUCHA NATIVO ACTIVO: Modifica tu script build en tu PC, haz commit y ejecuta 'git push'."
+            echo "La máquina virtual de GitHub se quedará esperando tus cambios en vivo..."
+            echo "====================================================================================================="
+
+            # Volvemos a la raíz del repositorio propio para poder escuchar las actualizaciones de Git
+            cd "${{ github.workspace }}"
+
+            # BUCLE SECUNDARIO DE ESCUCHA POR RED (Monitorea cambios en GitHub cada 20 segundos para mitigar Rate Limiting)
+            while true; do
+              sleep 20
+              
+              # Consultamos a GitHub de forma silenciosa. Si falla por red, no detiene el pipeline.
+              git fetch --quiet origin || { echo "⚠️ Advertencia: Fallo temporal de red al hacer fetch. Reintentando..."; continue; }
+              NEW_HASH=$(git rev-parse origin/${{ github.ref_name }})
+
+              # Si los Hashes no coinciden, significa que hiciste un 'git push' desde tu computadora
+              if [ "$LAST_HASH" != "$NEW_HASH" ]; then
+                echo "🔔 ¡ALERTA NATIVA! Detectado nuevo cambio en tu repositorio."
+                echo "Descargando parche en caliente... (Commit anterior: $LAST_HASH -> Nuevo: $NEW_HASH)"
+                
+                # Descargamos los nuevos cambios forzando la sobreescritura local del runner
+                #git pull origin ${{ github.ref_name }} --quiet
+                git reset --hard origin/${{ github.ref_name }} --quiet
+                
+                # Actualizamos nuestro token de control para la siguiente vuelta del bucle
+                LAST_HASH=$NEW_HASH
+                break # Rompe este minibucle de espera y vuelve al inicio del bucle principal a compilar
+              fi
+            done
+          done
+          
+
+      # 11. EXTRACCIÓN Y SUBIDA COMPLETA DE TODO EL ENTORNO CONSTRUIDO (BUILD OUTPUT)
+      - name: Upload All Build Output Directory Structure
+        if: always()        # Sube los archivos incluso si el bucle se detiene manualmente o falla a medias
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-virtual-device-chip-all_outputs
+          path: |
+            matter-sdk/out/
+          include-hidden-files: true # Asegura que se incluyan archivos de configuración ocultos generados por GN/Ninja
+          compression-level: 6       # Balance óptimo entre velocidad de empaquetado y tamaño del archivo zip resultante
+
+      # 12. All Compilation Logs & Reports
+      - name: Upload All Compilation Logs & Reports
+        if: always()        # Sube los archivos incluso si el bucle se detiene manualmente o falla a medias    
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-virtual-device-chip-logs  # ZIP reports-and-compilacion-logs
+          path: |
+            **/build/reports/
+            **/build/outputs/logs/
+            **/build/outputs/reports/
+            **/build/outputs/mapping/
+          include-hidden-files: true # Asegura que se incluyan archivos de configuración ocultos generados por GN/Ninja
+          compression-level: 6       # Balance óptimo entre velocidad de empaquetado y tamaño del archivo zip resultante            
+          if-no-files-found: warn    # Avisará con un warning si no hay reports/logs
+          
+      # 13. Subida de las aplicaciones Android (.apk) resultantes
+      # Busca cualquier archivo .apk generado de forma recursiva en el proyecto.
+      # Se ejecuta solo si la compilación tuvo éxito (success).      
+      - name: Upload Only Apps (.apk)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-virtual-device-chip-apk  # ZIP app-virtual-device-apk
+          path: "**/*.apk"
+          
+      # 14. Subida de las librerías nativas (.so) resultantes
+      - name: Upload Only Native Libraries (.so)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matter-only-native-libs
+          path: |
+            matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a/*.so
+            matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/arm64-v8a/*.so
+          compression-level: 5
+
+      # 15. Subida de los archivos Java (.jar) generados
+      - name: Upload Only Core Java Jars (.jar)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matter-only-java-jars
+          path: |
+            matter-sdk/examples/virtual-device-app/android/App/app/libs/*.jar
+          compression-level: 3
+
+
+
+
