@@ -147,7 +147,7 @@ jobs:
 
       # 10a. Descarga del SDK del proyecto CHIP (Matter) Oficial, brach 1.3
       - name: Checkout Upstream SDK Matter brach 1.3
-        #if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
+        if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
         run: |
           PATH_project="/project-chip/connectedhomeip.git"
           URL_github="https://github.com${PATH_project}"
