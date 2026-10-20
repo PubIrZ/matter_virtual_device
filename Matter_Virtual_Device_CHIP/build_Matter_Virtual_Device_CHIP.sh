@@ -64,15 +64,15 @@ echo ""
 echo "☕ VARIANTES DE ENTORNO JAVA (JDK MAP):"
 echo "-------------------------------------------------------------------------"
 echo "  ↳ CURRENT JAVA_HOME: ${JAVA_HOME:-'❌ NO DETECTADA'}"
-echo "  ↳ JAVA_11_HOME_X64 : ${JAVA_11_HOME_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
-echo "  ↳ JAVA_17_HOME_X64 : ${JAVA_17_HOME_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
+echo "  ↳ JAVA_HOME_11_X64 : ${JAVA_HOME_11_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
+echo "  ↳ JAVA_HOME_17_X64 : ${JAVA_HOME_17_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
 
 # Mostrar versión física real apuntada por las variantes si existen
-if [ -n "$JAVA_11_HOME_X64" ] && [ -x "$JAVA_11_HOME_X64/bin/java" ]; then
-    echo "    ↳ Versión Real en Java 11 SDK: $($JAVA_11_HOME_X64/bin/java -version 2>&1 | head -n 1)"
+if [ -n "$JAVA_HOME_11_X64" ] && [ -x "$JAVA_HOME_11_X64/bin/java" ]; then
+    echo "    ↳ Versión Real en Java 11 SDK: $($JAVA_HOME_11_X64/bin/java -version 2>&1 | head -n 1)"
 fi
-if [ -n "$JAVA_17_HOME_X64" ] && [ -x "$JAVA_17_HOME_X64/bin/java" ]; then
-    echo "    ↳ Versión Real en Java 17 SDK: $($JAVA_17_HOME_X64/bin/java -version 2>&1 | head -n 1)"
+if [ -n "$JAVA_HOME_17_X64" ] && [ -x "$JAVA_HOME_17_X64/bin/java" ]; then
+    echo "    ↳ Versión Real en Java 17 SDK: $($JAVA_HOME_17_X64/bin/java -version 2>&1 | head -n 1)"
 fi
 echo ""
 
@@ -127,7 +127,7 @@ if [ -f "$CLANG_NDK" ]; then
 else
     echo "  ↳ NDK Clang    : ❌ Binario del compilador no hallado en la ruta del NDK"
 fi
-
+echo ""
 
 # 5. VARIABLES CUSTOM DE CONTROL
 echo "📂 VARIABLES CUSTOM DE CONTROL:"
