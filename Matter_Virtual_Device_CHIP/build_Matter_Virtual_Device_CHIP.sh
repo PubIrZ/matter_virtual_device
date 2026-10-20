@@ -159,6 +159,19 @@ else
     echo "⚡ INFRA: Manteniendo carpeta 'out/' para permitir compilación incremental rápida."
 fi
 
+
+# =========================================================================
+# ¡EL PARCHE CLAVE AN_TI-CIPD DE CONFIGURACIÓN NEUTRALIZADA!
+# Vaciar zap.json para que CIPD ignore su  intento de descarga
+# =========================================================================
+echo "INFRA: Neutralizando configuraciones JSON rígidas de CIPD para ZAP..."
+if [ -f "scripts/setup/zap.json" ]; then
+    echo '{"packages": []}' > scripts/setup/zap.json
+fi
+find . -name "zap.json" -exec sh -c 'echo "{\"packages\": []}" > "{}"' \;
+
+echo "INFRA: Archivos zap.json vaciados con éxito. CIPD ignorará la descarga de red."
+
 # =========================================================================
 # INICIALIZACIÓN DEL ENTORNO DE COMPILACIÓN DE MATTER
 # =========================================================================
