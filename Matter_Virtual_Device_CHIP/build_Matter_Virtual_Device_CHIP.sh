@@ -253,28 +253,50 @@ find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 #
 #echo "INFRA: Parche inmutable de Kotlin inyectado. El compilador ignorará la firma 2.4.0."
 
-# =========================================================================
-# 🛡️ TUNING MAESTRO: EXPORTACIÓN UNIFICADA DE MEMORIA Y COMPILACIÓN GRADLE
-# =========================================================================
-echo "INFRA: Configurando topes de memoria JVM y supresores de metadatos de Kotlin..."
+# # =========================================================================
+# # 🛡️ TUNING MAESTRO: EXPORTACIÓN UNIFICADA DE MEMORIA Y COMPILACIÓN GRADLE
+# # =========================================================================
+# echo "INFRA: Configurando topes de memoria JVM y supresores de metadatos de Kotlin..."
+#
+# ## 1. Limpiamos cualquier residuo de texto previo de los sed anteriores en el SDK
+# #git reset --hard HEAD --quiet || true
+#
+# # 2. Bloqueamos alertas redundantes del motor de Kotlin
+# export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
+#
+# # 3. Forzamos límites globales en los hilos base de ejecución de Java (Bajo nivel)
+# export _JAVA_OPTIONS="-Xmx2048m -Xms512m -Dawt.useSystemAAFontSettings=gasp"
+#
+# # 4. 🔥 UNIFICACIÓN PERFECTA: Asignamos 2GB de RAM al demonio de Gradle Y 
+# #    pasamos los argumentos del compilador de Kotlin en un formato plano inmutable.
+# #    Esto detiene la recursión (Adiós StackOverflow) y acelera la compilación.
+# export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2048m -Dorg.jetbrains.kotlin.compiler.arguments='-Xskip-metadata-version-check -Xallow-no-source-files'"
+33
+# echo "INFRA: Entorno de memoria y compilación optimizado al 100%."
+# # =========================================================================
 
-## 1. Limpiamos cualquier residuo de texto previo de los sed anteriores en el SDK
-#git reset --hard HEAD --quiet || true
 
-# 2. Bloqueamos alertas redundantes del motor de Kotlin
+# =========================================================================
+# 🛡️ INTERCEPTOR DEFINITIVO: HARD-BINDING DE ARGUMENTOS DIRECTO EN GRADLEW
+# =========================================================================
+echo "INFRA: Purgando residuos e inyectando argumentos planos en el core de gradlew..."
+
+# Localizamos el script ejecutable gradlew del subproyecto Android App
+GRADLEW_FILE="examples/virtual-device-app/android/App/gradlew"
+
+if [ -f "$GRADLEW_FILE" ]; then
+    # Inyectamos los argumentos planos e inmutables directamente en la cabecera de ejecución de la JVM de gradlew.
+    # Esto blinda al demonio de Gradle contra StackOverflow y suprime el error de la firma de metadatos 2.4.0.
+    sed -i '/#!/a DEFAULT_JVM_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"' "$GRADLEW_FILE"
+    echo "INFRA: Parche atómico acoplado con éxito en $GRADLEW_FILE."
+else
+    echo "⚠️ ADVERTENCIA: No se encontró el archivo gradlew en la ruta esperada."
+fi
+
+# Bloqueamos alertas cosméticas redundantes del motor de Kotlin
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
-
-# 3. Forzamos límites globales en los hilos base de ejecución de Java (Bajo nivel)
-export _JAVA_OPTIONS="-Xmx2048m -Xms512m -Dawt.useSystemAAFontSettings=gasp"
-
-# 4. 🔥 UNIFICACIÓN PERFECTA: Asignamos 2GB de RAM al demonio de Gradle Y 
-#    pasamos los argumentos del compilador de Kotlin en un formato plano inmutable.
-#    Esto detiene la recursión (Adiós StackOverflow) y acelera la compilación.
-export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2048m -Dorg.jetbrains.kotlin.compiler.arguments='-Xskip-metadata-version-check -Xallow-no-source-files'"
-
-echo "INFRA: Entorno de memoria y compilación optimizado al 100%."
+export KOTLINC_ARGS="-nowarn"
 # =========================================================================
-
 
 
 # =========================================================================
