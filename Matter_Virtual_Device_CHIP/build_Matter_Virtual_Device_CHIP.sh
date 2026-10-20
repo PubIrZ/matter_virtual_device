@@ -210,6 +210,7 @@ find . -name "*.gni" -exec sed -i 's|"-Xlint:all",||g' {} +
 find . -name "*.gni" -exec sed -i 's|"-Xlint:all"||g' {} +
 
 # 🚀 ¡AÑADE ESTA NUEVA LÍNEA AQUÍ PARA CORREGIR EL ERROR DE JAVA 17!
+# Se elimina el flag obsoleto
 find . -name "gradle.properties" -exec sed -i 's|-XX:MaxPermSize=2048m||g' {} +
 
 # =========================================================================
@@ -225,87 +226,40 @@ export KOTLINC_ARGS="-nowarn"
 find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')\n    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
 find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 
-## =========================================================================
-## 🛡️ PARCHE CLAVE ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
-## =========================================================================
-#echo "INFRA: Inyectando supresores de versión de metadatos de Kotlin (-Xskip-metadata-version-check)..."
-#
-## Localizamos todos los archivos build.gradle del subproyecto Android y acoplamos el flag de escape
-#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/kotlinOptions {/a \        freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]' {} +
-#
-## Respaldo de seguridad directo para variantes que usen sintaxis de asignación clásica (=)
-#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i 's|freeCompilerArgs = |freeCompilerArgs = ["-Xskip-metadata-version-check", "-Xallow-no-source-files"] + |g' {} +
-#
-#echo "INFRA: Flags de supresión de Kotlin inyectados con éxito en el árbol App/."
 
+# ==========================================================================
+# 🛡️ PARCHEADO DEL FICHERO GRADLE gradle.propertie DE LA COMPILACION KOTLIN
+#    ANTI-STAKOVERFLOW Y ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
+# ==========================================================================
+echo "INFRA: Configurando argumentos en la ruta fija de gradle.properties..."
 
-## =========================================================================
-## 🛡️ PARCHE ANTI-STAKOVERFLOW Y VERSIONES DE KOTLIN METADATA!
-## =========================================================================
-#echo "INFRA: Aplicando supresores planos estables para evitar StackOverflow de Kotlin..."
-#
-## 1. Limpiamos cualquier rastro o intento previo de inyección acumulada en el bucle caliente
-#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/-Xskip-metadata-version-check/d' {} +
-#
-## 2. Forzamos una declaración plana inmutable dentro de los bloques kotlinOptions de forma limpia
-#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/kotlinOptions {/a \        freeCompilerArgs = ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]' {} +
-#
-#echo "INFRA: Parche inmutable de Kotlin inyectado. El compilador ignorará la firma 2.4.0."
+GRADLE_PROPERTIES="examples/virtual-device-app/android/App/gradle.properties"
 
-# # =========================================================================
-# # 🛡️ TUNING MAESTRO: EXPORTACIÓN UNIFICADA DE MEMORIA Y COMPILACIÓN GRADLE
-# # =========================================================================
-# echo "INFRA: Configurando topes de memoria JVM y supresores de metadatos de Kotlin..."
-#
-# ## 1. Limpiamos cualquier residuo de texto previo de los sed anteriores en el SDK
-# #git reset --hard HEAD --quiet || true
-#
-# # 2. Bloqueamos alertas redundantes del motor de Kotlin
-# export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
-#
-# # 3. Forzamos límites globales en los hilos base de ejecución de Java (Bajo nivel)
-# export _JAVA_OPTIONS="-Xmx2048m -Xms512m -Dawt.useSystemAAFontSettings=gasp"
-#
-# # 4. 🔥 UNIFICACIÓN PERFECTA: Asignamos 2GB de RAM al demonio de Gradle Y 
-# #    pasamos los argumentos del compilador de Kotlin en un formato plano inmutable.
-# #    Esto detiene la recursión (Adiós StackOverflow) y acelera la compilación.
-# export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2048m -Dorg.jetbrains.kotlin.compiler.arguments='-Xskip-metadata-version-check -Xallow-no-source-files'"
-33
-# echo "INFRA: Entorno de memoria y compilación optimizado al 100%."
-# # =========================================================================
+if [ -f "$GRADLE_PROPERTIES" ]; then
 
-
-# =========================================================================
-# 🛡️ INTERCEPTOR DEFINITIVO: HARD-BINDING DE ARGUMENTOS DIRECTO EN GRADLEW
-# =========================================================================
-echo "INFRA: Purgando residuos e inyectando argumentos planos en el core de gradlew..."
-
-# Localizamos el script ejecutable gradlew del subproyecto Android App
-GRADLEW_FILE="examples/virtual-device-app/android/App/gradlew"
-
-if [ -f "$GRADLEW_FILE" ]; then
-    # Inyectamos los argumentos planos e inmutables directamente en la cabecera de ejecución de la JVM de gradlew.
-    # Esto blinda al demonio de Gradle contra StackOverflow y suprime el error de la firma de metadatos 2.4.0.
-    sed -i '/#!/a DEFAULT_JVM_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"' "$GRADLEW_FILE"
-    echo "INFRA: Parche atómico acoplado con éxito en $GRADLEW_FILE."
+    # 🔥 En gradle.properties buscamos la línea original de -Xmx2048m Matter y concatenamos al final los flags:
+    #    -Xskip-metadata-version-check y -Xallow-no-source-files 
+	#    Esto blinda al demonio de Gradle contra los errores de la firma de metadatos 2.4.0 y el StackOverflow (detiene la recursión) 
+    sed -i 's|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
+    
+    echo "INFRA: -Xskip-metadata-version-check y -Xallow-no-source-files inyectados con éxito en $GRADLE_PROPERTIES."
 else
-    echo "⚠️ ADVERTENCIA: No se encontró el archivo gradlew en la ruta esperada."
+    echo "⚠️ ADVERTENCIA: No se localizó el archivo $GRADLE_PROPERTIES."
 fi
 
 # Bloqueamos alertas cosméticas redundantes del motor de Kotlin
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
 export KOTLINC_ARGS="-nowarn"
 # =========================================================================
-
+echo ""
 
 # =========================================================================
-#
+#  🛠️ REGENERAR LA ESTRUCTURA DE COMPILACIÓN (FUNDAMENTAL SI SE HIZO FORCE_CLEAR_CACHE (rm -rf out/))
 # =========================================================================
 echo "INFRA: Sincronizando árbol estructural de GN..."
-# 🛠️ 5. REGENERA LA ESTRUCTURA DE COMPILACIÓN SI SE HIZO FORCE_CLEAR_CACHE (rm -rf out/)
-#gn gen out/virtual-device-app \
-#  --args='target_os="android" target_cpu="arm" android_ndk_root="'$ANDROID_NDK_ROOT'" android_sdk_root="/usr/local/lib/android/sdk" chip_config_network_layer_ble=false treat_warnings_as_errors=false' \
-#  --root=examples/virtual-device-app/android/
+
+# ANDROID_HOME="/usr/local/lib/android/sdk" 
+# ANDROID_NDK_ROOT="/opt/hostedtoolcache/ndk/r25c/x64"
 
 gn gen out/virtual-device-app \
   --args='target_os="android" target_cpu="arm" android_ndk_root="'$ANDROID_NDK_ROOT'" android_sdk_root="'$ANDROID_HOME'" chip_config_network_layer_ble=false treat_warnings_as_errors=false' \
@@ -313,6 +267,7 @@ gn gen out/virtual-device-app \
   
 # Parches secundarios de seguridad de última capa sobre archivos de configuración JSON
 find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
+echo ""
 
 # =========================================================================
 # 🛡️ INTERCEPTOR EXCLUSIVO: PRE-ACEPTACIÓN DE LICENCIAS CON JAVA 17
@@ -335,22 +290,24 @@ else
     echo "⚠️ ADVERTENCIA: No se localizó la ruta de JAVA_HOME_17_X64 en el entorno."
 fi
 # =========================================================================
+echo ""
 
 echo "INFRA: Ninja reanudará la compilación de forma incremental..."
 #ninja -C out/virtual-device-app
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
-
-# =========================================================================
-# 📊 TELEMETRÍA AVANZADA: COMPARATIVA DE TÉCNICAS DE EXTRACCIÓN DE REQUISITOS
-# =========================================================================
 echo ""
+
+# =============================================================================
+# 📊 TELEMETRÍA AVANZADA: COMPARATIVA DE TÉCNICAS DE EXTRACCIÓN DE REQUISITOS
+# =============================================================================
+echo "INFRA: Descubrimiento de las carpetas de proyecto requeridas por la aplicación
 # 1. Definimos y creamos de forma segura la ruta destino mapeada en el upload-artifact de tu YAML
 REPORT_TARGET_DIR="examples/virtual-device-app/android/App/app/build/outputs/reports"
 mkdir -p "$REPORT_TARGET_DIR"
 
-echo "========================================================================="
-echo "🔬 TÉCNICA 1: ANALIZADOR DE DEPENDENCIAS ATÓMICAS DE GN (NINJA MAP)"
-echo "========================================================================="
+echo "  ========================================================================="
+echo "  🔬 DESCUBRIR 1: ANALIZADOR DE DEPENDENCIAS DE GN (NINJA MAP)"
+echo "  ========================================================================="
 if [ -d "out" ]; then
     # Escaneamos los mapas .ninja.d, filtramos rutas relativas, limpiamos nombres de archivos
     # y ordenamos de forma única para obtener la huella dactilar exacta del compilador.
@@ -361,31 +318,30 @@ if [ -d "out" ]; then
     sed 's|/[^/]*$||' | \
     sort -u > "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || true
 
-    echo "🎯 TÉCNICA 1: Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" 2>/dev/null || echo '0') carpetas críticas en el SDK."
-    echo "📋 El reporte físico se ha guardado en: $REPORT_TARGET_DIR/carpetas_esenciales_gn.txt"
-    echo "Top 20 carpetas indispensables leídas:"
+    echo "  🎯 Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" 2>/dev/null || echo '0') carpetas críticas en el SDK Matter."
+    echo   "📋 Report guardado en: $REPORT_TARGET_DIR/carpetas_esenciales_gn.txt"
+    echo "  Top 20 carpetas indispensables leídas:"
     echo "-------------------------------------------------------------------------"
-    head -n 20 "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || echo "⚠️ Archivo vacío."
+    head -n 20 "  $REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || echo "  ⚠️ Ninguna carpeta descubierta."
 else
-    echo "❌ Error: La carpeta out/ no existe. GN no generó mapas de compilación."
+    echo "  ❌ Error: La carpeta out/ no existe. GN no generó mapas de compilación."
 fi
 echo "========================================================================="
 echo ""
 
-echo "============================================================================"
-echo "📂 TÉCNICA 2: CARPETAS FUENTE DEL SDK MODIFICADAS POR PARCHES SED (GIT STATUS)"
-echo "============================================================================"
+echo "  ==========================================================================================="
+echo "  📂 DESCUBRIR 2: GIT STATUS: CARPETAS FUENTE DEL SDK MODIFICADAS POR PARCHEADO DE FICHEROS "
+echo "  ==========================================================================================="
 # Preguntamos a Git qué directorios contienen archivos modificados "al vuelo" por los sed de nuestra compilación
 git status --porcelain 2>/dev/null | grep "M " | awk '{print $2}' | sed 's|/[^/]*$||' | sort -u > "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" || true
 
-echo "🎯 TÉCNICA 2: Localizadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" 2>/dev/null || echo '0') carpetas parchadas por sed."
-echo "📋 El reporte físico se ha guardado en: $REPORT_TARGET_DIR/carpetas_modificadas_git.txt"
-echo "Top 20 de carpetas modificadas por sed:"
-echo "-------------------------------------------------------------------------"
-head -n 20 "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" || echo "⚠️ Git no reporta archivos modificados."
-echo "========================================================================="
+echo "  🎯 Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" 2>/dev/null || echo '0') carpetas parchadas por sed."
+echo "  📋 Report guardado en: $REPORT_TARGET_DIR/carpetas_modificadas_git.txt"
+echo "  Top 20 de carpetas modificadas por sed:"
+echo "  -------------------------------------------------------------------------"
+head -n 20 "  $REPORT_TARGET_DIR/carpetas_modificadas_git.txt" || echo "  ⚠️ Git no reporta archivos modificados."
+echo "  ========================================================================="
 echo ""
-
 
 
 # =========================================================================
