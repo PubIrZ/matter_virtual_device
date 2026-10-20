@@ -87,6 +87,7 @@ jobs:
       # Activamos aquí la caché condicional para agilizar tus futuros builds.
       # -------------------------------------------------------------------
       - name: Configurar Java JDK 11
+        if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
         uses: actions/setup-java@v4
         with:
           java-version: '11'
@@ -144,9 +145,9 @@ jobs:
           if [ -f "matter-sdk/scripts/setup/zap.json" ]; then echo '{"packages": []}' > matter-sdk/scripts/setup/zap.json; fi
           echo "ZAP_INSTALL_PATH=/usr/local/bin" >> $GITHUB_ENV
 
-      # 10. Descarga del SDK del proyecto CHIP (Matter) Oficial, brach 1.3
+      # 10a. Descarga del SDK del proyecto CHIP (Matter) Oficial, brach 1.3
       - name: Checkout Upstream SDK Matter brach 1.3
-        if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
+        #if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
         run: |
           PATH_project="/project-chip/connectedhomeip.git"
           URL_github="https://github.com${PATH_project}"
@@ -156,7 +157,30 @@ jobs:
           git clone --depth 1 --branch v1.3-branch "${URL_github}" matter-sdk
           cd matter-sdk
           git submodule update --init --recursive --depth 1
-          
+
+      # 10b. Downgrade seguro del sistema operativo a Java 11 (El entorno requerido para la compilación de Matter 1.3)
+      # Modificamos el entorno de la máquina virtual para restaurar Java 11.
+      # Activamos aquí la caché condicional para agilizar tus futuros builds.
+      # -------------------------------------------------------------------
+      - name: Configurar Java JDK 11
+        #if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          # =======================================================================
+          # NOTA ARQUITECTURA DISTRIBUCIÓN:
+          # Elegimos 'temurin' (Eclipse Adoptium) por ser la distribución recomendada
+          # de GitHub para la action 'setup-java', ya que con ella la caché de Gradle se
+          # integra de forma nativa con esta distribución. 
+          #
+          # Alternativas válidas si Gradle da errores heredados de compatibilidad: 
+          # 'zulu' (Azul Systems, recomendada para entornos Android clásicos),
+          # 'corretto' (Amazon), 'microsoft' o 'liberica'.
+          # =====================================================================          
+          distribution: 'temurin'
+          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
+
+                    
       ## Ejecución directa y lineal del script de compilación
       #- name: Run Matter Compilation Script
       #  shell: bash
