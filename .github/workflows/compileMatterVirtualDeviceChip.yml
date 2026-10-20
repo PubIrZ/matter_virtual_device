@@ -247,9 +247,10 @@ jobs:
           # en el propio script sh de compilación en cada ejecución del bucle.         
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE_CLEAR_CACHE: ${{ github.event.inputs.clear_cache }}  
-          # 🔥 Stops the authenticated CIPD download loop, forces Pigweed to accept 
-          # the pre-installed local ZAP installation binary.
-          PW_ZAP_CIPD_RELEASE: "skip"
+          # OJO: Se elimina PW_ZAP_CIPD_RELEASE, no estaá soportada por la version antigua de Pigweed que utilizamos
+          ## 🔥 Stops the authenticated CIPD download loop, forces Pigweed to accept 
+          ## the pre-installed local ZAP installation binary.
+          #PW_ZAP_CIPD_RELEASE: "skip"
         run: |
           # 1. Configuración de Git en el host runner para evitar bloqueos y fallos de identidad
           git config --global --add safe.directory "${{ github.workspace }}"
