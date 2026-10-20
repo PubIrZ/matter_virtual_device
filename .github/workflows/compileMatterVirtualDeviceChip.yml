@@ -158,6 +158,30 @@ jobs:
           cd matter-sdk
           git submodule update --init --recursive --depth 1
 
+
+
+      #- name: Install Missing Android 26 Platform SDK
+      #  run: |
+      #    yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null
+      #    $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-26"
+          
+      ## -------------------------------------------------------------------
+      ## 🔥 LICENSE PRE-ACCEPTANCE INTERCEPTOR (THE CRITICAL FIX)
+      ## Temporarily forces the Android sdkmanager to run under Java 17
+      ## to sign licenses before the system environment drops to Java 11.
+      ## -------------------------------------------------------------------
+      #- name: Pre-Accept Android SDK & NDK Licenses via Java 17
+      #  run: |
+      #    echo "=== PRE-ACCEPTING LICENSES USING JAVA 17 ==="
+      #    # Point the shell temporarily to the Java 17 runtime path
+      #    export JAVA_HOME="${{ env.JAVA_HOME_17_X64 }}"
+      #    export PATH="$JAVA_HOME/bin:$PATH"
+      #    
+      #    # Run the canonical acceptance sequence via the pre-installed tools
+      #    yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
+      #    echo "SUCCESS: Licenses mapped securely onto the disk."
+          
+
       # 10b. Downgrade seguro del sistema operativo a Java 11 (El entorno requerido para la compilación de Matter 1.3)
       # Modificamos el entorno de la máquina virtual para restaurar Java 11.
       # Activamos aquí la caché condicional para agilizar tus futuros builds.
