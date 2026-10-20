@@ -67,12 +67,20 @@ jobs:
           #packages: 'platforms/android-26' 
           packages: 'platforms;android-26'
 
-      # 6. Configuración del Android NDK r25c requerido (debe ir tras Setup Android SDK 26)
+      # 6a. Configuración del Android NDK r25c requerido (debe ir tras Setup Android SDK 26)
       - name: Setup Android NDK r25c
         id: setup-ndk     # id requerido para poder utilizar ${{ steps.setup-ndk.outputs.ndk-path }} para acceder a la ruta del NDK r25c 
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: 'r25c'
+          
+          
+      # 6b. Forzamos la escritura física de las variables en $GITHUB_ENV
+      # Al hacer esto, tu bucle 'while read' del script las imprimirá con la etiqueta [ENV LOAD] con total certeza.
+      - name: Force NDK Pointers into GITHUB_ENV Map
+        run: |
+          echo "ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV  
           
       # 7. Downgrade seguro del sistema operativo a Java 11 (El entorno requerido para la compilación de Matter 1.3)
       # Modificamos el entorno de la máquina virtual para restaurar Java 11.
@@ -138,7 +146,7 @@ jobs:
 
       # 10. Descarga del SDK del proyecto CHIP (Matter) Oficial, brach 1.3
       - name: Checkout Upstream SDK Matter brach 1.3
-        #if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
+        if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
         run: |
           PATH_project="/project-chip/connectedhomeip.git"
           URL_github="https://github.com${PATH_project}"
@@ -190,7 +198,10 @@ jobs:
           # variable están ya en el environment del actions ($GITHUB_ENV) y se refrescan
           # en el propio script sh de compilación en cada ejecución del bucle.         
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORCE_CLEAR_CACHE: ${{ github.event.inputs.clear_cache }}                    
+          FORCE_CLEAR_CACHE: ${{ github.event.inputs.clear_cache }}  
+          # 🔥 Stops the authenticated CIPD download loop, forces Pigweed to accept 
+          # the pre-installed local ZAP installation binary.
+          PW_ZAP_CIPD_RELEASE: "skip"
         run: |
           # 1. Configuración de Git en el host runner para evitar bloqueos y fallos de identidad
           git config --global --add safe.directory "${{ github.workspace }}"
@@ -339,6 +350,7 @@ jobs:
           path: |
             matter-sdk/examples/virtual-device-app/android/App/app/libs/*.jar
           compression-level: 3
+
 
 
 
