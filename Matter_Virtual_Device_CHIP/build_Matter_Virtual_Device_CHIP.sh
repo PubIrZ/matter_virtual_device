@@ -27,6 +27,11 @@ if [ -n "$GITHUB_ENV" ] && [ -f "$GITHUB_ENV" ]; then
     done < "$GITHUB_ENV"
 fi
 
+# 🔥 ANULACIÓN CRÍTICA ANTI-CRASH: Forzamos el borrado de la variable conflictiva
+# Esto evita que el validador estricto de Python de Pigweed aborte la compilación.
+unset PW_ZAP_CIPD_RELEASE
+export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
+
 # =========================================================================
 # ⚙️ CONTROL MANUAL DE CACHÉ LOCAL (COMENTAR / DESCOMENTAR SEGÚN NECESIDAD)
 # =========================================================================
