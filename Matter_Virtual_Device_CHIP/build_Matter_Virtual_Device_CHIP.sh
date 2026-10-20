@@ -5,7 +5,7 @@
 # =========================================================================
 
 # =========================================================================
-# ¡EL LIMPIADOR MAESTRO DE SALTOS DE LÍNEA DE WINDOWS (CRLF a LF)!
+# ¡CONVERTIR LOS SALTOS DE LÍNEA WINDOWS A LINUX (CRLF a LF)!
 # =========================================================================
 sed -i 's/\r$//' "$0" || true
 
@@ -209,8 +209,9 @@ find . -name "BUILD.gn" -exec sed -i 's|"-Xlint:all"||g' {} +
 find . -name "*.gni" -exec sed -i 's|"-Xlint:all",||g' {} +
 find . -name "*.gni" -exec sed -i 's|"-Xlint:all"||g' {} +
 
-# 🚀 ¡AÑADE ESTA NUEVA LÍNEA AQUÍ PARA CORREGIR EL ERROR DE JAVA 17!
-# Se elimina el flag obsoleto
+# 🚀 PARA PREVENIR ERROR EN JAVA 17! 
+# ( deprecated en Java 8 y eliminado por completo en Java 17)
+# Se elimina el flag obsoleto MaxPermSize de todo el árbol SDK Matter
 find . -name "gradle.properties" -exec sed -i 's|-XX:MaxPermSize=2048m||g' {} +
 
 # =========================================================================
@@ -237,11 +238,12 @@ GRADLE_PROPERTIES="examples/virtual-device-app/android/App/gradle.properties"
 
 if [ -f "$GRADLE_PROPERTIES" ]; then
 
-    # 🔥 En gradle.properties buscamos la línea original de -Xmx2048m Matter y concatenamos al final los flags:
+    # 🔥 En gradle.properties buscamos la línea original de jvmargs Matter y concatenamos al final los flags:
     #    -Xskip-metadata-version-check y -Xallow-no-source-files 
 	#    Esto blinda al demonio de Gradle contra los errores de la firma de metadatos 2.4.0 y el StackOverflow (detiene la recursión) 
-    sed -i 's|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
-    
+    #sed -i 's|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
+    sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
+	
     echo "INFRA: -Xskip-metadata-version-check y -Xallow-no-source-files inyectados con éxito en $GRADLE_PROPERTIES."
 else
     echo "⚠️ ADVERTENCIA: No se localizó el archivo $GRADLE_PROPERTIES."
@@ -300,8 +302,8 @@ echo ""
 # =============================================================================
 # 📊 TELEMETRÍA AVANZADA: COMPARATIVA DE TÉCNICAS DE EXTRACCIÓN DE REQUISITOS
 # =============================================================================
-echo "INFRA: Descubrimiento de las carpetas de proyecto requeridas por la aplicación
-# 1. Definimos y creamos de forma segura la ruta destino mapeada en el upload-artifact de tu YAML
+echo "INFRA: Descubrimiento de las carpetas de proyecto requeridas por la aplicación"
+# 1. Definimos y creamos de forma segura la ruta destino mapeada en el upload-artifact del YAML
 REPORT_TARGET_DIR="examples/virtual-device-app/android/App/app/build/outputs/reports"
 mkdir -p "$REPORT_TARGET_DIR"
 
@@ -322,9 +324,9 @@ if [ -d "out" ]; then
     echo   "📋 Report guardado en: $REPORT_TARGET_DIR/carpetas_esenciales_gn.txt"
     echo "  Top 20 carpetas indispensables leídas:"
     echo "-------------------------------------------------------------------------"
-    head -n 20 "  $REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || echo "  ⚠️ Ninguna carpeta descubierta."
+    head -n 20 "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" | sed 's/^/  /' || echo "  ⚠️ Ninguna carpeta descubierta."
 else
-    echo "  ❌ Error: La carpeta out/ no existe. GN no generó mapas de compilación."
+    echo "  ❌ Error: La carpeta out/ no existe. GN no generó mapa de compilación."
 fi
 echo "========================================================================="
 echo ""
@@ -333,13 +335,13 @@ echo "  ========================================================================
 echo "  📂 DESCUBRIR 2: GIT STATUS: CARPETAS FUENTE DEL SDK MODIFICADAS POR PARCHEADO DE FICHEROS "
 echo "  ==========================================================================================="
 # Preguntamos a Git qué directorios contienen archivos modificados "al vuelo" por los sed de nuestra compilación
-git status --porcelain 2>/dev/null | grep "M " | awk '{print $2}' | sed 's|/[^/]*$||' | sort -u > "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" || true
+git status --porcelain 2>/dev/null | grep "M " | awk '{print $2}' | sed 's|/[^/]*$||' | sort -u > "$REPORT_TARGET_DIR/carpetas_git_modificadas.txt" || true
 
-echo "  🎯 Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_modificadas_git.txt" 2>/dev/null || echo '0') carpetas parchadas por sed."
-echo "  📋 Report guardado en: $REPORT_TARGET_DIR/carpetas_modificadas_git.txt"
+echo "  🎯 Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_git_modificadas.txt" 2>/dev/null || echo '0') carpetas parchadas por sed."
+echo "  📋 Report guardado en: $REPORT_TARGET_DIR/carpetas_git_modificadas.txt"
 echo "  Top 20 de carpetas modificadas por sed:"
 echo "  -------------------------------------------------------------------------"
-head -n 20 "  $REPORT_TARGET_DIR/carpetas_modificadas_git.txt" || echo "  ⚠️ Git no reporta archivos modificados."
+head -n 20 "$REPORT_TARGET_DIR/carpetas_git_modificadas.txt" | sed 's/^/  /' || echo "  ⚠️ Git no reporta archivos modificados."
 echo "  ========================================================================="
 echo ""
 
