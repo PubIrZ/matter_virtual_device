@@ -35,7 +35,7 @@ export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 # ⚙️ CONTROL MANUAL DE CACHÉ LOCAL (COMENTAR / DESCOMENTAR SEGÚN NECESIDAD)
 # =========================================================================
 # Descomenta la siguiente línea para FORZAR la limpieza y ejecución en limpio:
-# FORCE_CLEAR_CACHE="true"
+FORCE_CLEAR_CACHE="true"
 
 # Si sigue comentada, heredará automáticamente el valor del botón web de GitHub:
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
@@ -182,6 +182,18 @@ echo "INFRA: Archivos zap.json vaciados con éxito. CIPD ignorará la descarga d
 echo "INFRA: Inicializando el entorno virtual aislado de Pigweed..."
 source scripts/activate.sh
 
+## ==========================================================================
+## 🛡️ Proteger la COMPILACION KOTLIN contra los errores de StackOverflow
+##    y la colision entre versiones del metadata de KOTLIN
+## ==========================================================================
+#  Configuramos los flags de JVM, separados por un espacio simple y sin 
+#  comillas dobles internas para evitar errores.
+export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
+
+echo "INFRA: Parche GRADLE_OPTS justo tras la activación de Pigweed."
+# =========================================================================
+echo ""
+
 # GN (Generate Ninja)
 echo ""
 if command -v gn >/dev/null 2>&1; then
@@ -215,43 +227,39 @@ find . -name "*.gni" -exec sed -i 's|"-Xlint:all"||g' {} +
 find . -name "gradle.properties" -exec sed -i 's|-XX:MaxPermSize=2048m||g' {} +
 
 # =========================================================================
-# ANULACIÓN COMPLETA EN EL MOTOR DE PIGWEED (KOTLINC)
-# Modificamos el script wrapper para inyectar '-nowarn' al final del comando
+# Bloqueamos los mensajes de aviso del motor Pigweed (KOTLINC)
 # =========================================================================
 echo "INFRA: Inyectando inhibidores de error '-nowarn' en el motor de Pigweed..."
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
 export KOTLINC_ARGS="-nowarn"
-
-# Modificamos el script ejecutable de Python de forma segura. 
+ 
+# Modificamos el script wrapper ejecutable de Python para inyectar '-nowarn' al final del comando 
 # En lugar de romper la cabecera, inyectamos '-nowarn' de forma segura en los argumentos adicionales.
 find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')\n    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
 find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 
 
-# ==========================================================================
-# 🛡️ PARCHEADO DEL FICHERO GRADLE gradle.propertie DE LA COMPILACION KOTLIN
-#    ANTI-STAKOVERFLOW Y ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
-# ==========================================================================
-echo "INFRA: Configurando argumentos en la ruta fija de gradle.properties..."
+## ==========================================================================
+## 🛡️ PARCHEADO DEL FICHERO GRADLE gradle.propertie DE LA COMPILACION KOTLIN
+##    ANTI-STAKOVERFLOW Y ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
+## ==========================================================================
+#echo "INFRA: Configurando argumentos en la ruta fija de gradle.properties..."
+#
+#GRADLE_PROPERTIES="examples/virtual-device-app/android/App/gradle.properties"
+#
+#if [ -f "$GRADLE_PROPERTIES" ]; then
+#
+#    # 🔥 En gradle.properties buscamos la línea original de jvmargs Matter y concatenamos al final los flags:
+#    #    -Xskip-metadata-version-check y -Xallow-no-source-files 
+#	#    Esto blinda al demonio de Gradle contra los errores de la firma de metadatos 2.4.0 y el StackOverflow (detiene la recursión) 
+#    #sed -i 's|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
+#    sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
+#	
+#    echo "INFRA: -Xskip-metadata-version-check y -Xallow-no-source-files inyectados con éxito en $GRADLE_PROPERTIES."
+#else
+#    echo "⚠️ ADVERTENCIA: No se localizó el archivo $GRADLE_PROPERTIES."
+#fi
 
-GRADLE_PROPERTIES="examples/virtual-device-app/android/App/gradle.properties"
-
-if [ -f "$GRADLE_PROPERTIES" ]; then
-
-    # 🔥 En gradle.properties buscamos la línea original de jvmargs Matter y concatenamos al final los flags:
-    #    -Xskip-metadata-version-check y -Xallow-no-source-files 
-	#    Esto blinda al demonio de Gradle contra los errores de la firma de metadatos 2.4.0 y el StackOverflow (detiene la recursión) 
-    #sed -i 's|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
-    sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
-	
-    echo "INFRA: -Xskip-metadata-version-check y -Xallow-no-source-files inyectados con éxito en $GRADLE_PROPERTIES."
-else
-    echo "⚠️ ADVERTENCIA: No se localizó el archivo $GRADLE_PROPERTIES."
-fi
-
-# Bloqueamos alertas cosméticas redundantes del motor de Kotlin
-export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
-export KOTLINC_ARGS="-nowarn"
 # =========================================================================
 echo ""
 
