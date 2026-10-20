@@ -226,18 +226,34 @@ export KOTLINC_ARGS="-nowarn"
 find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')\n    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
 find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 
+## =========================================================================
+## 🛡️ PARCHE CLAVE ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
+## =========================================================================
+#echo "INFRA: Inyectando supresores de versión de metadatos de Kotlin (-Xskip-metadata-version-check)..."
+#
+## Localizamos todos los archivos build.gradle del subproyecto Android y acoplamos el flag de escape
+#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/kotlinOptions {/a \        freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]' {} +
+#
+## Respaldo de seguridad directo para variantes que usen sintaxis de asignación clásica (=)
+#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i 's|freeCompilerArgs = |freeCompilerArgs = ["-Xskip-metadata-version-check", "-Xallow-no-source-files"] + |g' {} +
+#
+#echo "INFRA: Flags de supresión de Kotlin inyectados con éxito en el árbol App/."
+
+
 # =========================================================================
-# 🛡️ PARCHE CLAVE ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
+# 🛡️ PARCHE ANTI-STAKOVERFLOW Y VERSIONES DE KOTLIN METADATA!
 # =========================================================================
-echo "INFRA: Inyectando supresores de versión de metadatos de Kotlin (-Xskip-metadata-version-check)..."
+echo "INFRA: Aplicando supresores planos estables para evitar StackOverflow de Kotlin..."
 
-# Localizamos todos los archivos build.gradle del subproyecto Android y acoplamos el flag de escape
-find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/kotlinOptions {/a \        freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]' {} +
+# 1. Limpiamos cualquier rastro o intento previo de inyección acumulada en el bucle caliente
+find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/-Xskip-metadata-version-check/d' {} +
 
-# Respaldo de seguridad directo para variantes que usen sintaxis de asignación clásica (=)
-find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i 's|freeCompilerArgs = |freeCompilerArgs = ["-Xskip-metadata-version-check", "-Xallow-no-source-files"] + |g' {} +
+# 2. Forzamos una declaración plana inmutable dentro de los bloques kotlinOptions de forma limpia
+find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/kotlinOptions {/a \        freeCompilerArgs = ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]' {} +
 
-echo "INFRA: Flags de supresión de Kotlin inyectados con éxito en el árbol App/."
+echo "INFRA: Parche inmutable de Kotlin inyectado. El compilador ignorará la firma 2.4.0."
+
+
 # =========================================================================
 
 # =========================================================================
