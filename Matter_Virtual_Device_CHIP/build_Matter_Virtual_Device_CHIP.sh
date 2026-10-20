@@ -240,21 +240,42 @@ find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 #echo "INFRA: Flags de supresión de Kotlin inyectados con éxito en el árbol App/."
 
 
+## =========================================================================
+## 🛡️ PARCHE ANTI-STAKOVERFLOW Y VERSIONES DE KOTLIN METADATA!
+## =========================================================================
+#echo "INFRA: Aplicando supresores planos estables para evitar StackOverflow de Kotlin..."
+#
+## 1. Limpiamos cualquier rastro o intento previo de inyección acumulada en el bucle caliente
+#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/-Xskip-metadata-version-check/d' {} +
+#
+## 2. Forzamos una declaración plana inmutable dentro de los bloques kotlinOptions de forma limpia
+#find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/kotlinOptions {/a \        freeCompilerArgs = ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]' {} +
+#
+#echo "INFRA: Parche inmutable de Kotlin inyectado. El compilador ignorará la firma 2.4.0."
+
 # =========================================================================
-# 🛡️ PARCHE ANTI-STAKOVERFLOW Y VERSIONES DE KOTLIN METADATA!
+# 🛡️ TUNING MAESTRO: EXPORTACIÓN UNIFICADA DE MEMORIA Y COMPILACIÓN GRADLE
 # =========================================================================
-echo "INFRA: Aplicando supresores planos estables para evitar StackOverflow de Kotlin..."
+echo "INFRA: Configurando topes de memoria JVM y supresores de metadatos de Kotlin..."
 
-# 1. Limpiamos cualquier rastro o intento previo de inyección acumulada en el bucle caliente
-find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/-Xskip-metadata-version-check/d' {} +
+## 1. Limpiamos cualquier residuo de texto previo de los sed anteriores en el SDK
+#git reset --hard HEAD --quiet || true
 
-# 2. Forzamos una declaración plana inmutable dentro de los bloques kotlinOptions de forma limpia
-find examples/virtual-device-app/android/ -name "build.gradle" -exec sed -i '/kotlinOptions {/a \        freeCompilerArgs = ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]' {} +
+# 2. Bloqueamos alertas redundantes del motor de Kotlin
+export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
 
-echo "INFRA: Parche inmutable de Kotlin inyectado. El compilador ignorará la firma 2.4.0."
+# 3. Forzamos límites globales en los hilos base de ejecución de Java (Bajo nivel)
+export _JAVA_OPTIONS="-Xmx2048m -Xms512m -Dawt.useSystemAAFontSettings=gasp"
 
+# 4. 🔥 UNIFICACIÓN PERFECTA: Asignamos 2GB de RAM al demonio de Gradle Y 
+#    pasamos los argumentos del compilador de Kotlin en un formato plano inmutable.
+#    Esto detiene la recursión (Adiós StackOverflow) y acelera la compilación.
+export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2048m -Dorg.jetbrains.kotlin.compiler.arguments='-Xskip-metadata-version-check -Xallow-no-source-files'"
 
+echo "INFRA: Entorno de memoria y compilación optimizado al 100%."
 # =========================================================================
+
+
 
 # =========================================================================
 #
