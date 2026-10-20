@@ -11,6 +11,9 @@ sed -i 's/\r$//' "$0" || true
 
 set -e # Detiene el script inmediatamente si ocurre un error inesperado
 
+#echo "🚨 MODO RESCATE ACTIVO: Saltando compilación y forzando subida inmediata del out (gh artifact upload)."
+#exit 10
+
 # =========================================================================
 # 🐙 AUTOMAPEO DEL ENTORNO DE GITHUB ACTIONS (EXPORTS DE $GITHUB_ENV) 
 # Lee el archivo físico del disco y carga todas las variables en este subproceso
@@ -34,8 +37,8 @@ export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 # =========================================================================
 # ⚙️ CONTROL MANUAL DE CACHÉ LOCAL (COMENTAR / DESCOMENTAR SEGÚN NECESIDAD)
 # =========================================================================
-# Descomenta la siguiente línea para FORZAR la limpieza y ejecución en limpio:
-FORCE_CLEAR_CACHE="true"
+# Descomenta la siguiente línea para FORZAR la limpieza y ejecución desde 0:
+#FORCE_CLEAR_CACHE="true"
 
 # Si sigue comentada, heredará automáticamente el valor del botón web de GitHub:
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
