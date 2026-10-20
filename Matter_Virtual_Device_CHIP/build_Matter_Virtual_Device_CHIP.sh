@@ -242,6 +242,28 @@ gn gen out/virtual-device-app \
 # Parches secundarios de seguridad de última capa sobre archivos de configuración JSON
 find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
 
+# =========================================================================
+# 🛡️ INTERCEPTOR EXCLUSIVO: PRE-ACEPTACIÓN DE LICENCIAS CON JAVA 17
+# =========================================================================
+echo "INFRA: Interceptando licencias del sdkmanager usando subshell Java 17..."
+
+if [ -n "$JAVA_HOME_17_X64" ] && [ -d "$JAVA_HOME_17_X64" ]; then
+    # El uso de ( ) crea una subburbuja de memoria aislada. 
+    # Los cambios de PATH y JAVA_HOME mueren al cerrarse el paréntesis.
+    (
+        export JAVA_HOME="$JAVA_HOME_17_X64"
+        export PATH="$JAVA_HOME/bin:$PATH"
+        echo "   ↳ Activado temporalmente: $(java -version 2>&1 | head -n 1)"
+        
+        # Ejecutamos el sdkmanager con los privilegios de Java 17
+        yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
+    )
+    echo "INFRA: Licencias registradas en disco. Retornando a entorno global Java 11."
+else
+    echo "⚠️ ADVERTENCIA: No se localizó la ruta de JAVA_HOME_17_X64 en el entorno."
+fi
+# =========================================================================
+
 echo "INFRA: Ninja reanudará la compilación de forma incremental..."
 #ninja -C out/virtual-device-app
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
