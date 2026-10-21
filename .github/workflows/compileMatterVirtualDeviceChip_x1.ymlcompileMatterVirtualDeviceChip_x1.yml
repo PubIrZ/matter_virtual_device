@@ -38,6 +38,13 @@ jobs:
   build_Matter_Virtual_Device_Chip:
     runs-on: ubuntu-latest
 
+    # =========================================================================
+    # ⚙️ CONFIGURACIÓN DE PERMISOS (Obligatorio para vaciar cachés por comando)
+    # =========================================================================
+    permissions:
+      contents: read
+      actions: write    # 🔑 CRÍTICO: Permite que 'gh cache delete' limpie el disco
+
     steps:
       # ---------------------------------------------------------------------
       # STEP 1: DESCARGA SELECTIVA DEL SCRIPT DE COMPILACIÓN
@@ -51,7 +58,18 @@ jobs:
           sparse-checkout-cone-mode: false
 
       # ---------------------------------------------------------------------
-      # STEP 2: CONFIGURACIÓN DEL JAVA GLOBAL DE LA MÁQUINA (JAVA 17)
+      # STEP 2: INSTALACIÓN DEL JDK DE COMPILACION JDK 11 (UN JDK QUE ES UNA  
+      #         VERSION ANTIGUA) 
+      # ---------------------------------------------------------------------
+      # La ruta del JDK 11 se guardará de forma limpia en la variable env.JAVA_HOME_11_X64.
+      - name: Setup Isolated Java JDK 11 (Target for Compilation)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      # ---------------------------------------------------------------------
+      # STEP 3: CONFIGURACIÓN DEL JAVA GLOBAL DE LA MÁQUINA (JAVA 17)
       # ---------------------------------------------------------------------
       # El "Runner" completo adoptará Java 17 por defecto. Esto garantiza que las 
       # herramientas de Android de Google como 'sdkmanager' o 'cmdline-tools' 
@@ -63,45 +81,21 @@ jobs:
           java-version: '17'
 
       # ---------------------------------------------------------------------
-      # STEP 3: INSTALACIÓN DEL JDK DE COMPILACION JDK 11 (UN JDK QUE ES UNA  
-      #         VERSION ANTIGUA) TOTALMENTE AISLADO (update-environment: false) 
-      # ---------------------------------------------------------------------
-      # Usamos el flag 'update-environment: false'. Esto le ordena a GitHub:
-      # Descarga los binarios del JDK 11, pero NO los metas en el $PATH global
-      # ni sobreescribas el $JAVA_HOME del sistema. Mantiene la máquina en Java 17.
-      # La ruta del JDK 11 se guardará de forma limpia en la variable env.JAVA_HOME_11_X64.
-      - name: Setup Isolated Java JDK 11 (Target for Compilation)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-          update-environment: false 
-
-      # ---------------------------------------------------------------------
-      # STEP 7: ENTORNO ANDROID SDK (EJECUTADO BAJO JAVA 17 NATIVO)
-      # ---------------------------------------------------------------------
-      # Al estar la máquina en Java 17, el aceptador de licencias de esta acción 
-      # opera sin errores de firma. Descarga las APIs heredadas que pidas de forma correcta.
-      - name: Setup Android SDK 26 & Accept Licenses
-        id: setup-android    # id requerido para poder utilizar ${{ steps.setup-android.outputs.sdk-path }} para acceder a la ruta del SDK 26     
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
-          # IMPORTANTE: No usar barra (/) en lugar de punto y coma (;)
-          #packages: 'platforms/android-26' 
-          packages: 'platforms;android-26'
-          
-      # ---------------------------------------------------------------------
       # STEP 4: CONFIGURACIÓN AVANZADA DE LA CACHÉ INTELIGENTE DE GRADLE
       # ---------------------------------------------------------------------
       # Delegamos el control de caché a la acción oficial de Gradle. Es inmune a los
       # saltos de versión de JDK y protege el disco. Si el usuario activa 'clear_cache' 
-      # por botón web, la caché se inicializará en modo 'read-only' para ignorar registros previos.
+      # por botón web, la caché se desabilita para ignorar registros previos.
+      - name: Limpiar caché vieja físicamente
+        if: ${{ inputs.clear_cache == true }}
+        run: |
+          gh cache delete --all --succeed-on-no-caches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Setup Gradle Cache Hook
         uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.event.inputs.clear_cache == 'true' }}
-
+          
       # ---------------------------------------------------------------------
       # STEP 5: ENTORNO PYTHON ESTABLE PARA EL MOTOR PIGWEED
       # ---------------------------------------------------------------------
@@ -117,6 +111,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config ninja-build libglib2.0-dev libdbus-1-dev git unzip curl file dos2unix
+
+      # ---------------------------------------------------------------------
+      # STEP 7: ENTORNO ANDROID SDK (EJECUTADO BAJO JAVA 17 NATIVO)
+      # ---------------------------------------------------------------------
+      # Al estar la máquina en Java 17, el aceptador de licencias de esta acción 
+      # opera sin errores de firma. Descarga las APIs heredadas que pidas de forma correcta.
+      - name: Setup Android SDK 26 & Accept Licenses
+        id: setup-android    # id requerido para poder utilizar ${{ steps.setup-android.outputs.sdk-path }} para acceder a la ruta del SDK 26     
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          # IMPORTANTE: No usar barra (/) en lugar de punto y coma (;)
+          #packages: 'platforms/android-26' 
+          packages: 'platforms;android-26'
 
       # ---------------------------------------------------------------------
       # STEP 8: CONFIGURACIÓN E INYECCIÓN DE PUNTEROS DEL NDK
@@ -142,25 +150,6 @@ jobs:
       # ---------------------------------------------------------------------
       # Engaña al sistema de compilación antiguo de Matter mapeando las rutas
       # modernas de la librería de runtime nativo (libc++_shared.so) del NDK r25c.
-                                                                                      
-                                   
-             
-                            
-                                                                                   
-                                            
-                                                                                      
-                                                                                         
-                                                            
-           
-                                                                                    
-                                                                               
-                                                          
-                                                                                           
-                                 
-                                                                                    
-          
-          
-                                                                                                             
       - name: Patch NDK Directory Structure
         run: |
           echo "=== PATCH NDK DIRECTORY TREE FOR LIBC++ ==="
@@ -222,51 +211,6 @@ jobs:
           # Nos saltamos la descarga CIPD manual creando zap.json si no existe ya 
           if [ -f "scripts/setup/zap.json" ]; then echo '{"packages": []}' > scripts/setup/zap.json; fi
 
-
-      #- name: Install Missing Android 26 Platform SDK
-      #  run: |
-      #    yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null
-      #    $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-26"
-          
-      ## -------------------------------------------------------------------
-      ## 🔥 LICENSE PRE-ACCEPTANCE INTERCEPTOR (THE CRITICAL FIX)
-      ## Temporarily forces the Android sdkmanager to run under Java 17
-      ## to sign licenses before the system environment drops to Java 11.
-      ## -------------------------------------------------------------------
-      #- name: Pre-Accept Android SDK & NDK Licenses via Java 17
-      #  run: |
-      #    echo "=== PRE-ACCEPTING LICENSES USING JAVA 17 ==="
-      #    # Point the shell temporarily to the Java 17 runtime path
-      #    export JAVA_HOME="${{ env.JAVA_HOME_17_X64 }}"
-      #    export PATH="$JAVA_HOME/bin:$PATH"
-      #    
-      #    # Run the canonical acceptance sequence via the pre-installed tools
-      #    yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
-      #    echo "SUCCESS: Licenses mapped securely onto the disk."
-          
-
-      # 10b. Downgrade seguro del sistema operativo a Java 11 (El entorno requerido para la compilación de Matter 1.3)
-      # Modificamos el entorno de la máquina virtual para restaurar Java 11.
-      # Activamos aquí la caché condicional para agilizar tus futuros builds.
-      # -------------------------------------------------------------------
-      - name: Configurar Java JDK 11
-        #if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          # =======================================================================
-          # NOTA ARQUITECTURA DISTRIBUCIÓN:
-          # Elegimos 'temurin' (Eclipse Adoptium) por ser la distribución recomendada
-          # de GitHub para la action 'setup-java', ya que con ella la caché de Gradle se
-          # integra de forma nativa con esta distribución. 
-          #
-          # Alternativas válidas si Gradle da errores heredados de compatibilidad: 
-          # 'zulu' (Azul Systems, recomendada para entornos Android clásicos),
-          # 'corretto' (Amazon), 'microsoft' o 'liberica'.
-          # =====================================================================          
-          distribution: 'temurin'
-          cache: ${{ github.event.inputs.clear_cache == 'true' && '' || 'gradle' }}
-
                     
       ## Ejecución directa y lineal del script de compilación
       #- name: Run Matter Compilation Script
@@ -301,7 +245,7 @@ jobs:
           #ZAP_INSTALL_PATH: /usr/local/bin
           #GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ## 🔥 PASAMOS EL FLAG DE LIMPIEZA AL ENTORNO DEL BUCLE PARA QUE LO PUEDA LEER EL SCRIPT
-          #FORCE_CLEAR_CACHE: ${{ github.event.inputs.clear_cache }} 
+          #FORCE_CLEAR_CACHE: ${{ inputs.clear_cache }} 
           ## 🔥 INYECCIÓN DE LAS VARIABLES DE ENTORNO DE GITHUB PARA QUE LAS PUEDA LEER EL SCRIPT
           #GITHUB_WORKSPACE: ${{ github.workspace }}
           #GITHUB_REPOSITORY: ${{ github.repository }}
@@ -312,7 +256,7 @@ jobs:
           # variable están ya en el environment del actions ($GITHUB_ENV) y se refrescan
           # en el propio script sh de compilación en cada ejecución del bucle.         
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORCE_CLEAR_CACHE: ${{ github.event.inputs.clear_cache }} 
+          FORCE_CLEAR_CACHE: ${{ inputs.clear_cache }} 
           # ASEGURAMOS LA RUTA A JDK11 PASANDOLA AL SCRIPT SH DENTRO DEL ENVIRONMENT DEL BUCLE
           MATTER_TARGET_JAVA_HOME: ${{ env.JAVA_HOME_11_X64 }}          
           # OJO: Se elimina PW_ZAP_CIPD_RELEASE, porque no está soportada por la version antigua de 
