@@ -78,6 +78,20 @@ jobs:
           update-environment: false 
 
       # ---------------------------------------------------------------------
+      # STEP 7: ENTORNO ANDROID SDK (EJECUTADO BAJO JAVA 17 NATIVO)
+      # ---------------------------------------------------------------------
+      # Al estar la máquina en Java 17, el aceptador de licencias de esta acción 
+      # opera sin errores de firma. Descarga las APIs heredadas que pidas de forma correcta.
+      - name: Setup Android SDK 26 & Accept Licenses
+        id: setup-android    # id requerido para poder utilizar ${{ steps.setup-android.outputs.sdk-path }} para acceder a la ruta del SDK 26     
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          # IMPORTANTE: No usar barra (/) en lugar de punto y coma (;)
+          #packages: 'platforms/android-26' 
+          packages: 'platforms;android-26'
+          
+      # ---------------------------------------------------------------------
       # STEP 4: CONFIGURACIÓN AVANZADA DE LA CACHÉ INTELIGENTE DE GRADLE
       # ---------------------------------------------------------------------
       # Delegamos el control de caché a la acción oficial de Gradle. Es inmune a los
@@ -103,20 +117,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config ninja-build libglib2.0-dev libdbus-1-dev git unzip curl file dos2unix
-
-      # ---------------------------------------------------------------------
-      # STEP 7: ENTORNO ANDROID SDK (EJECUTADO BAJO JAVA 17 NATIVO)
-      # ---------------------------------------------------------------------
-      # Al estar la máquina en Java 17, el aceptador de licencias de esta acción 
-      # opera sin errores de firma. Descarga las APIs heredadas que pidas de forma correcta.
-      - name: Setup Android SDK 26 & Accept Licenses
-        id: setup-android    # id requerido para poder utilizar ${{ steps.setup-android.outputs.sdk-path }} para acceder a la ruta del SDK 26     
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
-          # IMPORTANTE: No usar barra (/) en lugar de punto y coma (;)
-          #packages: 'platforms/android-26' 
-          packages: 'platforms;android-26'
 
       # ---------------------------------------------------------------------
       # STEP 8: CONFIGURACIÓN E INYECCIÓN DE PUNTEROS DEL NDK
