@@ -21,7 +21,7 @@ on:
         default: false  
   #push:              # y tb se dispara automáticamente al modificar el script
   #  paths:
-  #    - 'Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh' 
+  #    - 'Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP_x1.sh' 
 
 
 # =========================================================================
@@ -221,7 +221,7 @@ jobs:
       #    ZAP_INSTALL_PATH: /usr/local/bin
       #  run: |
       #    # Copiar el script descargado hacia el SDK de Matter
-      #    cp -f Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP.sh matter-sdk/
+      #    cp -f Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP_x1.sh matter-sdk/
       #    cd matter-sdk
       #    chmod +x build_Matter_Virtual_Device_CHIP.sh
       #    
