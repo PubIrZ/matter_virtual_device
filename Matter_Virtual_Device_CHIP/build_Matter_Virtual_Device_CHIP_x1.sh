@@ -2,88 +2,285 @@
 
 # =========================================================================
 # SCRIPT DINÁMICO DE COMPILACIÓN CON ASIGNACIÓN DE ENTORNO AISLADO DE DISCO
+																		   
+
 # =========================================================================
 # Plantilla didáctica optimizada para compilaciones complejas en Matter/Android.
 # Evita la colisión de variables globales destructivas y limpia la terminal.
 # =========================================================================
 
 # Sanitizar saltos de línea de Windows (CRLF a LF) de forma automática e inmediata
-sed -i 's/
-$//' "$0" || true
-set -e 
+sed -i 's/\r$//' "$0" || true
 
+set -e # Detiene el script inmediatamente si ocurre un error inesperado
+
+#echo "🚨 MODO RESCATE ACTIVO: Saltando compilación y forzando subida inmediata del out (gh artifact upload)."
+#exit 10
+
+																		   
 # 🐙 EXTRACTOR DE ENTORNO DE GITHUB ACTIONS
 # Escanea de forma física el mapa del disco asignado al pipeline para heredar
 # variables refrescadas en caliente entre ciclos del bucle interactivo.
 if [ -n "$GITHUB_ENV" ] && [ -f "$GITHUB_ENV" ]; then
-    echo "⚙️ INFRA: Sincronizando bloque completo de variables \$GITHUB_ENV..."
+    echo "⚙️ INFRA: Sincronizando bloque completo de variables \$GITHUB_ENV (exports)..."
     while IFS= read -r line || [ -n "$line" ]; do
+																	 
         if [[ ! -z "$line" && "$line" != "#"* ]]; then
+										  
             export "$line"
         fi
     done < "$GITHUB_ENV"
 fi
 
-# Neutralizar el disparador de descargas redundantes de red del motor ZAP de CIPD
-unset PW_ZAP_CIPD_RELEASE
+# 🔥 ANULACIÓN CRÍTICA ANTI-CRASH: Forzamos el borrado de la variable conflictiva
+# Esto evita que el validador estricto de Python de Pigweed aborte la compilación.
+uunset PW_ZAP_CIPD_RELEASE
 export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 
-# Configuración de limpieza incremental condicional controlada por interfaz web
+# =========================================================================
+# ⚙️ CONTROL MANUAL DE CACHÉ LOCAL (COMENTAR / DESCOMENTAR SEGÚN NECESIDAD)
+# =========================================================================
+# Descomenta la siguiente línea para FORZAR la limpieza y ejecución en limpio:
+# FORCE_CLEAR_CACHE="true"
+
+# Si sigue comentada, heredará automáticamente el valor del botón web de GitHub:
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 
+
+
+## 🚀 FORZAR USO DE JAVA 11 PARA EVITAR EL ERROR "major version 61"
+#POSIBLE_JAVA_11=$(find /opt/hostedtoolcache/Java_Zulu_jdk/ -maxdepth 2 -name "11.*" | head -n 1)
+#if [ -n "$POSIBLE_JAVA_11" ]; then
+#    export JAVA_HOME="$POSIBLE_JAVA_11/x64"
+#    export PATH="$JAVA_HOME/bin:$PATH"
+#fi
+#
+#echo "INFRA: Ajustando entorno a $(java -version 2>&1 | head -n 1)"
+
+
 echo "========================================================================="
-echo "🔍 DIAGNÓSTICO DE PRE-COMPILACIÓN EN EL ENTORNO VIRTUAL HÍBRIDO"
-echo "========================================================================="
-echo "  ↳ ENTORNO GLOBAL RUNNER (Java Base del Sistema): $(java -version 2>&1 | head -n 1)"
-echo "  ↳ TARGET JDK MAP (Puntero inyectado aislado): ${MATTER_TARGET_JAVA_HOME:-'❌ NO DETECTADO'}"
-echo "  ↳ ANDROID_HOME MAPPED RUTA: ${ANDROID_HOME:-'❌ NO DETECTADA'}"
+echo "🔍 DIAGNÓSTICO AVANZADO DE ENTORNO EN EL RUNNER (HOST VIRTUAL)"
 echo "========================================================================="
 
-# Limpieza atómica de la carpeta estructural out/ si el flag está activo
-if [ "$FORCE_CLEAR_CACHE" = "true" ]; then
-    echo "⚠️ INFRA: Detectado flag 'clear_cache' como TRUE. Destruyendo out/..."
-    rm -rf out/
+# 1. Variables de Entorno Típicas de GitHub Actions
+echo "🐙 VARIABLES GLOBALES DE GITHUB:"
+echo "-------------------------------------------------------------------------"
+echo "  ↳ GITHUB_WORKSPACE : ${GITHUB_WORKSPACE:-'❌ NO EXPORTADA / VACÍA'}"
+echo "  ↳ GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-'❌ NO EXPORTADA'}"
+echo "  ↳ GITHUB_REF_NAME  : ${GITHUB_REF_NAME:-'❌ NO EXPORTADA'}"
+echo "  ↳ GITHUB_SHA       : ${GITHUB_SHA:-'❌ NO EXPORTADA'}"
+echo "  ↳ GITHUB_RUN_ID    : ${GITHUB_RUN_ID:-'❌ NO EXPORTADA'}"
+echo ""
+
+# 2. Variantes de JAVA_HOME dependientes del SDK (Inyectadas por setup-java)
+echo "☕ VARIANTES DE ENTORNO JAVA (JDK MAP):"
+echo "-------------------------------------------------------------------------"
+echo "  ↳ CURRENT JAVA_HOME: ${JAVA_HOME:-'❌ NO DETECTADA'}"
+echo "  ↳ JAVA_HOME_11_X64 : ${JAVA_HOME_11_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
+echo "  ↳ JAVA_HOME_17_X64 : ${JAVA_HOME_17_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
+
+# Mostrar versión física real apuntada por las variantes si existen
+if [ -n "$JAVA_HOME_11_X64" ] && [ -x "$JAVA_HOME_11_X64/bin/java" ]; then
+    echo "    ↳ Versión Real en Java 11 SDK: $($JAVA_HOME_11_X64/bin/java -version 2>&1 | head -n 1)"
+fi
+if [ -n "$JAVA_HOME_17_X64" ] && [ -x "$JAVA_HOME_17_X64/bin/java" ]; then
+    echo "    ↳ Versión Real en Java 17 SDK: $($JAVA_HOME_17_X64/bin/java -version 2>&1 | head -n 1)"
+fi
+echo ""
+
+
+# 3. Parámetros del Entorno de Android, NDK y ZAP
+echo "📂 VARIABLES DE DESARROLLO (ANDROID / MATTER):"
+echo "-------------------------------------------------------------------------"
+echo "  ↳ ANDROID_HOME     : ${ANDROID_HOME:-'❌ NO DETECTADA'}"
+echo "  ↳ ANDROID_NDK_ROOT : ${ANDROID_NDK_ROOT:-'❌ NO DETECTADA'}"
+echo "  ↳ ANDROID_NDK_HOME : ${ANDROID_NDK_HOME:-'❌ NO DETECTADA'}"
+echo "  ↳ ZAP_INSTALL_PATH : ${ZAP_INSTALL_PATH:-'❌ NO DETECTADA'}"
+echo ""
+
+# 4. Descubrimiento y Versión de Binarios Activos
+echo "🛠️ BINARIOS Y VERSIONES REALES (EN PATH ACTIVO):"
+echo "-------------------------------------------------------------------------"
+#echo "  ↳ Java CLI Activo  : $(java -version 2>&1 | head -n 1 || echo '❌ No encontrado')"
+#echo "  ↳ Python Ejecutable: $(python3 --version 2>&1 || echo '❌ No encontrado')"
+
+# Java Compiler / Runtime
+if command -v java >/dev/null 2>&1; then
+    echo "  ↳ Java CLI     : $(java -version 2>&1 | head -n 1)"
+else
+    echo "  ↳ Java CLI     : ❌ NO ENCONTRADO EN EL PATH"
 fi
 
-# Parche anti-descarga CIPD sobre ficheros zap.json
-if [ -f "scripts/setup/zap.json" ]; then echo '{"packages": []}' > scripts/setup/zap.json; fi
-find . -name "zap.json" -exec sh -c 'echo "{"packages": []}" > "{}"' \;
+# Python
+if command -v python3 >/dev/null 2>&1; then
+    echo "  ↳ Python       : $(python3 --version 2>&1)"
+else
+    echo "  ↳ Python       : ❌ NO ENCONTRADO EN EL PATH"
+fi
 
-# 🚀 ACTIVACIÓN DEL ENTORNO VIRTUAL DEL SDK (PIGWEED MOTOR ENGINE)
+# GN (Generate Ninja)
+if command -v gn >/dev/null 2>&1; then
+    echo "  ↳ GN Tool      : Encontrado en $(command -v gn) -> $(gn --version 2>/dev/null || echo 'GN disponible, pero ⚠️ no se localizó versión')"
+else
+    echo "  ↳ GN Tool      : ❌ No inicializado aún (⏳ Se activará tras Pigweed 'activate.sh')"
+fi
+
+# ZAP CLI
+if command -v zap-cli >/dev/null 2>&1; then
+    echo "  ↳ ZAP CLI      : Encontrado en $(command -v zap-cli)"
+else
+    echo "  ↳ ZAP CLI      : ❌ NO ACCESIBLE (Verificar enlace simbólico)"
+fi
+
+# NDK Compiler (Clang de LLVM específico del NDK configurado)
+CLANG_NDK="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+if [ -f "$CLANG_NDK" ]; then
+    echo "  ↳ NDK Clang    : Encontrado ($($CLANG_NDK --version | head -n 1 | cut -d' ' -f1-4))"
+else
+    echo "  ↳ NDK Clang    : ❌ Binario del compilador no hallado en la ruta del NDK"
+fi
+echo ""
+
+# 5. VARIABLES CUSTOM DE CONTROL
+echo "📂 VARIABLES CUSTOM DE CONTROL:"
+echo "-------------------------------------------------------------------------"
+echo "  ↳ FORCE_CLEAR_CACHE: $FORCE_CLEAR_CACHE"
+echo ""
+
+echo "========================================================================="
+
+# =========================================================================
+# 🧹 LIMPIEZA ATÓMICA DE CÓDIGO FUENTE (EVITA ACUMULACIÓN ENTRE INTENTOS DEL BUCLE)
+# =========================================================================
+echo "INFRA: Limpiando parches de texto residuales del intento de compilación anterior..."
+# Forzamos a Git a restaurar cualquier BUILD.gn alterado en el SDK de Matter antes de aplicar los nuevos sed
+git reset --hard HEAD --quiet || true
+git clean -fd --quiet || true
+
+# =========================================================================
+# 🔥 LIMPIEZA CONDICIONAL DE CACHÉ LOCAL (ANTES DE COMPILAR / ACTIVAR)
+# Nota: No afecta scripts/activate.sh (el script de activación de Matter, ya que
+#       Pigweed no guarda su entorno dentro de out/)
+#       Pero se pone antes de scripts/activate.sh para que este no pierda el
+#       tiempo escaneando y validando metadatos que se borraran.
+# =========================================================================
+if [ "$FORCE_CLEAR_CACHE" = "true" ]; then
+    echo "⚠️ INFRA: Flag 'clear_cache' detectado como TRUE. Destruyendo carpeta out/ de forma segura..."
+    rm -rf out/
+else
+    echo "⚡ INFRA: Manteniendo carpeta 'out/' para permitir compilación incremental rápida."
+fi
+
+
+# =========================================================================
+# ¡EL PARCHE CLAVE AN_TI-CIPD DE CONFIGURACIÓN NEUTRALIZADA!
+# Vaciar zap.json para que CIPD ignore su  intento de descarga
+# =========================================================================
+echo "INFRA: Neutralizando configuraciones JSON rígidas de CIPD para ZAP..."
+if [ -f "scripts/setup/zap.json" ]; then
+    echo '{"packages": []}' > scripts/setup/zap.json
+fi
+find . -name "zap.json" -exec sh -c 'echo "{\"packages\": []}" > "{}"' \;
+
+echo "INFRA: Archivos zap.json vaciados con éxito. CIPD ignorará la descarga de red."
+
+# =========================================================================
+# INICIALIZACIÓN DEL ENTORNO DE COMPILACIÓN DE MATTER
+# =========================================================================
 echo "INFRA: Inicializando el entorno virtual aislado de Pigweed..."
 source scripts/activate.sh
 
-# 🛡️ PROTECCIÓN CRÍTICA ANTI-SOF (STACK OVERFLOW) EN KOTLIN / GRADLE
+## ==========================================================================
+## 🛡️ Proteger la COMPILACION KOTLIN contra los errores de StackOverflow
+##    y la colision entre versiones del metadata de KOTLIN con GRADLE_OPTS
+## ==========================================================================
+#  Configuramos los flags de JVM, separados por un espacio simple y sin 
+#  comillas dobles internas para evitar errores.
+# 🛡️ PROTECCIÓN CRÍTICA ANTI ERRORES (STACK OVERFLOW) EN KOTLIN / GRADLE
 # Inyectamos argumentos seguros en la JVM del demonio constructor. El parámetro
 # '-Xskip-metadata-version-check' evita la colisión de firmas de metadatos de Kotlin
 # que provocan errores de compilación fatales en entornos Android clásicos.
+
 export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
+
+echo "INFRA: Parche GRADLE_OPTS justo tras la activación de Pigweed."
+# =========================================================================
+echo ""
+
+# GN (Generate Ninja)
+echo ""
+echo "INFRA: INFO GN (Generate Ninja)"
+if command -v gn >/dev/null 2>&1; then
+    echo "  ↳ GN Tool      : Encontrado en $(command -v gn) -> $(gn --version 2>/dev/null || echo 'GN disponible, pero ⚠️ no se localizó versión')"
+else
+    echo "  ↳ GN Tool      : ❌ No inicializado aún (⏳ Se activará tras Pigweed 'activate.sh')"
+fi
+echo ""
 
 # Sincronización local de librerías nativas internas del SDK de Matter
 echo "INFRA: Descargando pre-requisitos de dependencias de Android..."
 python3 third_party/android_deps/set_up_android_deps.py
 third_party/java_deps/set_up_java_deps.sh
 
-# 🧹 OPERACIÓN LIMPIEZA DE WARNINGS ESTRICTOS (-Werror & -Xlint)
+# =========================================================================
+# 🧹 LIMPIEZA DE WARNINGS ESTRICTOS (-Werror & -Xlint)
 # Evita que el compilador nativo de C/C++ (Ninja) y el de Java aborten la ejecución 
 # por avisos informativos menores u obsoletos en el árbol del código fuente de Matter.
-echo "INFRA: Neutralizando flags estrictos en plantillas GN, GNI y properties..."
-find . -name "BUILD.gn" -exec sed -i 's|"-Werror",||g; s|"-Werror"||g; s|"-Xlint:all",||g; s|"-Xlint:all"||g' {} +
-find . -name "*.gni" -exec sed -i 's|"-Werror",||g; s|"-Werror"||g; s|"-Xlint:all",||g; s|"-Xlint:all"||g' {} +
+# =========================================================================
+echo "INFRA: Se eliminan los flags Warning-Error de las plantillas .gn y .gni del código fuente Matter."
+find . -name "BUILD.gn" -exec sed -i 's|"-Werror",||g' {} +
+find . -name "BUILD.gn" -exec sed -i 's|"-Werror"||g' {} +
+find . -name "*.gni" -exec sed -i 's|"-Werror",||g' {} +
+find . -name "*.gni" -exec sed -i 's|"-Werror"||g' {} +
+
+find . -name "BUILD.gn" -exec sed -i 's|"-Xlint:all",||g' {} +
+find . -name "BUILD.gn" -exec sed -i 's|"-Xlint:all"||g' {} +
+find . -name "*.gni" -exec sed -i 's|"-Xlint:all",||g' {} +
+find . -name "*.gni" -exec sed -i 's|"-Xlint:all"||g' {} +
+
+# 🚀 PARA PREVENIR ERROR EN JAVA 17! 
+# Se elimina el flag obsoleto "MaxPermSize" de todo el árbol SDK Matter
+# Este flag fue deprecated en Java 8 y eliminado por completo en Java 17
+echo "INFRA: Se elimina el flag obsoleto "MaxPermSize" de todo el árbol SDK Matter"
 find . -name "gradle.properties" -exec sed -i 's|-XX:MaxPermSize=2048m||g' {} +
 
-# Forzado de inhibidores '-nowarn' en el motor de Pigweed para el compilador Kotlinc
+# =========================================================================
+# Bloqueamos los mensajes de aviso del motor Pigweed (KOTLINC)
+# =========================================================================
+echo "INFRA: Inyectando inhibidores de error '-nowarn' en el motor de Pigweed..."
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0"
 export KOTLINC_ARGS="-nowarn"
-find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')
-    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
+ 
+# Modificamos el script wrapper ejecutable de Python para inyectar '-nowarn' al final del comando 
+# En lugar de romper la cabecera, inyectamos '-nowarn' de forma segura en los argumentos adicionales.
+find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')\n    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
 find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 
-# 🛠️ GENERACIÓN DEL ÁRBOL ESTRUCTURAL GN (GENERATE NINJA)
-echo "INFRA: Sincronizando árbol estructural de mapas de GN..."
-gn gen out/virtual-device-app   --args='target_os="android" target_cpu="arm" android_ndk_root="'$ANDROID_NDK_ROOT'" android_sdk_root="'$ANDROID_HOME'" chip_config_network_layer_ble=false treat_warnings_as_errors=false'   --root=examples/virtual-device-app/android/
-  
-find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
+
+## ==========================================================================
+## 🛡️ PARCHEADO DEL FICHERO GRADLE gradle.propertie DE LA COMPILACION KOTLIN
+##    ANTI-STAKOVERFLOW Y ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
+## ==========================================================================
+#echo "INFRA: Configurando argumentos en la ruta fija de gradle.properties..."
+#
+#GRADLE_PROPERTIES="examples/virtual-device-app/android/App/gradle.properties"
+#
+#if [ -f "$GRADLE_PROPERTIES" ]; then
+#
+#    # 🔥 En gradle.properties buscamos la línea original de jvmargs Matter y concatenamos al final los flags:
+#    #    -Xskip-metadata-version-check y -Xallow-no-source-files 
+#	#    Esto blinda al demonio de Gradle contra los errores de la firma de metadatos 2.4.0 y el StackOverflow (detiene la recursión) 
+#    #sed -i 's|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
+#    sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
+#	
+#    echo "INFRA: -Xskip-metadata-version-check y -Xallow-no-source-files inyectados con éxito en $GRADLE_PROPERTIES."
+#else
+#    echo "⚠️ ADVERTENCIA: No se localizó el archivo $GRADLE_PROPERTIES."
+#fi
+
+# =========================================================================
+echo ""
+
 
 # =========================================================================
 # 🔥 EL CAMBIO MAESTRO: ESTRATEGIA DE INYECCIÓN A NIVEL DE DISCO DE USUARIO
@@ -108,27 +305,132 @@ else
     echo "⚠️ ADVERTENCIA: Variable MATTER_TARGET_JAVA_HOME vacía. Se intentará usar JDK del sistema."
 fi
 
+
+# =========================================================================
+#  🛠️ REGENERAR LA ESTRUCTURA DE COMPILACIÓN (FUNDAMENTAL SI SE HIZO FORCE_CLEAR_CACHE (rm -rf out/))
+# =========================================================================
+echo "INFRA: Sincronizando árbol estructural de mapas de GN..."
+
+# ANDROID_HOME="/usr/local/lib/android/sdk" 
+# ANDROID_NDK_ROOT="/opt/hostedtoolcache/ndk/r25c/x64"
+
+gn gen out/virtual-device-app \
+  --args='target_os="android" target_cpu="arm" android_ndk_root="'$ANDROID_NDK_ROOT'" android_sdk_root="'$ANDROID_HOME'" chip_config_network_layer_ble=false treat_warnings_as_errors=false' \
+  --root=examples/virtual-device-app/android/
+  
+# Parches secundarios de seguridad de última capa sobre archivos de configuración JSON
+find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
+echo ""
+
+																		   
+																		 
+																		   
+																			   
+
+																 
+															
+																		
+	 
+											
+										  
+																			   
+		
+																 
+																										  
+	 
+																					  
+	
+																						 
+  
+																		   
+	   
+
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
+echo ""
 
-# 📊 EXTRACCIÓN DE TELEMETRÍA NATIVA (ANÁLISIS DE HUELLES INDISPENSABLES)
+
+# =============================================================================
+# 📊 TELEMETRÍA AVANZADA: COMPARATIVA DE TÉCNICAS DE EXTRACCIÓN DE REQUISITOS
+# =============================================================================
+echo "INFRA: Descubrimiento de las carpetas de proyecto requeridas por la aplicación"
+# 1. Definimos y creamos de forma segura la ruta destino mapeada en el upload-artifact del YAML
 REPORT_TARGET_DIR="examples/virtual-device-app/android/App/app/build/outputs/reports"
 mkdir -p "$REPORT_TARGET_DIR"
 
+echo "  ========================================================================="
+echo "  🔬 DESCUBRIR 1: ANALIZADOR DE DEPENDENCIAS DE GN (NINJA MAP)"
+echo "  ========================================================================="
 if [ -d "out" ]; then
-    find out/ -name "*.ninja.d" -exec cat {} + 2>/dev/null | tr ' ' '
-' | grep -v '^out/' | grep '/' | sed 's|/[^/]*$||' | sort -u > "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || true
+    # Escaneamos los mapas .ninja.d, filtramos rutas relativas, limpiamos nombres de archivos
+    # y ordenamos de forma única para obtener la huella dactilar exacta del compilador.
+    find out/ -name "*.ninja.d" -exec cat {} + 2>/dev/null | \
+    tr ' ' '\n' | \
+    grep -v '^out/' | \
+    grep '/' | \
+    sed 's|/[^/]*$||' | \
+    sort -u > "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" || true
+
+    echo "  🎯 Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" 2>/dev/null || echo '0') carpetas críticas en el SDK Matter."
+    echo   "📋 Report guardado en: $REPORT_TARGET_DIR/carpetas_esenciales_gn.txt"
+    echo "  Top 20 carpetas indispensables leídas:"
+    echo "-------------------------------------------------------------------------"
+    head -n 20 "$REPORT_TARGET_DIR/carpetas_esenciales_gn.txt" | sed 's/^/  /' || echo "  ⚠️ Ninguna carpeta descubierta."
+else
+    echo "  ❌ Error: La carpeta out/ no existe. GN no generó mapa de compilación."
 fi
+echo "========================================================================="
+echo ""
+
+echo "  ==========================================================================================="
+echo "  📂 DESCUBRIR 2: GIT STATUS: CARPETAS FUENTE DEL SDK MODIFICADAS POR PARCHEADO DE FICHEROS "
+echo "  ==========================================================================================="
+# Preguntamos a Git qué directorios contienen archivos modificados "al vuelo" por los sed de nuestra compilación
 git status --porcelain 2>/dev/null | grep "M " | awk '{print $2}' | sed 's|/[^/]*$||' | sort -u > "$REPORT_TARGET_DIR/carpetas_git_modificadas.txt" || true
 
-# ⚡ REDUCCIÓN ATÓMICA DE PESO MEDIANTE LLVM-STRIP (OPTIMIZACIÓN DE BINARIOS NATIVOS .SO)
+echo "  🎯 Detectadas $(wc -l < "$REPORT_TARGET_DIR/carpetas_git_modificadas.txt" 2>/dev/null || echo '0') carpetas parchadas por sed."
+echo "  📋 Report guardado en: $REPORT_TARGET_DIR/carpetas_git_modificadas.txt"
+echo "  Top 20 de carpetas modificadas por sed:"
+echo "  -------------------------------------------------------------------------"
+head -n 20 "$REPORT_TARGET_DIR/carpetas_git_modificadas.txt" | sed 's/^/  /' || echo "  ⚠️ Git no reporta archivos modificados."
+echo "  ========================================================================="
+echo ""
+
+
+# =========================================================================
+# 🚀 OPTIMIZACIÓN POST-COMPILACIÓN (LLVM-STRIP)
+# =========================================================================
+echo "========================================================================="
+echo "INFRA: Compilación completada. Generando copias '_small' (LLVM-STRIP) para comparativa..."
+echo "========================================================================="
+
+## Usamos la ruta absoluta exacta basada en el Workspace real del host de GitHub
+#JNI_TARGET_DIR="/home/runner/work/matter_virtual_device/Matter_Virtual_Device_CHIP/matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a"
+
+# $GITHUB_WORKSPACE apunta dinámicamente a /home/runner/work/matter_virtual_device/Matter_Virtual_Device_CHIP
+# JNI_TARGET_DIR="$GITHUB_WORKSPACE/matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a"
+
+# Usamos la ruta relativa directa ya que nos encontramos dentro de la carpeta 'matter-sdk'
 JNI_TARGET_DIR="examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a"
+
 STRIP_TOOL="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
 
 if [ -f "$JNI_TARGET_DIR/libDeviceApp.so" ] && [ -x "$STRIP_TOOL" ]; then
-    echo "INFRA: Optimizando peso de empaquetado de librerías nativas con llvm-strip..."
+    echo "INFRA: Duplicando y reduciendo binarios nativos con llvm-strip..."
+    
+    # El parámetro -o clona y aplica el strip en el nuevo archivo sin alterar el original
     $STRIP_TOOL --strip-unneeded "$JNI_TARGET_DIR/libDeviceApp.so" -o "$JNI_TARGET_DIR/libDeviceApp_small.so"
     $STRIP_TOOL --strip-unneeded "$JNI_TARGET_DIR/libc++_shared.so" -o "$JNI_TARGET_DIR/libc++_shared_small.so"
+    
+    echo "========================================================================="
+    echo "📊 COMPARATIVA DE TAMAÑOS EN EL DISCO DEL RUNNER:"
+    echo "========================================================================="
     ls -lh "$JNI_TARGET_DIR"/libDeviceApp*.so
+    ls -lh "$JNI_TARGET_DIR"/libc++_shared*.so
+    echo "========================================================================="
+else
+    echo "⚠️ ADVERTENCIA CRÍTICA: No se localizaron los binarios en la ruta esperada:"
+    echo "-> Buscado en: $JNI_TARGET_DIR/libDeviceApp.so"
+fi  ls -lh "$JNI_TARGET_DIR"/libDeviceApp*.so
 fi
