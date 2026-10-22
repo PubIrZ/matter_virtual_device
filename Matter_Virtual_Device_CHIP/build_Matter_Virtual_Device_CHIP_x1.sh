@@ -30,17 +30,26 @@ FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 #//////////////////////////////////////////////////////////////////////////
 # =========================================================================
 
-
 # =========================================================================
-# 🛡️ GLOBAL GRADLE COMPILER BLINDAJE (INIT SCRIPT SEGURO REFLEXIVO + FIX KAPT)
+# 🛡️ GLOBAL GRADLE COMPILER & STACK BLINDAJE (INIT SCRIPT + MEMORY FORCE)
 # =========================================================================
-echo "INFRA: Levantando escudo de compilación global robusto mediante init.gradle..."
+echo "INFRA: Levantando escudo de compilación global y expansión de memoria Stack..."
 
+# 1. Configurar directivas físicas en el archivo global gradle.properties del Runner
+# Esto obliga al demonio raíz y a sus subprocesos KAPT a levantar con un Stack ampliado
 mkdir -p ~/.gradle
+touch ~/.gradle/gradle.properties
+sed -i '/org.gradle.jvmargs/d' ~/.gradle/gradle.properties || true
+
+# Forzamos -Xss4m directamente en los argumentos base de la JVM de Gradle
+echo "org.gradle.jvmargs=-Xmx2048m -Xms512m -Xss4m -Dfile.encoding=UTF-8 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" >> ~/.gradle/gradle.properties
+echo "  ✅ Propiedades de memoria global JVM asignadas en ~/.gradle/gradle.properties"
+
+# 2. Generar el script de inicialización reflexivo para interceptar las tareas de Kotlin
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
     afterEvaluate { project ->
-        // 1. Force the bypass options on standard Kotlin compilation tasks
+        // Forzar los argumentos libres en tareas estándar de compilación de Kotlin
         project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
             try {
                 if (task.hasProperty('kotlinOptions')) {
@@ -51,10 +60,9 @@ allprojects {
             } catch (Exception e) {}
         }
 
-        // 2. 🚀 CRITICAL FIX: Intercept KAPT tasks to prevent java.lang.StackOverflowError
+        // Forzar la herencia de los argumentos de la JVM en el entorno de KAPT
         project.tasks.matching { it.name.contains("kapt") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
-                // Force larger stack allocations (-Xss4m) directly inside KAPT's worker options
                 if (task.hasProperty('kaptProcessJvmArgs')) {
                     task.kaptProcessJvmArgs += ["-Xss4m", "-Xmx2048m"]
                 }
@@ -63,13 +71,13 @@ allprojects {
     }
 }
 EOF
-
 echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
 
-# 2. Refuerzo absoluto en las variables globales de entorno del demonio JVM
+# 3. Exportación complementaria de variables de entorno para procesos secundarios de Python
 export GRADLE_OPTS="-Xmx2048m -Xms512m -Xss4m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check"
 export KOTLINC_ARGS="-nowarn -Xskip-metadata-version-check"
+# =========================================================================
 
 
 # =========================================================================
