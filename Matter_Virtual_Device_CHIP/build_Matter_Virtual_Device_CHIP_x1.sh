@@ -56,8 +56,9 @@ FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 echo "========================================================================="
 echo "🔍 DIAGNÓSTICO AVANZADO DE ENTORNO EN EL RUNNER (HOST VIRTUAL)"
 echo "========================================================================="
-
+echo ""
 # 1. Variables de Entorno Típicas de GitHub Actions
+echo "-------------------------------------------------------------------------"
 echo "🐙 VARIABLES GLOBALES DE GITHUB:"
 echo "-------------------------------------------------------------------------"
 echo "  ↳ GITHUB_WORKSPACE : ${GITHUB_WORKSPACE:-'❌ NO EXPORTADA / VACÍA'}"
@@ -66,14 +67,15 @@ echo "  ↳ GITHUB_REF_NAME  : ${GITHUB_REF_NAME:-'❌ NO EXPORTADA'}"
 echo "  ↳ GITHUB_SHA       : ${GITHUB_SHA:-'❌ NO EXPORTADA'}"
 echo "  ↳ GITHUB_RUN_ID    : ${GITHUB_RUN_ID:-'❌ NO EXPORTADA'}"
 echo ""
-
+echo "-------------------------------------------------------------------------"
 # 2. Variantes de JAVA_HOME dependientes del SDK (Inyectadas por setup-java)
+echo "-------------------------------------------------------------------------"
 echo "☕ VARIANTES DE ENTORNO JAVA (JDK MAP):"
 echo "-------------------------------------------------------------------------"
 echo "  ↳ CURRENT JAVA_HOME: ${JAVA_HOME:-'❌ NO DETECTADA'}"
 echo "  ↳ JAVA_HOME_11_X64 : ${JAVA_HOME_11_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
 echo "  ↳ JAVA_HOME_17_X64 : ${JAVA_HOME_17_X64:-'❌ NO DETECTADA (¿No instalada?)'}"
-
+echo ""
 # Mostrar versión física real apuntada por las variantes si existen
 if [ -n "$JAVA_HOME_11_X64" ] && [ -x "$JAVA_HOME_11_X64/bin/java" ]; then
     echo "    ↳ Versión Real en Java 11 SDK: $($JAVA_HOME_11_X64/bin/java -version 2>&1 | head -n 1)"
@@ -81,19 +83,20 @@ fi
 if [ -n "$JAVA_HOME_17_X64" ] && [ -x "$JAVA_HOME_17_X64/bin/java" ]; then
     echo "    ↳ Versión Real en Java 17 SDK: $($JAVA_HOME_17_X64/bin/java -version 2>&1 | head -n 1)"
 fi
+
 echo ""
-
-
 # 3. Parámetros del Entorno de Android, NDK y ZAP
+echo "-------------------------------------------------------------------------"
 echo "📂 VARIABLES DE DESARROLLO (ANDROID / MATTER):"
 echo "-------------------------------------------------------------------------"
 echo "  ↳ ANDROID_HOME     : ${ANDROID_HOME:-'❌ NO DETECTADA'}"
 echo "  ↳ ANDROID_NDK_ROOT : ${ANDROID_NDK_ROOT:-'❌ NO DETECTADA'}"
 echo "  ↳ ANDROID_NDK_HOME : ${ANDROID_NDK_HOME:-'❌ NO DETECTADA'}"
 echo "  ↳ ZAP_INSTALL_PATH : ${ZAP_INSTALL_PATH:-'❌ NO DETECTADA'}"
-echo ""
 
+echo ""
 # 4. Descubrimiento y Versión de Binarios Activos
+echo "-------------------------------------------------------------------------"
 echo "🛠️ BINARIOS Y VERSIONES REALES (EN PATH ACTIVO):"
 echo "-------------------------------------------------------------------------"
 #echo "  ↳ Java CLI Activo  : $(java -version 2>&1 | head -n 1 || echo '❌ No encontrado')"
@@ -134,15 +137,16 @@ if [ -f "$CLANG_NDK" ]; then
 else
     echo "  ↳ NDK Clang    : ❌ Binario del compilador no hallado en la ruta del NDK"
 fi
-echo ""
 
+echo ""
 # 5. VARIABLES CUSTOM DE CONTROL
+echo "-------------------------------------------------------------------------"
 echo "📂 VARIABLES CUSTOM DE CONTROL:"
 echo "-------------------------------------------------------------------------"
 echo "  ↳ FORCE_CLEAR_CACHE: $FORCE_CLEAR_CACHE"
 echo ""
-
 echo "========================================================================="
+
 
 # =========================================================================
 # 🧹 LIMPIEZA ATÓMICA DE CÓDIGO FUENTE (EVITA ACUMULACIÓN ENTRE INTENTOS DEL BUCLE)
@@ -211,6 +215,52 @@ else
     echo "  ↳ GN Tool      : ❌ No inicializado aún (⏳ Se activará tras Pigweed 'activate.sh')"
 fi
 echo ""
+
+
+# =========================================================================
+# 🛡️ INYECCIÓN INTEGRAL ANTI-CRASH DE METADATOS EN EL SUBPROYECTO DE TERCEROS
+# =========================================================================
+echo "INFRA: Aplicando parche de mitigación en caliente sobre third_party/android_deps..."
+
+TARGET_NESTED_GRADLE="third_party/android_deps/build.gradle"
+
+if [ -f "$TARGET_NESTED_GRADLE" ]; then
+    # 1. Creamos el bloque de código Groovy que obliga a saltarse la validación estricta de Kotlin
+    BLOCK_COMPATIBILITY=$(cat << 'EOF'
+
+// Parche de compatibilidad inyectado por el pipeline de infraestructura de CI
+allprojects {
+    tasks.withType(executePattern = { it.name.contains("Kotlin") || it.class.name.contains("Kotlin") }).configureEach {
+        try {
+            kotlinOptions {
+                freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+            }
+        } catch (Exception e) {
+            // Silenciar errores si la tarea no expone directamente las opciones de Kotlin
+        }
+    }
+}
+EOF
+)
+    # 2. Inyectamos el bloque completo de configuración al final de build.gradle de dependencias
+    echo "$BLOCK_COMPATIBILITY" >> "$TARGET_NESTED_GRADLE"
+    echo "  ✅ Bloque de anulación inyectado con éxito en $TARGET_NESTED_GRADLE"
+    
+    # 3. Blindaje secundario: Escribir parámetros directamente en el archivo gradle.properties interno
+    NESTED_PROPERTIES="third_party/android_deps/gradle.properties"
+    touch "$NESTED_PROPERTIES"
+    sed -i '/Xskip-metadata-version-check/d' "$NESTED_PROPERTIES" || true
+    echo "android.kotlinOptions.freeCompilerArgs+=[-Xskip-metadata-version-check]" >> "$NESTED_PROPERTIES"
+    echo "kotlin.experimental.tryK2=false" >> "$NESTED_PROPERTIES"
+    echo "  ✅ Parámetros de respaldo asignados en $NESTED_PROPERTIES"
+else
+    echo "⚠️ ADVERTENCIA CRÍTICA: No se localizó $TARGET_NESTED_GRADLE. Saltando inyección."
+fi
+
+# 4. Aseguramos que las variables de entorno de la JVM sigan activas para los hilos de Gradle
+export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
+export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check"
+export KOTLINC_ARGS="-nowarn -Xskip-metadata-version-check"
 
 # Sincronización local de librerías nativas internas del SDK de Matter
 echo "INFRA: Descargando pre-requisitos de dependencias de Android..."
