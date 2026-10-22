@@ -306,30 +306,6 @@ find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call
 find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 
 
-## ==========================================================================
-## 🛡️ PARCHEADO DEL FICHERO GRADLE gradle.propertie DE LA COMPILACION KOTLIN
-##    ANTI-STAKOVERFLOW Y ANTI-COLLISION DE VERSIONES DE KOTLIN METADATA!
-## ==========================================================================
-#echo "INFRA: Configurando argumentos en la ruta fija de gradle.properties..."
-#
-#GRADLE_PROPERTIES="examples/virtual-device-app/android/App/gradle.properties"
-#
-#if [ -f "$GRADLE_PROPERTIES" ]; then
-#
-#    # 🔥 En gradle.properties buscamos la línea original de jvmargs Matter y concatenamos al final los flags:
-#    #    -Xskip-metadata-version-check y -Xallow-no-source-files 
-#	#    Esto blinda al demonio de Gradle contra los errores de la firma de metadatos 2.4.0 y el StackOverflow (detiene la recursión) 
-#    #sed -i 's|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
-#    sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files|g' "$GRADLE_PROPERTIES"
-#	
-#    echo "INFRA: -Xskip-metadata-version-check y -Xallow-no-source-files inyectados con éxito en $GRADLE_PROPERTIES."
-#else
-#    echo "⚠️ ADVERTENCIA: No se localizó el archivo $GRADLE_PROPERTIES."
-#fi
-
-# =========================================================================
-echo ""
-
 
 # =========================================================================
 # 🔥 EL CAMBIO MAESTRO: ESTRATEGIA DE INYECCIÓN A NIVEL DE DISCO DE USUARIO
@@ -372,40 +348,41 @@ find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
 echo ""
 
 
-# =========================================================================
-# 🛡️ GLOBAL GRADLE COMPILER BLINDAJE (INIT SCRIPT OMNIPRESENTE)
-# =========================================================================
-echo "INFRA: Levantando escudo de compilación global mediante init.gradle..."
 
-# 1. Creamos el archivo de inicialización global en el directorio del usuario del Runner
+# =========================================================================
+# 🛡️ GLOBAL KOTLIN COMPILER FORCE-OVERRIDE EN GRADLE DAEMON
+# =========================================================================
+echo "INFRA: Applying deep structural patch to the global Gradle compilation engine..."
+
+# 1. Generate an omnipresent initialization script inside the Gradle home workspace
 mkdir -p ~/.gradle
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
     beforeEvaluate { project ->
-        project.plugins.withId("org.jetbrains.kotlin.android") {
-            configureKotlinTasks(project)
-        }
-        project.plugins.withId("kotlin-android") {
-            configureKotlinTasks(project)
-        }
-    }
-}
-
-def configureKotlinTasks(Project project) {
-    project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        kotlinOptions {
-            // Inyección forzada indestructible anti-metadatos 2.4.0
-            freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+        // Force the configuration properties directly on any applied Kotlin compilation tasks
+        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+            }
         }
     }
 }
 EOF
+echo "  ✅ Global initialization script injected at ~/.gradle/init.gradle"
 
-echo "  ✅ Escudo global init.gradle guardado en ~/.gradle/init.gradle"
+# 2. Hardcode the compiler bypass arguments directly inside the global user parameters file
+# This guarantees execution even if sub-processes drop environment variables
+touch ~/.gradle/gradle.properties
+sed -i '/freeCompilerArgs/d' ~/.gradle/gradle.properties || true
+echo "org.gradle.jvmargs=-Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" >> ~/.gradle/gradle.properties
+echo "  ✅ User properties collection patched at ~/.gradle/gradle.properties"
 
-# 2. Refuerzo absoluto en las variables del demonio constructor JVM
+# 3. Export absolute environment parameters to wrap the Python sub-processes
 export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
-# ==
+# =========================================================================
+
+
+
 
 
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
