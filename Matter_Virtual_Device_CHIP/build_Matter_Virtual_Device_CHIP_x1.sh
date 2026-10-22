@@ -219,32 +219,36 @@ echo ""
 
 # =========================================================================
 # 🛡️ INYECCIÓN INTEGRAL ANTI-CRASH DE METADATOS EN EL SUBPROYECTO DE TERCEROS
+#
+#2026-10-22 00:12:49 WARNING e: file:///home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/core/matter/src/main/java/com/matter/virtual/device/app/core/matter/model/Payload.kt:17:33 
+#Class 'matter.onboardingpayload.DiscoveryCapability' was compiled with an incompatible version of Kotlin. 
+#The binary version of its metadata is 2.4.0, expected version is 1.8.0.
 # =========================================================================
-echo "INFRA: Aplicando parche de mitigación en caliente sobre third_party/android_deps..."
+
+
+echo "INFRA: Aplicando parche de mitigación en Groovy sobre third_party/android_deps..."
 
 TARGET_NESTED_GRADLE="third_party/android_deps/build.gradle"
 
 if [ -f "$TARGET_NESTED_GRADLE" ]; then
-    # 1. Creamos el bloque de código Groovy que obliga a saltarse la validación estricta de Kotlin
+    # 1. Creamos el bloque de código nativo en Groovy sin propiedades desconocidas
     BLOCK_COMPATIBILITY=$(cat << 'EOF'
 
 // Parche de compatibilidad inyectado por el pipeline de infraestructura de CI
-allprojects {
-    tasks.withType(executePattern = { it.name.contains("Kotlin") || it.class.name.contains("Kotlin") }).configureEach {
-        try {
-            kotlinOptions {
-                freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
-            }
-        } catch (Exception e) {
-            // Silenciar errores si la tarea no expone directamente las opciones de Kotlin
+tasks.matching { it.name =~ /(?i)Kotlin/ }.configureEach {
+    try {
+        kotlinOptions {
+            freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
         }
+    } catch (Exception e) {
+        // Evita romper la ejecución si la tarea emparejada no expone kotlinOptions
     }
 }
 EOF
 )
-    # 2. Inyectamos el bloque completo de configuración al final de build.gradle de dependencias
+    # 2. Inyectamos el bloque corregido al final del build.gradle de dependencias
     echo "$BLOCK_COMPATIBILITY" >> "$TARGET_NESTED_GRADLE"
-    echo "  ✅ Bloque de anulación inyectado con éxito en $TARGET_NESTED_GRADLE"
+    echo "  ✅ Bloque de anulación Groovy inyectado con éxito en $TARGET_NESTED_GRADLE"
     
     # 3. Blindaje secundario: Escribir parámetros directamente en el archivo gradle.properties interno
     NESTED_PROPERTIES="third_party/android_deps/gradle.properties"
