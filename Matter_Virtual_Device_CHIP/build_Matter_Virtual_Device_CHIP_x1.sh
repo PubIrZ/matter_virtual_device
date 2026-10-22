@@ -2,8 +2,6 @@
 
 # =========================================================================
 # SCRIPT DINÁMICO DE COMPILACIÓN CON ASIGNACIÓN DE ENTORNO AISLADO DE DISCO
-																		   
-
 # =========================================================================
 # Plantilla didáctica optimizada para compilaciones complejas en Matter/Android.
 # Evita la colisión de variables globales destructivas y limpia la terminal.
@@ -17,16 +15,13 @@ set -e # Detiene el script inmediatamente si ocurre un error inesperado
 #echo "🚨 MODO RESCATE ACTIVO: Saltando compilación y forzando subida inmediata del out (gh artifact upload)."
 #exit 10
 
-																		   
 # 🐙 EXTRACTOR DE ENTORNO DE GITHUB ACTIONS
 # Escanea de forma física el mapa del disco asignado al pipeline para heredar
 # variables refrescadas en caliente entre ciclos del bucle interactivo.
 if [ -n "$GITHUB_ENV" ] && [ -f "$GITHUB_ENV" ]; then
     echo "⚙️ INFRA: Sincronizando bloque completo de variables \$GITHUB_ENV (exports)..."
     while IFS= read -r line || [ -n "$line" ]; do
-																	 
         if [[ ! -z "$line" && "$line" != "#"* ]]; then
-										  
             export "$line"
         fi
     done < "$GITHUB_ENV"
@@ -34,7 +29,7 @@ fi
 
 # 🔥 ANULACIÓN CRÍTICA ANTI-CRASH: Forzamos el borrado de la variable conflictiva
 # Esto evita que el validador estricto de Python de Pigweed aborte la compilación.
-uunset PW_ZAP_CIPD_RELEASE
+unset PW_ZAP_CIPD_RELEASE
 export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 
 # =========================================================================
@@ -322,29 +317,6 @@ gn gen out/virtual-device-app \
 find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
 echo ""
 
-																		   
-																		 
-																		   
-																			   
-
-																 
-															
-																		
-	 
-											
-										  
-																			   
-		
-																 
-																										  
-	 
-																					  
-	
-																						 
-  
-																		   
-	   
-
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
@@ -414,23 +386,39 @@ echo "========================================================================="
 # Usamos la ruta relativa directa ya que nos encontramos dentro de la carpeta 'matter-sdk'
 JNI_TARGET_DIR="examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a"
 
+# Strip Tool
 STRIP_TOOL="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
 
-if [ -f "$JNI_TARGET_DIR/libDeviceApp.so" ] && [ -x "$STRIP_TOOL" ]; then
-    echo "INFRA: Duplicando y reduciendo binarios nativos con llvm-strip..."
+if [ -x "$STRIP_TOOL" ] && [ -d "$JNI_TARGET_DIR" ]; then
+    echo "INFRA: Procesando y reduciendo binarios nativos con llvm-strip..."
     
-    # El parámetro -o clona y aplica el strip en el nuevo archivo sin alterar el original
-    $STRIP_TOOL --strip-unneeded "$JNI_TARGET_DIR/libDeviceApp.so" -o "$JNI_TARGET_DIR/libDeviceApp_small.so"
-    $STRIP_TOOL --strip-unneeded "$JNI_TARGET_DIR/libc++_shared.so" -o "$JNI_TARGET_DIR/libc++_shared_small.so"
-    
-    echo "========================================================================="
-    echo "📊 COMPARATIVA DE TAMAÑOS EN EL DISCO DEL RUNNER:"
-    echo "========================================================================="
-    ls -lh "$JNI_TARGET_DIR"/libDeviceApp*.so
-    ls -lh "$JNI_TARGET_DIR"/libc++_shared*.so
-    echo "========================================================================="
+    # Buscamos solo los archivos .so originales (evitando procesar los *_small.so en ejecuciones repetidas)
+    # y mapeamos de manera limpia la lista de librerías a optimizar.
+    FOUND_ANY=false
+    for so_file in "$JNI_TARGET_DIR"/*.so; do
+        # Saltar si el archivo es un subproducto anterior o si no coincide ningún archivo literal
+        [[ "$so_file" == *"_small.so" ]] && continue
+        [ -f "$so_file" ] || continue
+        
+        FOUND_ANY=true
+        base_name="${so_file%.so}"
+        target_small="${base_name}_small.so"
+        
+        echo "  ↳ Optimizando: $(basename "$so_file") -> $(basename "$target_small")"
+        $STRIP_TOOL --strip-unneeded "$so_file" -o "$target_small"
+    done
+
+    if [ "$FOUND_ANY" = true ]; then
+        echo "========================================================================="
+        echo "📊 COMPARATIVA DE TAMAÑOS EN EL DISCO DEL RUNNER:"
+        echo "========================================================================="
+        ls -lh "$JNI_TARGET_DIR"/*.so
+        echo "========================================================================="
+    else
+        echo "⚠️ ADVERTENCIA: No se encontró ningún archivo .so original para optimizar en $JNI_TARGET_DIR"
+    fi
 else
-    echo "⚠️ ADVERTENCIA CRÍTICA: No se localizaron los binarios en la ruta esperada:"
-    echo "-> Buscado en: $JNI_TARGET_DIR/libDeviceApp.so"
-fi  ls -lh "$JNI_TARGET_DIR"/libDeviceApp*.so
+    echo "⚠️ ADVERTENCIA CRÍTICA: No se pudo iniciar la optimización post-compilación."
+    [ ! -x "$STRIP_TOOL" ] && echo "  ↳ Razón: El binario de stripping no es ejecutable o no existe en: $STRIP_TOOL"
+    [ ! -d "$JNI_TARGET_DIR" ] && echo "  ↳ Razón: No se localizó la carpeta de librerías: $JNI_TARGET_DIR"
 fi
