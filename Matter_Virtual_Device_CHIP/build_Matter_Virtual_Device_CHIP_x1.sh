@@ -28,14 +28,29 @@ export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 
 # =========================================================================
+# 🧹 PURGA Y KILL DE PROCESOS DEMONIOS DE GRADLE HUÉRFANOS
+# 🚀 Evita que Gradle reutilice procesos antiguos sin los nuevos flags de memoria
+# =========================================================================
+echo "INFRA: Purgando hilos y demonios Gradle en ejecución en la memoria RAM..."
+if [ -f "examples/virtual-device-app/android/App/gradlew" ]; then
+    ./examples/virtual-device-app/android/App/gradlew --stop || true
+fi
+if [ -f "third_party/android_deps/gradlew" ]; then
+    ./third_party/android_deps/gradlew --stop || true
+fi
+pkill -f 'gradle' || true  # 🚀 [AÑADIDO] -> Matanza total a nivel de kernel de la máquina virtual
+echo "  ✅ Memoria RAM del Runner purgada. Iniciando entorno limpio..."
+# =========================================================================
+
+
+# =========================================================================
 #//////////////////////////////////////////////////////////////////////////
 # =========================================================================
 
 # =========================================================================
 # 🛡️ BLINDAJE GLOBAL: STACK & GRADLE COMPILER (MEMORY FORCE + INIT SCRIPT)
 # =========================================================================
-echo "INFRA: Levantando protección de expansión de memoria (STACK & METASPACE DE 8MB)..."
-# 🚀 APLICACIÓN DE PARÁMETROS DE ALTO RENDIMIENTO (STACK & METASPACE DE 8MB)
+echo "INFRA: Protejemos la compilación incrementando la memoria (STACK & METASPACE DE 8MB)..."
 
 # 1. Configurar directivas físicas en el archivo global gradle.properties del Runner
 # Esto obliga al demonio raíz y a sus subprocesos KAPT a levantar con un Stack ampliado
@@ -48,9 +63,8 @@ sed -i '/org.gradle.jvmargs/d' ~/.gradle/gradle.properties || true
 echo "org.gradle.jvmargs=-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" >> ~/.gradle/gradle.properties
 
 echo "  ✅ Propiedades de memoria global JVM asignadas en ~/.gradle/gradle.properties"
-
-
-# 2. Generar el script de inicialización reflexivo para interceptar las tareas de Kotlin
+  
+# 2. Generar el script init.gradle para interceptar las tareas de Kotlin
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
     afterEvaluate { project ->
@@ -69,7 +83,8 @@ allprojects {
         project.tasks.matching { it.name.contains("kapt") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
                 if (task.hasProperty('kaptProcessJvmArgs')) {
-                    task.kaptProcessJvmArgs += ["-Xss4m", "-Xmx2048m"]
+                    // 🚀 Forzamos a KAPT a asimilar los 8MB de pila para romper la recursión de Matter
+                    task.kaptProcessJvmArgs += ["-Xss8m", "-Xmx4g", "-XX:MaxMetaspaceSize=1024m"]
                 }
             } catch (Exception e) {}
         }
@@ -78,8 +93,7 @@ allprojects {
 EOF
 echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
 
-
-# Actualizamos también las variables de entorno de la sesión para envolver al subproceso Python
+# 🚀 Actualizamos también las variables de entorno de la sesión para procesos hijos Python
 export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check"
 export KOTLINC_ARGS="-nowarn -Xskip-metadata-version-check"
