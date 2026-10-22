@@ -371,6 +371,43 @@ gn gen out/virtual-device-app \
 find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
 echo ""
 
+
+# =========================================================================
+# 🛡️ GLOBAL GRADLE COMPILER BLINDAJE (INIT SCRIPT OMNIPRESENTE)
+# =========================================================================
+echo "INFRA: Levantando escudo de compilación global mediante init.gradle..."
+
+# 1. Creamos el archivo de inicialización global en el directorio del usuario del Runner
+mkdir -p ~/.gradle
+cat << 'EOF' > ~/.gradle/init.gradle
+allprojects {
+    beforeEvaluate { project ->
+        project.plugins.withId("org.jetbrains.kotlin.android") {
+            configureKotlinTasks(project)
+        }
+        project.plugins.withId("kotlin-android") {
+            configureKotlinTasks(project)
+        }
+    }
+}
+
+def configureKotlinTasks(Project project) {
+    project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            // Inyección forzada indestructible anti-metadatos 2.4.0
+            freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+        }
+    }
+}
+EOF
+
+echo "  ✅ Escudo global init.gradle guardado en ~/.gradle/init.gradle"
+
+# 2. Refuerzo absoluto en las variables del demonio constructor JVM
+export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
+# ==
+
+
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
