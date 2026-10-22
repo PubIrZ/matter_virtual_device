@@ -189,21 +189,6 @@ echo "INFRA: Archivos zap.json vaciados con éxito. CIPD ignorará la descarga d
 echo "INFRA: Inicializando el entorno virtual aislado de Pigweed..."
 source scripts/activate.sh
 
-## ==========================================================================
-## 🛡️ Proteger la COMPILACION KOTLIN contra los errores de StackOverflow
-##    y la colision entre versiones del metadata de KOTLIN con GRADLE_OPTS
-## ==========================================================================
-#  Configuramos los flags de JVM, separados por un espacio simple y sin 
-#  comillas dobles internas para evitar errores.
-# 🛡️ PROTECCIÓN CRÍTICA ANTI ERRORES (STACK OVERFLOW) EN KOTLIN / GRADLE
-# Inyectamos argumentos seguros en la JVM del demonio constructor. El parámetro
-# '-Xskip-metadata-version-check' evita la colisión de firmas de metadatos de Kotlin
-# que provocan errores de compilación fatales en entornos Android clásicos.
-
-export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
-
-echo "INFRA: Parche GRADLE_OPTS justo tras la activación de Pigweed."
-# =========================================================================
 echo ""
 
 # GN (Generate Ninja)
@@ -216,50 +201,6 @@ else
 fi
 echo ""
 
-
-# =========================================================================
-# 🛡️ INYECCIÓN INTEGRAL ANTI-CRASH DE METADATOS EN EL SUBPROYECTO DE TERCEROS
-#
-#2026-10-22 00:12:49 WARNING e: file:///home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/core/matter/src/main/java/com/matter/virtual/device/app/core/matter/model/Payload.kt:17:33 
-#Class 'matter.onboardingpayload.DiscoveryCapability' was compiled with an incompatible version of Kotlin. 
-#The binary version of its metadata is 2.4.0, expected version is 1.8.0.
-# =========================================================================
-
-
-echo "INFRA: Aplicando parche de mitigación en Groovy sobre third_party/android_deps..."
-
-TARGET_NESTED_GRADLE="third_party/android_deps/build.gradle"
-
-if [ -f "$TARGET_NESTED_GRADLE" ]; then
-    # 1. Creamos el bloque de código nativo en Groovy sin propiedades desconocidas
-    BLOCK_COMPATIBILITY=$(cat << 'EOF'
-
-// Parche de compatibilidad inyectado por el pipeline de infraestructura de CI
-tasks.matching { it.name =~ /(?i)Kotlin/ }.configureEach {
-    try {
-        kotlinOptions {
-            freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
-        }
-    } catch (Exception e) {
-        // Evita romper la ejecución si la tarea emparejada no expone kotlinOptions
-    }
-}
-EOF
-)
-    # 2. Inyectamos el bloque corregido al final del build.gradle de dependencias
-    echo "$BLOCK_COMPATIBILITY" >> "$TARGET_NESTED_GRADLE"
-    echo "  ✅ Bloque de anulación Groovy inyectado con éxito en $TARGET_NESTED_GRADLE"
-    
-    # 3. Blindaje secundario: Escribir parámetros directamente en el archivo gradle.properties interno
-    NESTED_PROPERTIES="third_party/android_deps/gradle.properties"
-    touch "$NESTED_PROPERTIES"
-    sed -i '/Xskip-metadata-version-check/d' "$NESTED_PROPERTIES" || true
-    echo "android.kotlinOptions.freeCompilerArgs+=[-Xskip-metadata-version-check]" >> "$NESTED_PROPERTIES"
-    echo "kotlin.experimental.tryK2=false" >> "$NESTED_PROPERTIES"
-    echo "  ✅ Parámetros de respaldo asignados en $NESTED_PROPERTIES"
-else
-    echo "⚠️ ADVERTENCIA CRÍTICA: No se localizó $TARGET_NESTED_GRADLE. Saltando inyección."
-fi
 
 # 4. Aseguramos que las variables de entorno de la JVM sigan activas para los hilos de Gradle
 export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
@@ -347,41 +288,41 @@ gn gen out/virtual-device-app \
 find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
 echo ""
 
+# ====================================================================================================
 
 
 # =========================================================================
-# 🛡️ GLOBAL KOTLIN COMPILER FORCE-OVERRIDE EN GRADLE DAEMON
+# 🛡️ GLOBAL GRADLE COMPILER BLINDAJE (INIT SCRIPT SEGURO REFLEXIVO)
 # =========================================================================
-echo "INFRA: Applying deep structural patch to the global Gradle compilation engine..."
+echo "INFRA: Levantando escudo de compilación global robusto mediante init.gradle..."
 
-# 1. Generate an omnipresent initialization script inside the Gradle home workspace
 mkdir -p ~/.gradle
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
-    beforeEvaluate { project ->
-        // Force the configuration properties directly on any applied Kotlin compilation tasks
-        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-            kotlinOptions {
-                freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+    // Escuchamos cuando el proyecto termina de cargarse para evitar errores en buildSrc
+    afterEvaluate { project ->
+        // Buscamos las tareas de compilación de Kotlin de forma segura usando el nombre de su clase como string
+        project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
+            try {
+                // Modificamos los argumentos libres del compilador usando reflexión Groovy
+                if (task.hasProperty('kotlinOptions')) {
+                    task.kotlinOptions {
+                        freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+                    }
+                }
+            } catch (Exception e) {
+                // Silenciar errores en módulos puros de Java o configuraciones internas
             }
         }
     }
 }
 EOF
-echo "  ✅ Global initialization script injected at ~/.gradle/init.gradle"
 
-# 2. Hardcode the compiler bypass arguments directly inside the global user parameters file
-# This guarantees execution even if sub-processes drop environment variables
-touch ~/.gradle/gradle.properties
-sed -i '/freeCompilerArgs/d' ~/.gradle/gradle.properties || true
-echo "org.gradle.jvmargs=-Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" >> ~/.gradle/gradle.properties
-echo "  ✅ User properties collection patched at ~/.gradle/gradle.properties"
+echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
 
-# 3. Export absolute environment parameters to wrap the Python sub-processes
+# 2. Refuerzo absoluto en las variables del demonio constructor JVM
 export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
 # =========================================================================
-
-
 
 
 
