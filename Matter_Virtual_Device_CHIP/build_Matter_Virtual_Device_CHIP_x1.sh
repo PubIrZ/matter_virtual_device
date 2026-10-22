@@ -27,39 +27,57 @@ export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 
 # =========================================================================
-# 🛡️ GLOBAL GRADLE COMPILER BLINDAJE (INIT SCRIPT SEGURO REFLEXIVO)
-# [UBICACIÓN CORREGIDA]: Declarado al inicio para blindar todas las fases
+#//////////////////////////////////////////////////////////////////////////
+# =========================================================================
+
+
+# =========================================================================
+# 🛡️ GLOBAL GRADLE COMPILER BLINDAJE (INIT SCRIPT SEGURO REFLEXIVO + FIX KAPT)
 # =========================================================================
 echo "INFRA: Levantando escudo de compilación global robusto mediante init.gradle..."
 
 mkdir -p ~/.gradle
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
-    // Interceptamos la inicialización de proyectos usando tipado seguro para Groovy
     afterEvaluate { project ->
-        // Buscamos tareas de compilación usando strings planos para evitar errores con :buildSrc
+        // 1. Force the bypass options on standard Kotlin compilation tasks
         project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
             try {
                 if (task.hasProperty('kotlinOptions')) {
                     task.kotlinOptions {
-                        // Inyección forzada indestructible anti-metadatos 2.4.0
                         freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
                     }
                 }
-            } catch (Exception e) {
-                // Silenciar errores en módulos puros de Java o tareas internas
-            }
+            } catch (Exception e) {}
+        }
+
+        // 2. 🚀 CRITICAL FIX: Intercept KAPT tasks to prevent java.lang.StackOverflowError
+        project.tasks.matching { it.name.contains("kapt") || it.class.name.contains("Kapt") }.configureEach { task ->
+            try {
+                // Force larger stack allocations (-Xss4m) directly inside KAPT's worker options
+                if (task.hasProperty('kaptProcessJvmArgs')) {
+                    task.kaptProcessJvmArgs += ["-Xss4m", "-Xmx2048m"]
+                }
+            } catch (Exception e) {}
         }
     }
 }
 EOF
+
 echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
 
 # 2. Refuerzo absoluto en las variables globales de entorno del demonio JVM
-export GRADLE_OPTS="-Xmx2048m -Xms512m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
+export GRADLE_OPTS="-Xmx2048m -Xms512m -Xss4m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check"
 export KOTLINC_ARGS="-nowarn -Xskip-metadata-version-check"
+
+
 # =========================================================================
+#//////////////////////////////////////////////////////////////////////////
+# =========================================================================
+
+
+
 
 echo "========================================================================="
 echo "🔍 DIAGNÓSTICO AVANZADO DE ENTORNO EN EL RUNNER (HOST VIRTUAL)"
