@@ -28,6 +28,32 @@ export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 
 # =========================================================================
+# ☕ FORZADO DINÁMICO DE JDK 11 USANDO LAS VARIABLES DEL RUNNER
+# 🚀 [MODIFICADO] -> Inicializa JAVA_HOME a partir de JAVA_HOME_11_X64
+#                    para garantizar compatibilidad total con KAPT/Kotlin.
+# =========================================================================
+echo "INFRA: Configurando el entorno del sistema para usar JDK 11 de forma dinámica..."
+
+if [ -n "$JAVA_HOME_11_X64" ] && [ -d "$JAVA_HOME_11_X64" ]; then
+    # Asignamos la variable raíz a partir del puntero oficial de GitHub
+    export JAVA_HOME="$JAVA_HOME_11_X64"
+    export PATH="$JAVA_HOME/bin:$PATH"
+    
+    echo "  ↳ ✅ JAVA_HOME asignado con éxito desde JAVA_HOME_11_X64."
+    echo "  ↳ Versión de Java activa en el PATH: $(java -version 2>&1 | head -n 1)"
+    
+    # Exportamos los cambios al entorno persistente del pipeline de GitHub
+    if [ -n "$GITHUB_ENV" ] && [ -f "$GITHUB_ENV" ]; then
+        echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+        echo "PATH=$PATH" >> "$GITHUB_ENV"
+    fi
+else
+    echo "⚠️ ADVERTENCIA CRÍTICA: La variable JAVA_HOME_11_X64 está vacía o su ruta no existe."
+    echo "  ↳ Se mantendrá el Java del sistema actual: $(java -version 2>&1 | head -n 1)"
+fi
+# =========================================================================
+
+# =========================================================================
 # 🧹 PURGA Y KILL DE PROCESOS DEMONIOS DE GRADLE HUÉRFANOS
 # 🚀 Evita que Gradle reutilice procesos antiguos sin los nuevos flags de memoria
 # =========================================================================
