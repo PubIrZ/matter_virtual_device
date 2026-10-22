@@ -31,12 +31,14 @@ FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 #//////////////////////////////////////////////////////////////////////////
 # =========================================================================
 
-
 # =========================================================================
+# 🛡️ BLINDAJE GLOBAL: STACK & GRADLE COMPILER (MEMORY FORCE + INIT SCRIPT)
+# =========================================================================
+echo "INFRA: Levantando protección de expansión de memoria (STACK & METASPACE DE 8MB)..."
 # 🚀 APLICACIÓN DE PARÁMETROS DE ALTO RENDIMIENTO (STACK & METASPACE DE 8MB)
-# =========================================================================
-echo "INFRA: Configurando valores de memoria masiva recomendados en la JVM..."
 
+# 1. Configurar directivas físicas en el archivo global gradle.properties del Runner
+# Esto obliga al demonio raíz y a sus subprocesos KAPT a levantar con un Stack ampliado
 mkdir -p ~/.gradle
 touch ~/.gradle/gradle.properties
 sed -i '/org.gradle.jvmargs/d' ~/.gradle/gradle.properties || true
@@ -45,7 +47,37 @@ sed -i '/org.gradle.jvmargs/d' ~/.gradle/gradle.properties || true
 # Incrementamos el montón base a 4 Gigabytes (-Xmx4g) y Metaspace a 1024m
 echo "org.gradle.jvmargs=-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" >> ~/.gradle/gradle.properties
 
-echo "  ✅ Parámetros de memoria extrema inyectados en ~/.gradle/gradle.properties"
+echo "  ✅ Propiedades de memoria global JVM asignadas en ~/.gradle/gradle.properties"
+
+
+# 2. Generar el script de inicialización reflexivo para interceptar las tareas de Kotlin
+cat << 'EOF' > ~/.gradle/init.gradle
+allprojects {
+    afterEvaluate { project ->
+        // Forzar los argumentos libres en tareas estándar de compilación de Kotlin
+        project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
+            try {
+                if (task.hasProperty('kotlinOptions')) {
+                    task.kotlinOptions {
+                        freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+                    }
+                }
+            } catch (Exception e) {}
+        }
+
+        // Forzar la herencia de los argumentos de la JVM en el entorno de KAPT
+        project.tasks.matching { it.name.contains("kapt") || it.class.name.contains("Kapt") }.configureEach { task ->
+            try {
+                if (task.hasProperty('kaptProcessJvmArgs')) {
+                    task.kaptProcessJvmArgs += ["-Xss4m", "-Xmx2048m"]
+                }
+            } catch (Exception e) {}
+        }
+    }
+}
+EOF
+echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
+
 
 # Actualizamos también las variables de entorno de la sesión para envolver al subproceso Python
 export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
@@ -202,6 +234,42 @@ gn gen out/virtual-device-app \
   
 find out/ -name "*.json" -exec sed -i 's|"-Werror",||g' {} +
 echo ""
+
+
+
+# =========================================================================
+# 🔍 AUDITORÍA DE INFRAESTRUCTURA: UBICACIÓN Y VOLCADO DE CONFIGURACIÓN
+# =========================================================================
+echo "========================================================================="
+echo "📂 DETERMINANDO UBICACIÓN REAL FÍSICA DE LOS FICHEROS GLOBALES:"
+echo "========================================================================="
+
+# 1. Resolver y mostrar las rutas absolutas reales en el disco del Runner
+echo "  ↳ Ruta real de ~/.gradle/ : $(cd ~/.gradle && pwd)"
+[ -f ~/.gradle/gradle.properties ] && echo "  ↳ Fichero gradle.properties: $(realpath ~/.gradle/gradle.properties)" || echo "  ↳ Fichero gradle.properties: ❌ NO EXISTE EN DISCO"
+[ -f ~/.gradle/init.gradle ]       && echo "  ↳ Fichero init.gradle:       $(realpath ~/.gradle/init.gradle)"       || echo "  ↳ Fichero init.gradle:       ❌ NO EXISTE EN DISCO"
+echo ""
+
+echo "========================================================================="
+echo "📄 VOLCADO DE CONTENIDO: ~/.gradle/gradle.properties"
+echo "========================================================================="
+if [ -f ~/.gradle/gradle.properties ]; then
+    cat ~/.gradle/gradle.properties
+else
+    echo "⚠️ ADVERTENCIA: El archivo gradle.properties está vacío o no se ha creado."
+fi
+echo "========================================================================="
+echo ""
+
+echo "========================================================================="
+echo "📄 VOLCADO DE CONTENIDO: ~/.gradle/init.gradle"
+echo "========================================================================="
+if [ -f ~/.gradle/init.gradle ]; then
+    cat ~/.gradle/init.gradle
+else
+    echo "⚠️ ADVERTENCIA: El archivo init.gradle está vacío o no se ha creado."
+fi
+echo "========================================================================="
 
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
