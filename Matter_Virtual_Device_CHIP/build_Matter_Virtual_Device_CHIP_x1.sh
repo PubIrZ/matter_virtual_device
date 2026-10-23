@@ -53,24 +53,24 @@ else
 fi
 # =========================================================================
 
-# =========================================================================
-# 🪚 PARCHE QUIRÚRGICO ANTI-LICENCIAS EN EL BUILDER DE PYTHON
-# 🚀 [AÑADIDO] -> Fuerza al script oficial de Matter a saltarse por completo
-#                la llamada a sdkmanager que rompe Java 11.
-# =========================================================================
-MATTER_ANDROID_BUILDER="scripts/build/builders/android.py"
+# # =========================================================================
+# # 🪚 PARCHE QUIRÚRGICO ANTI-LICENCIAS EN EL BUILDER DE PYTHON
+# # 🚀 [AÑADIDO] -> Fuerza al script oficial de Matter a saltarse por completo
+# #                la llamada a sdkmanager que rompe Java 11.
+# # =========================================================================
+# MATTER_ANDROID_BUILDER="scripts/build/builders/android.py"
 
-if [ -f "$MATTER_ANDROID_BUILDER" ]; then
-    echo "INFRA: Neutralizando validación de licencias en $MATTER_ANDROID_BUILDER..."
+# if [ -f "$MATTER_ANDROID_BUILDER" ]; then
+#     echo "INFRA: Neutralizando validación de licencias en $MATTER_ANDROID_BUILDER..."
     
-    # 1. Modificamos la función para que no intente ejecutar 'sdkmanager --licenses'
-    # Forzamos que la ejecución devuelva éxito inmediato sin abrir subprocesos
-    sed -i "s|self._Execute(\['bash', '-c', 'yes \| ' + sdkmanager + ' --licenses >/dev/null'\], title='Accepting NDK licenses @ cmdline-tools')|print('🚀 INFRA PARCHE: Licencias pre-aceptadas automáticamente')|g" "$MATTER_ANDROID_BUILDER"
+#     # 1. Modificamos la función para que no intente ejecutar 'sdkmanager --licenses'
+#     # Forzamos que la ejecución devuelva éxito inmediato sin abrir subprocesos
+#     sed -i "s|self._Execute(\['bash', '-c', 'yes \| ' + sdkmanager + ' --licenses >/dev/null'\], title='Accepting NDK licenses @ cmdline-tools')|print('🚀 INFRA PARCHE: Licencias pre-aceptadas automáticamente')|g" "$MATTER_ANDROID_BUILDER"
     
-    echo "  ✅ Función de licencias anulada con éxito en el árbol de Python."
-else
-    echo "⚠️ ADVERTENCIA CRÍTICA: No se encontró $MATTER_ANDROID_BUILDER para aplicar el parche."
-fi
+#     echo "  ✅ Función de licencias anulada con éxito en el árbol de Python."
+# else
+#     echo "⚠️ ADVERTENCIA CRÍTICA: No se encontró $MATTER_ANDROID_BUILDER para aplicar el parche."
+# fi
 
 # =========================================================================
 # 🧹 PURGA Y KILL DE PROCESOS DEMONIOS DE GRADLE HUÉRFANOS
