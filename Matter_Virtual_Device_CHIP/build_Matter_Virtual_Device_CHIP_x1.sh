@@ -53,27 +53,28 @@ else
 fi
 # =========================================================================
 
-# =========================================================================
-# 🛡️ EL PARCHE MULTI-LÍNEA DEFINITIVO PARA ANDROID.PY
-# =========================================================================
-echo "INFRA: Neutralizando el comando de licencias invasivo dentro de android.py..."
-
 ANDROID_PY_FILE="scripts/build/builders/android.py"
 
 if [ -f "$ANDROID_PY_FILE" ]; then
-    # 1. Limpiamos cualquier residuo de intentos previos de inyección en el disco
-    sed -i 's/ || true//g' "$ANDROID_PY_FILE" || true
-
-    # 2. 🔥 LA CLAVE INDESTRUCTIBLE: Buscamos la cadena exacta antes del salto 
-    #    e inyectamos el operador de escape '|| true' directamente dentro de la cadena Bash de Python
-    sed -i 's|--licenses >/dev/null|--licenses >/dev/null || true|g' "$ANDROID_PY_FILE"
+    echo "INFRA: Iniciando proceso de parcheo seguro para Android SDK licenses..."
     
-    echo "INFRA: Verificando la inyección física en el archivo (Debe salir || true abajo):"
-    grep -n "licenses" "$ANDROID_PY_FILE" || echo "⚠️ Alerta: No se encontró la palabra licenses en el código."
+    # 1. Parcheo idempotente: Reemplaza solo si NO tiene ya el '|| true' aplicado.
+    # Esto evita duplicados como '|| true || true' y protege otras partes del código.
+    sed -i 's|--licenses >/dev/null\( \||\ true\)*|--licenses >/dev/null || true|g' "$ANDROID_PY_FILE"
+
+    # 2. Verificación física estricta
+    echo "INFRA: Verificando la inyección física en el archivo:"
+    if grep -n "licenses >/dev/null || true" "$ANDROID_PY_FILE"; then
+        echo "✅ ÉXITO: Parche aplicado e inyectado correctamente."
+    else
+        echo "❌ ERROR: La inyección falló. Verifique si la cadena original existe en el archivo."
+        echo "Contenido actual de las líneas con 'licenses':"
+        grep -n "licenses" "$ANDROID_PY_FILE" || echo "⚠️ Alerta: No se encontró la palabra 'licenses' en el código."
+        exit 1
+    fi
 else
     echo "⚠️ ADVERTENCIA: No se localizó el archivo $ANDROID_PY_FILE para parchear."
 fi
-# =========================================================================
 
 
 
