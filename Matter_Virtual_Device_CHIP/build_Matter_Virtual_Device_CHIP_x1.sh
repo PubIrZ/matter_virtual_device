@@ -54,22 +54,27 @@ fi
 # =========================================================================
 
 # =========================================================================
-# 🛡️ EL PARCHE DEFINITIVO: BYPASS DE LICENCIAS DENTRO DE ANDROID.PY
-# Neutraliza el comando interno de Python que provoca el crash de Java 11.
+# 🛡️ EL PARCHE MULTI-LÍNEA DEFINITIVO PARA ANDROID.PY
 # =========================================================================
 echo "INFRA: Neutralizando el comando de licencias invasivo dentro de android.py..."
 
 ANDROID_PY_FILE="scripts/build/builders/android.py"
 
 if [ -f "$ANDROID_PY_FILE" ]; then
-    # Buscamos la línea exacta de ejecución de las licencias y le inyectamos '|| true' antes del cierre de comillas.
-    # Esto blinda a Python contra el fallo de Java y permite que la compilación pase de largo.
-    sed -i "s|yes \| %s --licenses >/dev/null|yes \| %s --licenses >/dev/null \|\| true|g" "$ANDROID_PY_FILE"
-    echo "INFRA: Parche anti-crash acoplado con éxito en $ANDROID_PY_FILE."
+    # 1. Limpiamos cualquier residuo de intentos previos de inyección en el disco
+    sed -i 's/ || true//g' "$ANDROID_PY_FILE" || true
+
+    # 2. 🔥 LA CLAVE INDESTRUCTIBLE: Buscamos la cadena exacta antes del salto 
+    #    e inyectamos el operador de escape '|| true' directamente dentro de la cadena Bash de Python
+    sed -i 's|--licenses >/dev/null|--licenses >/dev/null || true|g' "$ANDROID_PY_FILE"
+    
+    echo "INFRA: Verificando la inyección física en el archivo (Debe salir || true abajo):"
+    grep -n "licenses" "$ANDROID_PY_FILE" || echo "⚠️ Alerta: No se encontró la palabra licenses en el código."
 else
     echo "⚠️ ADVERTENCIA: No se localizó el archivo $ANDROID_PY_FILE para parchear."
 fi
 # =========================================================================
+
 
 
 # =========================================================================
