@@ -53,24 +53,24 @@ else
 fi
 # =========================================================================
 
-# # =========================================================================
-# # 🪚 PARCHE QUIRÚRGICO ANTI-LICENCIAS EN EL BUILDER DE PYTHON
-# # 🚀 [AÑADIDO] -> Fuerza al script oficial de Matter a saltarse por completo
-# #                la llamada a sdkmanager que rompe Java 11.
-# # =========================================================================
-# MATTER_ANDROID_BUILDER="scripts/build/builders/android.py"
+# =========================================================================
+# 🪚 PARCHE QUIRÚRGICO ANTI-LICENCIAS EN EL BUILDER DE PYTHON
+# 🚀 [AÑADIDO] -> Fuerza al script oficial de Matter a saltarse por completo
+#                la llamada a sdkmanager que rompe Java 11.
+# =========================================================================
+MATTER_ANDROID_BUILDER="scripts/build/builders/android.py"
 
-# if [ -f "$MATTER_ANDROID_BUILDER" ]; then
-#     echo "INFRA: Neutralizando validación de licencias en $MATTER_ANDROID_BUILDER..."
+if [ -f "$MATTER_ANDROID_BUILDER" ]; then
+    echo "INFRA: Neutralizando validación de licencias en $MATTER_ANDROID_BUILDER..."
     
-#     # 1. Modificamos la función para que no intente ejecutar 'sdkmanager --licenses'
-#     # Forzamos que la ejecución devuelva éxito inmediato sin abrir subprocesos
-#     sed -i "s|self._Execute(\['bash', '-c', 'yes \| ' + sdkmanager + ' --licenses >/dev/null'\], title='Accepting NDK licenses @ cmdline-tools')|print('🚀 INFRA PARCHE: Licencias pre-aceptadas automáticamente')|g" "$MATTER_ANDROID_BUILDER"
+    # 1. Modificamos la función para que no intente ejecutar 'sdkmanager --licenses'
+    # Forzamos que la ejecución devuelva éxito inmediato sin abrir subprocesos
+    sed -i "s|self._Execute(\['bash', '-c', 'yes \| ' + sdkmanager + ' --licenses >/dev/null'\], title='Accepting NDK licenses @ cmdline-tools')|print('🚀 INFRA PARCHE: Licencias pre-aceptadas automáticamente')|g" "$MATTER_ANDROID_BUILDER"
     
-#     echo "  ✅ Función de licencias anulada con éxito en el árbol de Python."
-# else
-#     echo "⚠️ ADVERTENCIA CRÍTICA: No se encontró $MATTER_ANDROID_BUILDER para aplicar el parche."
-# fi
+    echo "  ✅ Función de licencias anulada con éxito en el árbol de Python."
+else
+    echo "⚠️ ADVERTENCIA CRÍTICA: No se encontró $MATTER_ANDROID_BUILDER para aplicar el parche."
+fi
 
 # =========================================================================
 # 🧹 PURGA Y KILL DE PROCESOS DEMONIOS DE GRADLE HUÉRFANOS
@@ -141,8 +141,12 @@ echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
 # 🚀 Actualizamos también las variables de entorno de la sesión para procesos hijos Python
 #export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
 export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info "
-export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check"
-export KOTLINC_ARGS="-nowarn -Xskip-metadata-version-check"
+# export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check"
+# export KOTLINC_ARGS="-nowarn -Xskip-metadata-version-check"
+echo "INFRA: Configurando inhibidores de error y metadatos en el motor de Kotlin..."
+export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check -Xallow-no-source-files"
+export KOTLINC_ARGS="-nowarn"
+
 #export KAPT_ARGS="--stacktrace --info"
 # =========================================================================
 
@@ -276,16 +280,16 @@ echo "INFRA: Inyectando inhibidores de error '-nowarn' en el motor de Pigweed...
 find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')\n    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
 find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 
-# 🔥 ASIGNACIÓN DE DISCO DE USUARIO PARA JAVA
-if [ -n "$MATTER_TARGET_JAVA_HOME" ]; then
-    echo "INFRA: Registrando asignación de JDK 11 en las directivas de usuario locales (~/.gradle/)..."
-    mkdir -p ~/.gradle
-    touch ~/.gradle/gradle.properties
-    sed -i '/org.gradle.java.home/d' ~/.gradle/gradle.properties || true
-    echo "org.gradle.java.home=$MATTER_TARGET_JAVA_HOME" >> ~/.gradle/gradle.properties
-else
-    echo "⚠️ ADVERTENCIA: Variable MATTER_TARGET_JAVA_HOME vacía. Se intentará usar JDK del sistema."
-fi
+# # 🔥 ASIGNACIÓN DE DISCO DE USUARIO PARA JAVA
+# if [ -n "$MATTER_TARGET_JAVA_HOME" ]; then
+#     echo "INFRA: Registrando asignación de JDK 11 en las directivas de usuario locales (~/.gradle/)..."
+#     mkdir -p ~/.gradle
+#     touch ~/.gradle/gradle.properties
+#     sed -i '/org.gradle.java.home/d' ~/.gradle/gradle.properties || true
+#     echo "org.gradle.java.home=$MATTER_TARGET_JAVA_HOME" >> ~/.gradle/gradle.properties
+# else
+#     echo "⚠️ ADVERTENCIA: Variable MATTER_TARGET_JAVA_HOME vacía. Se intentará usar JDK del sistema."
+# fi
 
 # 🛠️ REGENERAR LA ESTRUCTURA DE COMPILACIÓN GN
 echo "INFRA: Sincronizando árbol estructural de mapas de GN..."
