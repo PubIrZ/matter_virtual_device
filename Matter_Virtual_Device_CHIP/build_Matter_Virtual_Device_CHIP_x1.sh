@@ -76,15 +76,18 @@ if [ -f "$ANDROID_PY_FILE" ]; then
 else
     echo "⚠️ ADVERTENCIA: No se localizó el archivo $ANDROID_PY_FILE para parchear."
 fi
+
 echo ""
-echo "========================================================================="
-echo "📄 VOLCADO DE CONTENIDO: ~/.gradle/gradle.properties"
-echo "========================================================================="
-if [ -f $ANDROID_PY_FILE ]; then
-    cat  $ANDROID_PY_FILE
+if [ -f "$ANDROID_PY_FILE" ]; then
+    if [ -s "$ANDROID_PY_FILE" ]; then
+        cat "$ANDROID_PY_FILE"
+    else
+        echo "⚠️ ADVERTENCIA: El archivo existe en el disco, pero está completamente VACÍO."
+    fi
 else
-    echo "⚠️ ADVERTENCIA: El archivo  $ANDROID_PY_FILE está vacío o no se ha creado."
+    echo "⚠️ ADVERTENCIA: El archivo no existe en la ruta especificada."
 fi
+
 echo "========================================================================="
 echo ""
 
