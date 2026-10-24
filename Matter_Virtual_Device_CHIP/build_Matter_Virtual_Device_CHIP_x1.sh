@@ -53,6 +53,7 @@ else
 fi
 # =========================================================================
 
+
 ANDROID_PY_FILE="scripts/build/builders/android.py"
 
 if [ -f "$ANDROID_PY_FILE" ]; then
@@ -75,7 +76,17 @@ if [ -f "$ANDROID_PY_FILE" ]; then
 else
     echo "⚠️ ADVERTENCIA: No se localizó el archivo $ANDROID_PY_FILE para parchear."
 fi
-
+echo ""
+echo "========================================================================="
+echo "📄 VOLCADO DE CONTENIDO: ~/.gradle/gradle.properties"
+echo "========================================================================="
+if [ -f $ANDROID_PY_FILE ]; then
+    cat  $ANDROID_PY_FILE
+else
+    echo "⚠️ ADVERTENCIA: El archivo  $ANDROID_PY_FILE está vacío o no se ha creado."
+fi
+echo "========================================================================="
+echo ""
 
 
 # =========================================================================
