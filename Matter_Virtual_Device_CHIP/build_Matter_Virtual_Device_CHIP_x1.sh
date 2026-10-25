@@ -57,24 +57,26 @@ fi
 ANDROID_PY_FILE="scripts/build/builders/android.py"
 
 if [ -f "$ANDROID_PY_FILE" ]; then
-    echo "INFRA: Iniciando proceso de parcheo seguro para Android SDK licenses..."
+    echo "INFRA: Iniciando proceso de parcheo avanzado e infalible anti-crash para sdkmanager..."
     
-    # Neutralización total: Reemplaza el comando problemático por un bypass exitoso ("true")
-    sed -i 's/"yes | %s --licenses >\/dev\/null || true"/"true"/g' "$ANDROID_PY_FILE"
-    sed -i 's/"yes | %s --licenses >\/dev\/null"/"true"/g' "$ANDROID_PY_FILE"
-
-    # Verificación física estricta adaptada al nuevo parche
-    echo "INFRA: Verificando la inyección física en el archivo:"
-    if grep -n '"true"' "$ANDROID_PY_FILE"; then
-        echo "✅ ÉXITO: Parche de bypass inyectado correctamente."
+    # Parche de amplio espectro: Machaca el array completo de ejecución transformándolo en un eco inofensivo
+    sed -i -E 's/\["bash", "-c", "yes \| %s --licenses >\/dev\/null( \|\| true)?" % [a-zA-Z0-9_]+/\["echo", "Licencias Bypassed"/g' "$ANDROID_PY_FILE"
+    sed -i -E 's/\["bash", "-c", "yes \| %s --licenses >\/dev\/null" % [a-zA-Z0-9_]+/\["echo", "Licencias Bypassed"/g' "$ANDROID_PY_FILE"
+    
+    # 2. Verificación física estricta en base al nuevo patrón inyectado
+    echo "INFRA: Verificando inyección atómica en el archivo de construcción:"
+    if grep -n "Licencias Bypassed" "$ANDROID_PY_FILE"; then
+        echo "✅ ÉXITO ROTUNDO: Llamadas rotas de sdkmanager erradicadas de la memoria."
     else
-        echo "❌ ERROR: La inyección falló. Contenido actual de las líneas de licencias:"
-        grep -n "licenses" "$ANDROID_PY_FILE" || echo "⚠️ Alerta: No se encontró la palabra 'licenses'."
+        echo "❌ ERROR CRÍTICO: El sed no pudo capturar la expresión regular."
+        echo "Líneas actuales que contienen la palabra licenses en el SDK:"
+        grep -n "licenses" "$ANDROID_PY_FILE"
         exit 1
     fi
 else
     echo "⚠️ ADVERTENCIA: No se localizó el archivo $ANDROID_PY_FILE para parchear."
 fi
+
 
 echo ""
 if [ -f "$ANDROID_PY_FILE" ]; then
