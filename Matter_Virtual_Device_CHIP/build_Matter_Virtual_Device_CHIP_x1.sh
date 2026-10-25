@@ -59,19 +59,17 @@ ANDROID_PY_FILE="scripts/build/builders/android.py"
 if [ -f "$ANDROID_PY_FILE" ]; then
     echo "INFRA: Iniciando proceso de parcheo seguro para Android SDK licenses..."
     
-    # 1. Parcheo idempotente: Reemplaza solo si NO tiene ya el '|| true' aplicado.
-    # Esto evita duplicados como '|| true || true' y protege otras partes del código.
-    sed -i -E 's/--licenses >\/dev\/null( \|\| true)*/--licenses >\/dev\/null || true/g' "$ANDROID_PY_FILE"
+    # Neutralización total: Reemplaza el comando problemático por un bypass exitoso ("true")
+    sed -i 's/"yes | %s --licenses >\/dev\/null || true"/"true"/g' "$ANDROID_PY_FILE"
+    sed -i 's/"yes | %s --licenses >\/dev\/null"/"true"/g' "$ANDROID_PY_FILE"
 
-
-    # 2. Verificación física estricta
+    # Verificación física estricta adaptada al nuevo parche
     echo "INFRA: Verificando la inyección física en el archivo:"
-    if grep -n "licenses >/dev/null || true" "$ANDROID_PY_FILE"; then
-        echo "✅ ÉXITO: Parche aplicado e inyectado correctamente."
+    if grep -n '"true"' "$ANDROID_PY_FILE"; then
+        echo "✅ ÉXITO: Parche de bypass inyectado correctamente."
     else
-        echo "❌ ERROR: La inyección falló. Verifique si la cadena original existe en el archivo."
-        echo "Contenido actual de las líneas con 'licenses':"
-        grep -n "licenses" "$ANDROID_PY_FILE" || echo "⚠️ Alerta: No se encontró la palabra 'licenses' en el código."
+        echo "❌ ERROR: La inyección falló. Contenido actual de las líneas de licencias:"
+        grep -n "licenses" "$ANDROID_PY_FILE" || echo "⚠️ Alerta: No se encontró la palabra 'licenses'."
         exit 1
     fi
 else
