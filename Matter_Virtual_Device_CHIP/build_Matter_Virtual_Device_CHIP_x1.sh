@@ -272,6 +272,9 @@ fi
 find . -name "zap.json" -exec sh -c 'echo "{\"packages\": []}" > "{}"' \;
 echo "INFRA: Archivos zap.json vaciados con éxito. CIPD ignorará la descarga de red."
 
+echo "INFRA: Parcheando dependencia crítica libgirepository en caliente..."
+sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
+
 # INICIALIZACIÓN DEL ENTORNO DE COMPILACIÓN DE MATTER
 echo "INFRA: Inicializando el entorno virtual aislado de Pigweed..."
 source scripts/activate.sh
