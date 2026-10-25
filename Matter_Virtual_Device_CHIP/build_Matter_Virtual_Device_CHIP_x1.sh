@@ -61,7 +61,8 @@ if [ -f "$ANDROID_PY_FILE" ]; then
     
     # 1. Parcheo idempotente: Reemplaza solo si NO tiene ya el '|| true' aplicado.
     # Esto evita duplicados como '|| true || true' y protege otras partes del código.
-    sed -i 's|--licenses >/dev/null\( \||\ true\)*|--licenses >/dev/null || true|g' "$ANDROID_PY_FILE"
+    sed -i -E 's/--licenses >\/dev\/null( \|\| true)*/--licenses >\/dev\/null || true/g' "$ANDROID_PY_FILE"
+
 
     # 2. Verificación física estricta
     echo "INFRA: Verificando la inyección física en el archivo:"
