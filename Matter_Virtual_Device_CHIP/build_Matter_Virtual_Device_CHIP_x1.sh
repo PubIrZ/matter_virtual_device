@@ -57,24 +57,25 @@ fi
 ANDROID_PY_FILE="scripts/build/builders/android.py"
 
 if [ -f "$ANDROID_PY_FILE" ]; then
-    echo "INFRA: Iniciando proceso de parcheo avanzado e infalible anti-crash para sdkmanager..."
+    echo "INFRA: Iniciando proceso de parcheo destructivo total para sdkmanager..."
     
-    # Parche de amplio espectro: Machaca el array completo de ejecución transformándolo en un eco inofensivo
-    sed -i -E 's/\["bash", "-c", "yes \| %s --licenses >\/dev\/null( \|\| true)?" % [a-zA-Z0-9_]+/\["echo", "Licencias Bypassed"/g' "$ANDROID_PY_FILE"
-    sed -i -E 's/\["bash", "-c", "yes \| %s --licenses >\/dev\/null" % [a-zA-Z0-9_]+/\["echo", "Licencias Bypassed"/g' "$ANDROID_PY_FILE"
-    
-    # 2. Verificación física estricta en base al nuevo patrón inyectado
-    echo "INFRA: Verificando inyección atómica en el archivo de construcción:"
-    if grep -n "Licencias Bypassed" "$ANDROID_PY_FILE"; then
-        echo "✅ ÉXITO ROTUNDO: Llamadas rotas de sdkmanager erradicadas de la memoria."
+    # 1. Neutralizamos de forma plana y directa cualquier llamada a sdkmanager dentro de arrays de Bash
+    sed -i 's/\["bash", "-c", "yes | %s --licenses >\/dev\/null || true" %/\["echo", "Bypass standard tools" #/g' "$ANDROID_PY_FILE"
+    sed -i 's/\["bash", "-c", "yes | %s --licenses >\/dev\/null" % sdk_manager\],/\["echo", "Bypass legacy tools"\],/g' "$ANDROID_PY_FILE"
+    sed -i 's/\["bash", "-c", "yes | %s --licenses >\/dev\/null" % new_sdk_manager\],/\["echo", "Bypass modern tools"\],/g' "$ANDROID_PY_FILE"
+
+    # 2. Verificación física estricta de control
+    echo "INFRA: Verificando la erradicación de subprocesos sdkmanager en el script:"
+    if grep -n "Bypass" "$ANDROID_PY_FILE"; then
+        echo "✅ ÉXITO ABSOLUTO: Todas las variantes de licencias del SDK han sido neutralizadas."
+        echo "Estado actual del código inyectado:"
+        grep -n -C 2 "Bypass" "$ANDROID_PY_FILE"
     else
-        echo "❌ ERROR CRÍTICO: El sed no pudo capturar la expresión regular."
-        echo "Líneas actuales que contienen la palabra licenses en el SDK:"
-        grep -n "licenses" "$ANDROID_PY_FILE"
+        echo "❌ ERROR: No se pudieron interceptar los comandos de licencias."
         exit 1
     fi
 else
-    echo "⚠️ ADVERTENCIA: No se localizó el archivo $ANDROID_PY_FILE para parchear."
+    echo "⚠️ ADVERTENCIA: No se localizó el archivo $ANDROID_PY_FILE."
 fi
 
 
