@@ -379,6 +379,20 @@ else
 fi
 echo "========================================================================="
 
+
+
+#ANDROID_PY_FILE="scripts/build/builders/android.py"
+ANDROID_PY_FILE="/home/runner/work/MatterTVApp/MatterTVApp/matter-sdk/scripts/build/builders/android.py"
+
+if [ -f "$ANDROID_PY_FILE" ]; then
+    echo "INFRA: Aplicando parche de última instancia sobre la línea de ejecución de sdkmanager..."
+
+    sed -i 's@"yes | %s --licenses >/dev/null"@"JAVA_HOME=/opt/hostedtoolcache/Java_Zulu_jdk/17.0.21-9/x64 yes | %s --licenses"@g' "$ANDROID_PY_FILE"
+    #sed -i 's@"yes | %s --licenses >/dev/null"@"JAVA_HOME='"$JAVA_HOME_17_X64"' yes | %s --licenses "@g' "$ANDROID_PY_FILE"
+    echo "  ✅ Parche crítico aplicado sobre los métodos _Execute."
+fi
+# =========================================================================
+
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
