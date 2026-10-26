@@ -177,7 +177,7 @@ echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
 
 # 🚀 Actualizamos también las variables de entorno de la sesión para procesos hijos Python
 #export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
-export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info"
+export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=debug"
 
 
 
@@ -404,9 +404,9 @@ echo ""
   -PmatterSdkSourceBuild=false \
   -PbuildDir=/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/out/android-arm-virtual-device-app \
   assembleDebug \
+  --debug \
   --stacktrace \
-  --info
-
+  --scan
 # =============================================================================
 # 📊 TELEMETRÍA AVANZADA: COMPARATIVA DE TÉCNICAS DE EXTRACCIÓN DE REQUISITOS
 # =============================================================================
