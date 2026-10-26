@@ -177,7 +177,7 @@ echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
 
 # 🚀 Actualizamos también las variables de entorno de la sesión para procesos hijos Python
 #export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
-export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info"
+export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=debug"
 
 
 
@@ -271,17 +271,17 @@ echo "-------------------------------------------------------------------------"
 echo "  ↳ FORCE_CLEAR_CACHE: $FORCE_CLEAR_CACHE"
 echo "========================================================================="
 
-# # 🧹 LIMPIEZA ATÓMICA DE CÓDIGO FUENTE
-# echo "INFRA: Limpiando parches de texto residuales del intento de compilación anterior..."
-# git reset --hard HEAD --quiet || true
-# git clean -fd --quiet || true
+# 🧹 LIMPIEZA ATÓMICA DE CÓDIGO FUENTE
+echo "INFRA: Limpiando parches de texto residuales del intento de compilación anterior..."
+git reset --hard HEAD --quiet || true
+git clean -fd --quiet || true
 
-# if [ "$FORCE_CLEAR_CACHE" = "true" ]; then
-#     echo "⚠️ INFRA: Flag 'clear_cache' detectado como TRUE. Destruyendo carpeta out/ de forma segura..."
-#     rm -rf out/
-# else
-#     echo "⚡ INFRA: Manteniendo carpeta 'out/' para permitir compilación incremental rápida."
-# fi
+if [ "$FORCE_CLEAR_CACHE" = "true" ]; then
+    echo "⚠️ INFRA: Flag 'clear_cache' detectado como TRUE. Destruyendo carpeta out/ de forma segura..."
+    rm -rf out/
+else
+    echo "⚡ INFRA: Manteniendo carpeta 'out/' para permitir compilación incremental rápida."
+fi
 
 # ¡EL PARCHE CLAVE ANTI-CIPD DE CONFIGURACIÓN NEUTRALIZADA!
 echo "INFRA: Neutralizando configuraciones JSON rígidas de CIPD para ZAP..."
@@ -396,7 +396,7 @@ fi
 
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
-#./scripts/build/build_examples.py --target android-arm-virtual-device-app build
+./scripts/build/build_examples.py --target android-arm-virtual-device-app build
 echo ""
 /home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/gradlew \
   -p /home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/ \
