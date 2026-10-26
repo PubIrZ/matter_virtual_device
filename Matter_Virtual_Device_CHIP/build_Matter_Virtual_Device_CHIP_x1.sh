@@ -62,48 +62,48 @@ echo "INFRA: Levantando escudo interceptor de comandos para desarmar sdkmanager.
 git checkout -- scripts/build/runner/shell.py || true
 git checkout -- scripts/build/builders/android.py || true
 
-# 2. Creamos una carpeta binaria privada con prioridad absoluta en el PATH
-BIN_TRAP_DIR="$HOME/.infra_bin_trap"
-mkdir -p "$BIN_TRAP_DIR"
+# # 2. Creamos una carpeta binaria privada con prioridad absoluta en el PATH
+# BIN_TRAP_DIR="$HOME/.infra_bin_trap"
+# mkdir -p "$BIN_TRAP_DIR"
 
-# 3. Creamos un ejecutable 'bash' falso que actuará como filtro del sistema
-cat << 'EOF' > "$BIN_TRAP_DIR/bash"
-#!/bin/env bash
-echo "$@"
-echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-# Si el comando invocado intenta usar sdkmanager, respondemos éxito instantáneo (exit 0)
-if [[ "$*" == *"sdkmanager"* ]]; then
-    echo "[INFRA INTERCEPTOR]: sdkmanager bloqueado de forma segura. Retornando exit 0."
-    exit 0
-fi
-# Para cualquier otro comando de compilación, actuamos de puente transparente usando el bash real
+# # 3. Creamos un ejecutable 'bash' falso que actuará como filtro del sistema
+# cat << 'EOF' > "$BIN_TRAP_DIR/bash"
+# #!/bin/env bash
+# echo "$@"
+# echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+# # Si el comando invocado intenta usar sdkmanager, respondemos éxito instantáneo (exit 0)
+# if [[ "$*" == *"sdkmanager"* ]]; then
+#     echo "[INFRA INTERCEPTOR]: sdkmanager bloqueado de forma segura. Retornando exit 0."
+#     exit 0
+# fi
+# # Para cualquier otro comando de compilación, actuamos de puente transparente usando el bash real
 
-exec /bin/bash "$@"
-EOF
+# exec /bin/bash "$@"
+# EOF
 
-chmod +x "$BIN_TRAP_DIR/bash"
+# chmod +x "$BIN_TRAP_DIR/bash"
 
-# 4. Inyectamos la carpeta al inicio del PATH para engañar a Python y Pigweed
-export PATH="$BIN_TRAP_DIR:$PATH"
-echo "  ✅ PATH alterado con éxito. Prioridad asignada a: $(which bash)"
-# ======
-
-
+# # 4. Inyectamos la carpeta al inicio del PATH para engañar a Python y Pigweed
+# export PATH="$BIN_TRAP_DIR:$PATH"
+# echo "  ✅ PATH alterado con éxito. Prioridad asignada a: $(which bash)"
+# # ======
 
 
 
 
 
-echo ""
-if [ -f "$ANDROID_PY_FILE" ]; then
-    if [ -s "$ANDROID_PY_FILE" ]; then
-        cat "$ANDROID_PY_FILE"
-    else
-        echo "⚠️ ADVERTENCIA: El archivo existe en el disco, pero está completamente VACÍO."
-    fi
-else
-    echo "⚠️ ADVERTENCIA: El archivo no existe en la ruta especificada."
-fi
+
+
+# echo ""
+# if [ -f "$ANDROID_PY_FILE" ]; then
+#     if [ -s "$ANDROID_PY_FILE" ]; then
+#         cat "$ANDROID_PY_FILE"
+#     else
+#         echo "⚠️ ADVERTENCIA: El archivo existe en el disco, pero está completamente VACÍO."
+#     fi
+# else
+#     echo "⚠️ ADVERTENCIA: El archivo no existe en la ruta especificada."
+# fi
 
 echo "========================================================================="
 echo ""
