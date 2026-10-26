@@ -69,12 +69,15 @@ mkdir -p "$BIN_TRAP_DIR"
 # 3. Creamos un ejecutable 'bash' falso que actuará como filtro del sistema
 cat << 'EOF' > "$BIN_TRAP_DIR/bash"
 #!/bin/env bash
+echo "$@"
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 # Si el comando invocado intenta usar sdkmanager, respondemos éxito instantáneo (exit 0)
 if [[ "$*" == *"sdkmanager"* ]]; then
     echo "[INFRA INTERCEPTOR]: sdkmanager bloqueado de forma segura. Retornando exit 0."
     exit 0
 fi
 # Para cualquier otro comando de compilación, actuamos de puente transparente usando el bash real
+
 exec /bin/bash "$@"
 EOF
 
