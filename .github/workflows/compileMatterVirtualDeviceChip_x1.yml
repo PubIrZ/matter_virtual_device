@@ -310,6 +310,12 @@ jobs:
               cd matter-sdk
               chmod +x build_Matter_Virtual_Device_CHIP_x1.sh
 
+              echo ""
+              echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+              cat build_Matter_Virtual_Device_CHIP_x1.sh
+              echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+              echo ""
+              
               echo "Executing: ./build_Matter_Virtual_Device_CHIP_x1.sh - Intento $ATTEMPT_COUNT"
               # Ejecutamos tu script de compilación nativo directo en el host
               if ./build_Matter_Virtual_Device_CHIP_x1.sh; then
