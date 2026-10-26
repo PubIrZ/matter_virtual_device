@@ -25,6 +25,8 @@ unset PW_ZAP_CIPD_RELEASE
 export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 
 # ⚙️ CONTROL MANUAL DE CACHÉ LOCAL
+# Si la variable de entorno FORCE_CLEAR_CACHE existe y tiene un valor, usa ese valor. 
+# Si está vacía, no está definida o es nula, usa el valor de reemplazo, false
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
 
 # =========================================================================
