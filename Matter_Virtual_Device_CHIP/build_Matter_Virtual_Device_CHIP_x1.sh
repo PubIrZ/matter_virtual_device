@@ -109,20 +109,20 @@ echo "========================================================================="
 echo ""
 
 
-# =========================================================================
-# 🧹 PURGA Y KILL DE PROCESOS DEMONIOS DE GRADLE HUÉRFANOS
-# 🚀 Evita que Gradle reutilice procesos antiguos sin los nuevos flags de memoria
-# =========================================================================
-echo "INFRA: Purgando hilos y demonios Gradle en ejecución en la memoria RAM..."
-if [ -f "examples/virtual-device-app/android/App/gradlew" ]; then
-    ./examples/virtual-device-app/android/App/gradlew --stop || true
-fi
-if [ -f "third_party/android_deps/gradlew" ]; then
-    ./third_party/android_deps/gradlew --stop || true
-fi
-pkill -f 'gradle' || true  # 🚀 [AÑADIDO] -> Matanza total a nivel de kernel de la máquina virtual
-echo "  ✅ Memoria RAM del Runner purgada. Iniciando entorno limpio..."
-# =========================================================================
+# # =========================================================================
+# # 🧹 PURGA Y KILL DE PROCESOS DEMONIOS DE GRADLE HUÉRFANOS
+# # 🚀 Evita que Gradle reutilice procesos antiguos sin los nuevos flags de memoria
+# # =========================================================================
+# echo "INFRA: Purgando hilos y demonios Gradle en ejecución en la memoria RAM..."
+# if [ -f "examples/virtual-device-app/android/App/gradlew" ]; then
+#     ./examples/virtual-device-app/android/App/gradlew --stop || true
+# fi
+# if [ -f "third_party/android_deps/gradlew" ]; then
+#     ./third_party/android_deps/gradlew --stop || true
+# fi
+# pkill -f 'gradle' || true  # 🚀 [AÑADIDO] -> Matanza total a nivel de kernel de la máquina virtual
+# echo "  ✅ Memoria RAM del Runner purgada. Iniciando entorno limpio..."
+# # =========================================================================
 
 
 # =========================================================================
@@ -271,17 +271,17 @@ echo "-------------------------------------------------------------------------"
 echo "  ↳ FORCE_CLEAR_CACHE: $FORCE_CLEAR_CACHE"
 echo "========================================================================="
 
-# 🧹 LIMPIEZA ATÓMICA DE CÓDIGO FUENTE
-echo "INFRA: Limpiando parches de texto residuales del intento de compilación anterior..."
-git reset --hard HEAD --quiet || true
-git clean -fd --quiet || true
+# # 🧹 LIMPIEZA ATÓMICA DE CÓDIGO FUENTE
+# echo "INFRA: Limpiando parches de texto residuales del intento de compilación anterior..."
+# git reset --hard HEAD --quiet || true
+# git clean -fd --quiet || true
 
-if [ "$FORCE_CLEAR_CACHE" = "true" ]; then
-    echo "⚠️ INFRA: Flag 'clear_cache' detectado como TRUE. Destruyendo carpeta out/ de forma segura..."
-    rm -rf out/
-else
-    echo "⚡ INFRA: Manteniendo carpeta 'out/' para permitir compilación incremental rápida."
-fi
+# if [ "$FORCE_CLEAR_CACHE" = "true" ]; then
+#     echo "⚠️ INFRA: Flag 'clear_cache' detectado como TRUE. Destruyendo carpeta out/ de forma segura..."
+#     rm -rf out/
+# else
+#     echo "⚡ INFRA: Manteniendo carpeta 'out/' para permitir compilación incremental rápida."
+# fi
 
 # ¡EL PARCHE CLAVE ANTI-CIPD DE CONFIGURACIÓN NEUTRALIZADA!
 echo "INFRA: Neutralizando configuraciones JSON rígidas de CIPD para ZAP..."
@@ -396,9 +396,16 @@ fi
 
 # 🚀 EJECUCIÓN DEL MÓDULO INTÉRPRETE DE COMPILACIÓN DE MATTER
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
-./scripts/build/build_examples.py --target android-arm-virtual-device-app build
+#./scripts/build/build_examples.py --target android-arm-virtual-device-app build
 echo ""
-
+/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/gradlew \
+  -p /home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/ \
+  -PmatterBuildSrcDir=/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/out/android-arm-virtual-device-app \
+  -PmatterSdkSourceBuild=false \
+  -PbuildDir=/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/out/android-arm-virtual-device-app \
+  assembleDebug \
+  --stacktrace \
+  --info
 
 # =============================================================================
 # 📊 TELEMETRÍA AVANZADA: COMPARATIVA DE TÉCNICAS DE EXTRACCIÓN DE REQUISITOS
