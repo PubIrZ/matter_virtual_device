@@ -145,12 +145,25 @@ sed -i '/org.gradle.jvmargs/d' ~/.gradle/gradle.properties || true
 echo "org.gradle.jvmargs=-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" >> ~/.gradle/gradle.properties
 
 echo "  ✅ Propiedades de memoria global JVM asignadas en ~/.gradle/gradle.properties"
-  
+
 # 2. Generar el script init.gradle para interceptar las tareas de Kotlin
+echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.8.10 mapping..."
+mkdir -p ~/.gradle
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
+    // Obliga a todos los submódulos a usar las librerías de la versión 1.8.10
+    configurations.all {
+        resolutionStrategy {
+            eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.jetbrains.kotlin') {
+                    details.useVersion '1.8.10'
+                }
+            }
+        }
+    }
+
     afterEvaluate { project ->
-        // Forzar los argumentos libres en tareas estándar de compilación de Kotlin
+        // Force skip-metadata flags on every Kotlin task
         project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
             try {
                 if (task.hasProperty('kotlinOptions')) {
@@ -161,6 +174,7 @@ allprojects {
             } catch (Exception e) {}
         }
 
+        // Allocate strict memory heaps to KAPT workers to prevent background crashes
         // Forzar la herencia de los argumentos de la JVM en el entorno de KAPT
         project.tasks.matching { it.name.contains("kapt") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
@@ -173,7 +187,8 @@ allprojects {
     }
 }
 EOF
-echo "  ✅ Escudo global seguro init.gradle guardado en ~/.gradle/init.gradle"
+echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
+
 
 # 🚀 Actualizamos también las variables de entorno de la sesión para procesos hijos Python
 #export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
