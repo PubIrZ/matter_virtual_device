@@ -1,6 +1,6 @@
 #!/bin/bash
 
-exit 0
+#exit 0
 
 # =========================================================================
 # SCRIPT DINÁMICO DE COMPILACIÓN CON ASIGNACIÓN DE ENTORNO AISLADO DE DISCO
@@ -195,7 +195,7 @@ echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 # 🚀 Actualizamos también las variables de entorno de la sesión para procesos hijos Python
 #export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files"
-export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=debug"
+export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info"
 
 
 
@@ -337,9 +337,9 @@ find . -name "*.gni" -exec sed -i 's|"-Xlint:all"||g' {} +
 echo "INFRA: Se elimina el flag obsoleto 'MaxPermSize' de todo el árbol SDK Matter"
 find . -name "gradle.properties" -exec sed -i 's|-XX:MaxPermSize=2048m||g' {} +
 
-echo "INFRA: Inyectando inhibidores de error '-nowarn' en el motor de Pigweed..."
-find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')\n    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
-find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
+# echo "INFRA: Inyectando inhibidores de error '-nowarn' en el motor de Pigweed..."
+# find . -name "kotlinc_runner.py" -exec sed -i "s|retcode = subprocess.check_call(kotlin_args + args.rest)|kotlin_args.append('-nowarn')\n    retcode = subprocess.check_call(kotlin_args + args.rest)|g" {} +
+# find . -name "kotlinc_runner.py" -exec sed -i "s|'-Werror'||g" {} +
 
 # # 🔥 ASIGNACIÓN DE DISCO DE USUARIO PARA JAVA
 # if [ -n "$MATTER_TARGET_JAVA_HOME" ]; then
@@ -417,15 +417,15 @@ fi
 echo "INFRA: Invocando script compilador nativo (Llamada Python a Gradle Wrapper)..."
 ./scripts/build/build_examples.py --target android-arm-virtual-device-app build
 echo ""
-/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/gradlew \
-  -p /home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/ \
-  -PmatterBuildSrcDir=/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/out/android-arm-virtual-device-app \
-  -PmatterSdkSourceBuild=false \
-  -PbuildDir=/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/out/android-arm-virtual-device-app \
-  assembleDebug \
-  --debug \
-  --stacktrace \
-  --scan
+# /home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/gradlew \
+#   -p /home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/examples/virtual-device-app/android/App/ \
+#   -PmatterBuildSrcDir=/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/out/android-arm-virtual-device-app \
+#   -PmatterSdkSourceBuild=false \
+#   -PbuildDir=/home/runner/work/matter_virtual_device/matter_virtual_device/matter-sdk/out/android-arm-virtual-device-app \
+#   assembleDebug \
+#   --debug \
+#   --stacktrace \
+#   --scan
 
 
   
