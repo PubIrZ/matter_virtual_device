@@ -406,9 +406,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: matter-only-native-libs
-          path: |
-            matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a/*.so
-            matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/arm64-v8a/*.so
+          path: "**/*.so"
+          # path: |
+          #   matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a/*.so
+          #   matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/arm64-v8a/*.so
           compression-level: 5
 
       # Subida de los archivos Java JNI (.jar) generados                                                 
@@ -417,6 +418,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: matter-only-java-jars
-          path: |
-            matter-sdk/examples/virtual-device-app/android/App/app/libs/*.jar
+          path: "**/*.jar"
+          # path: |
+          #   matter-sdk/examples/virtual-device-app/android/App/app/libs/*.jar
           compression-level: 3
