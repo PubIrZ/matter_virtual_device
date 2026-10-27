@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#exit 0 #2
+#exit 0 #2 
 
 # =========================================================================
 # SCRIPT DINÁMICO DE COMPILACIÓN CON ASIGNACIÓN DE ENTORNO AISLADO DE DISCO
