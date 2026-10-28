@@ -32,16 +32,17 @@ on:
 #env:
 #  SKIP_JDK_VERSION_CHECK: "true"           # sdkmanager ignorará que estás en JDK 11 o en JDK 17 y procederá a aceptar las licencias
 #                                           # de tu SDK Platform 26 de forma limpia   
-                                           
-                                           
+          
+          
+
 jobs:
-  build_Matter_Virtual_Device_Chip_x1:
-    #runs-on: ubuntu-latest
+  build_Matter_Virtual_Device_CHIP_x1:
+    # 🌟 CORRECCIÓN 1: Forzar un entorno LTS totalmente compatible con Matter 1.3
     runs-on: ubuntu-22.04
-    
-    # =========================================================================
-    # ⚙️ CONFIGURACIÓN DE PERMISOS (Obligatorio para vaciar cachés por comando)
-    # =========================================================================
+
+                                                                               
+                                                                                     
+                                                                               
     permissions:
       contents: read
       actions: write    # 🔑 CRÍTICO: Permite que 'gh cache delete' limpie el disco
@@ -51,7 +52,7 @@ jobs:
       # STEP 1: DESCARGA SELECTIVA DEL SCRIPT DE COMPILACIÓN
       # ---------------------------------------------------------------------
       # Ahorra ancho de banda y tiempo descargando únicamente la carpeta del script.
-      - name: Checkout Local Compilation Script
+     - name: Checkout Local Compilation Script
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
@@ -106,7 +107,7 @@ jobs:
           python-version: '3.11'
 
       # ---------------------------------------------------------------------
-      # STEP 6: DEPENDENCIAS NATIVAS DE LINUX COMPILADORAS
+      # STEP 6: DEPENDENCIAS NATIVAS DE LINUX PARA LA COMPILACION
       # ---------------------------------------------------------------------
       - name: Install Ubuntu Dependencies in the Runner
         run: |
@@ -174,7 +175,7 @@ jobs:
  
       # ---------------------------------------------------------------------
       # STEP 11: CONTROL LOCAL DE LA HERRAMIENTA ZAP DE MATTER
-      # ---------------------------------------------------------------------
+      # ---------------------------------------------------------------------                                                                             
       - name: Inject Pre-built ZAP Tools
         run: |
           ZAP_ASSET="/project-chip/zap/releases/download/v2024.03.29/zap-linux-x64.zip"
@@ -320,18 +321,17 @@ jobs:
               echo "Executing: ./build_Matter_Virtual_Device_CHIP_x1.sh - Intento $ATTEMPT_COUNT"
               # Ejecutamos tu script de compilación nativo directo en el host
               if ./build_Matter_Virtual_Device_CHIP_x1.sh; then
-                echo "SUCCESS: ¡Compilación nativa completada con éxito rotundo!"
+                echo "SUCCESS: ¡Compilación nativa completada con éxito!"
                 break # Rompe el bucle infinito principal y pasa al paso final de subir los artefactos
               else
-                echo "❌ ERROR: La compilación ha fallado en algún punto del proceso."
+                echo "⚠️ ALERTA: La compilación falló. El entorno se mantiene vivo para depurar en caliente."
               fi
             else
               echo "❌ ERROR CRÍTICO: No se encontró el script en '$SCRIPT_SOURCE'."
-              echo "Verifica que la estructura de carpetas en tu PC sea exactamente esa."
             fi
 
             echo "====================================================================================================="
-            echo "📡 MODO ESCUCHA NATIVO ACTIVO: Modifica tu script build en tu PC, haz commit y ejecuta 'git push'."
+            echo "📡 MODO ESCUCHA ACTIVO ACTIVO: Modifica tu script build en tu PC, haz commit y ejecuta 'git push'."
             echo "La máquina virtual de GitHub se quedará esperando tus cambios en vivo..."
             echo "====================================================================================================="
 
@@ -341,7 +341,7 @@ jobs:
             # BUCLE SECUNDARIO DE ESCUCHA POR RED (Monitorea cambios en GitHub cada 20 segundos para mitigar Rate Limiting)
             while true; do
               sleep 20
-
+              
               # Consultamos a GitHub de forma silenciosa. Si falla por red, no detiene el pipeline.
               git fetch --quiet origin || { echo "⚠️ Advertencia: Fallo temporal de red al hacer fetch. Reintentando..."; continue; }
               NEW_HASH=$(git rev-parse origin/${{ github.ref_name }})
@@ -399,7 +399,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-virtual-device-chip-apk  # ZIP app-virtual-device-apk
-          path: "**/*.apk"
+          path: |  
+            **/*.apk        
+            matter-sdk/examples/virtual-device-app/android/App/app/build/outputs/apk/**/*.apk
           
       # Subida de las librerías C++ (.so) generadas                                                        
       - name: Upload Only Native Libraries (.so)
@@ -407,10 +409,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: matter-only-native-libs
-          path: "**/*.so"
-          # path: |
-          #   matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a/*.so
-          #   matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/arm64-v8a/*.so
+          path: |
+            **/*.so                   
+            matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/armeabi-v7a/*.so
+            matter-sdk/examples/virtual-device-app/android/App/app/libs/jniLibs/arm64-v8a/*.so
           compression-level: 5
 
       # Subida de los archivos Java JNI (.jar) generados                                                 
@@ -419,7 +421,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: matter-only-java-jars
-          path: "**/*.jar"
-          # path: |
-          #   matter-sdk/examples/virtual-device-app/android/App/app/libs/*.jar
+          path: |
+            **/*.jar          
+            matter-sdk/examples/virtual-device-app/android/App/app/libs/*.jar
           compression-level: 3
