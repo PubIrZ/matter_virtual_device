@@ -36,8 +36,9 @@ on:
                                            
 jobs:
   build_Matter_Virtual_Device_Chip_x1:
-    runs-on: ubuntu-latest
-
+    #runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    
     # =========================================================================
     # ⚙️ CONFIGURACIÓN DE PERMISOS (Obligatorio para vaciar cachés por comando)
     # =========================================================================
