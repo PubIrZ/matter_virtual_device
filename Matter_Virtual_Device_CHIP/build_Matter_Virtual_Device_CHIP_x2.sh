@@ -55,7 +55,7 @@ echo ""
 # 🛡️ BLINDAJE GLOBAL: STACK, GRADLE COMPILER (MEMORY FORCE + HEAP DUMP)
 # =========================================================================
 echo "INFRA: Configurando blindaje de memoria JVM y ruta de telemetría..."
-
+# Limpiamos el archivo global para el ciclo incremental
 mkdir -p ~/.gradle
 rm -f ~/.gradle/gradle.properties || true
 touch ~/.gradle/gradle.properties
@@ -69,7 +69,8 @@ echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
 echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
 echo "org.gradle.java.home=$MATTER_TARGET_JAVA_HOME" >> ~/.gradle/gradle.properties
 
-# Inyección maestra fusionada: -Xss8m contra StackOverflow, flags paralelos y HeapDumpPath
+# Inyección de memoria JVM optimizada para resolver el cuello de botella
+# -Xss8m contra StackOverflow y HeapDumpPath
 echo "org.gradle.jvmargs=-Xmx4096m -Xms2048m -Xss8m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$DUMP_DIR/gradle_oom_dump.hprof -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
 
 echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
@@ -112,7 +113,7 @@ EOF
 echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 # Exportamos GRADLE_OPTS agregando paralelismo para agilizar Jetifier
-export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info --parallel --max-workers=4"
+export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info"
 
 echo "INFRA: Configurando inhibidores de error y metadatos en el motor de Kotlin..."
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check -Xallow-no-source-files"
