@@ -218,12 +218,12 @@ jobs:
       #    ZAP_INSTALL_PATH: /usr/local/bin
       #  run: |
       #    # Copiar el script descargado hacia el SDK de Matter
-      #    cp -f Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP_x1 matter-sdk/
+      #    cp -f Matter_Virtual_Device_CHIP/build_Matter_Virtual_Device_CHIP_x2 matter-sdk/
       #    cd matter-sdk
-      #    chmod +x build_Matter_Virtual_Device_CHIP_x1.sh
+      #    chmod +x build_Matter_Virtual_Device_CHIP_x2.sh
       #    
       #    # Ejecución directa del proceso de compilación
-      #    ./build_Matter_Virtual_Device_CHIP_x1.sh
+      #    ./build_Matter_Virtual_Device_CHIP_x2.sh
           
        
 
@@ -309,11 +309,11 @@ jobs:
 
               echo ""
               echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-              cat build_Matter_Virtual_Device_CHIP_x1.sh
+              cat build_Matter_Virtual_Device_CHIP_x2.sh
               echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
               echo ""
               
-              echo "Executing: ./build_Matter_Virtual_Device_CHIP_x1.sh - Intento $ATTEMPT_COUNT"
+              echo "Executing: ./build_Matter_Virtual_Device_CHIP_x2.sh - Intento $ATTEMPT_COUNT"
               # Ejecutamos tu script de compilación nativo directo en el host
               if ./build_Matter_Virtual_Device_CHIP_x2.sh; then
                 echo "SUCCESS: ¡Compilación nativa completada con éxito!"
