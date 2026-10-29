@@ -113,7 +113,7 @@ mkdir -p "$DUMP_DIR"
 # echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 # # Exportamos GRADLE_OPTS 
-# export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m  -XX:ThreadStackSize=4096 -XX:CompilerThreadStackSize=4096 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info"
+# export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m  -XX:ThreadStackSize=4096 -XX:CompilerThreadStackSize=4096 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" # -Dorg.gradle.logging.level=info"
 
 
 # Forzamos directivas en el archivo global de usuario
@@ -167,7 +167,7 @@ EOF
 echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 # Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
-export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.logging.level=info"
+export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m" # -Dorg.gradle.logging.level=info"
 
 echo "INFRA: Configurando inhibidores de error y metadatos en el motor de Kotlin..."
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check -Xallow-no-source-files"
