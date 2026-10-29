@@ -64,18 +64,69 @@ touch ~/.gradle/gradle.properties
 DUMP_DIR="${GITHUB_WORKSPACE}/matter-sdk/examples/virtual-device-app/android/App/app/build/outputs/reports"
 mkdir -p "$DUMP_DIR"
 
-# Forzamos directivas en el archivo global de usuario (Prevalencia absoluta)
+# # Forzamos directivas en el archivo global de usuario (Prevalencia absoluta)
+# echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
+# echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
+# echo "org.gradle.java.home=$MATTER_TARGET_JAVA_HOME" >> ~/.gradle/gradle.properties
+
+# # Inyección de memoria JVM optimizada para resolver el cuello de botella
+# # -Xss8m contra StackOverflow y HeapDumpPath
+# echo "org.gradle.jvmargs=-Xmx4096m -Xms2048m -Xss8m -XX:MaxMetaspaceSize=1024m  -XX:ThreadStackSize=4096 -XX:CompilerThreadStackSize=4096 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$DUMP_DIR/gradle_oom_dump.hprof -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+
+# echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
+
+# # 2. Generar el script init.gradle para interceptar las tareas de Kotlin
+# echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.8.10 mapping..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     configurations.all {
+#         resolutionStrategy {
+#             eachDependency { DependencyResolveDetails details ->
+#                 if (details.requested.group == 'org.jetbrains.kotlin') {
+#                     details.useVersion '1.8.10'
+#                 }
+#             }
+#         }
+#     }
+
+#     afterEvaluate { project ->
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
+#             try {
+#                 if (task.hasProperty('kotlinOptions')) {
+#                     task.kotlinOptions {
+#                         freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         project.tasks.matching { it.name.contains("kapt") || it.class.name.contains("Kapt") }.configureEach { task ->
+#             try {
+#                 if (task.hasProperty('kaptProcessJvmArgs')) {
+#                     task.kaptProcessJvmArgs += ["-Xss8m", "-Xmx4g", "-XX:MaxMetaspaceSize=1024m"]
+#                 }
+#             } catch (Exception e) {}
+#         }
+#     }
+# }
+# EOF
+# echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
+
+# # Exportamos GRADLE_OPTS 
+# export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m  -XX:ThreadStackSize=4096 -XX:CompilerThreadStackSize=4096 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info"
+
+
+# Forzamos directivas en el archivo global de usuario
 echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
 echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
 echo "org.gradle.java.home=$MATTER_TARGET_JAVA_HOME" >> ~/.gradle/gradle.properties
 
-# Inyección de memoria JVM optimizada para resolver el cuello de botella
-# -Xss8m contra StackOverflow y HeapDumpPath
+# Inyección de memoria JVM unificada (Eliminamos ThreadStackSize conflictivos y dejamos -Xss8m limpio)
 echo "org.gradle.jvmargs=-Xmx4096m -Xms2048m -Xss8m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$DUMP_DIR/gradle_oom_dump.hprof -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
 
 echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 
-# 2. Generar el script init.gradle para interceptar las tareas de Kotlin
+# 2. Generar el script init.gradle corregido para Kotlin y Kapt
 echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.8.10 mapping..."
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
@@ -90,6 +141,7 @@ allprojects {
     }
 
     afterEvaluate { project ->
+        // Configuración de compilación de Kotlin
         project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
             try {
                 if (task.hasProperty('kotlinOptions')) {
@@ -100,20 +152,22 @@ allprojects {
             } catch (Exception e) {}
         }
 
-        project.tasks.matching { it.name.contains("kapt") || it.class.name.contains("Kapt") }.configureEach { task ->
-            try {
-                if (task.hasProperty('kaptProcessJvmArgs')) {
-                    task.kaptProcessJvmArgs += ["-Xss8m", "-Xmx4g", "-XX:MaxMetaspaceSize=1024m"]
+        // Corrección de Kapt: Forzado robusto de argumentos de JVM
+        if (project.plugins.hasPlugin("kotlin-kapt")) {
+            project.extensions.findByType(org.jetbrains.kotlin.gradle.plugin.KaptExtension)?.shadowClosure {
+                arguments {
+                    // Forzar a los daemons de procesamiento de Kapt a usar 8MB de Stack
+                    javacArgs("-Xss8m", "-Xmx4g")
                 }
-            } catch (Exception e) {}
+            }
         }
     }
 }
 EOF
 echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
-# Exportamos GRADLE_OPTS agregando paralelismo para agilizar Jetifier
-export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files -Dorg.gradle.logging.level=info"
+# Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
+export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.logging.level=info"
 
 echo "INFRA: Configurando inhibidores de error y metadatos en el motor de Kotlin..."
 export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check -Xallow-no-source-files"
