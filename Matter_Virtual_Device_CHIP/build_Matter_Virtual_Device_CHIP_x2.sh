@@ -167,6 +167,51 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 #echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 
+# # 2. Generar el script init.gradle corregido para Kotlin y Kapt
+# echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.8.10 mapping..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     configurations.all {
+#         resolutionStrategy {
+#             eachDependency { DependencyResolveDetails details ->
+#                 if (details.requested.group == 'org.jetbrains.kotlin') {
+#                     details.useVersion '1.8.10'
+#                 }
+#             }
+#         }
+#     }
+
+#     afterEvaluate { project ->
+#         // Configuración de compilación de Kotlin
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
+#             try {
+#                 if (task.hasProperty('kotlinOptions')) {
+#                     task.kotlinOptions {
+#                         freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         // Forzado robusto de argumentos de JVM (Evita el StackOverflow en Java/Kapt)
+#         project.tasks.withType(JavaCompile).configureEach { task ->
+#             try {
+#                 task.options.fork = true
+#                 task.options.forkOptions.with {
+#                     memoryMaximumSize = "4g"
+#                     if (jvmArgs == null) {
+#                         jvmArgs = ["-Xss8m", "-XX:MaxMetaspaceSize=1g"]
+#                     } else {
+#                         jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+#     }
+# }
+# EOF
+#echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
+
 # 2. Generar el script init.gradle corregido para Kotlin y Kapt
 echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.8.10 mapping..."
 cat << 'EOF' > ~/.gradle/init.gradle
@@ -181,19 +226,33 @@ allprojects {
         }
     }
 
+    // Desactivar compilación incremental corrupta que guarda metadatos antiguos dañados
+    gradle.taskGraph.whenReady { taskGraph ->
+        taskGraph.allTasks.each { task ->
+            if (task.class.name.contains("KotlinCompile")) {
+                task.setProperty("incremental", false)
+            }
+        }
+    }
+
     afterEvaluate { project ->
-        // Configuración de compilación de Kotlin
+        // Configuración de compilación de Kotlin y mitigación de metadatos
         project.tasks.matching { it.class.name.contains("KotlinCompile") }.configureEach { task ->
             try {
                 if (task.hasProperty('kotlinOptions')) {
                     task.kotlinOptions {
-                        freeCompilerArgs += ["-Xskip-metadata-version-check", "-Xallow-no-source-files"]
+                        // -Xskip-prerelease-check e -Xmetadata-version-check evitan colapsos por diferencias de versión
+                        freeCompilerArgs += [
+                            "-Xskip-metadata-version-check", 
+                            "-Xskip-prerelease-check",
+                            "-Xallow-no-source-files"
+                        ]
                     }
                 }
             } catch (Exception e) {}
         }
 
-        // Forzado robusto de argumentos de JVM (Evita el StackOverflow en Java/Kapt)
+        // Forzado robusto de argumentos de JVM (Evita el StackOverflow anterior)
         project.tasks.withType(JavaCompile).configureEach { task ->
             try {
                 task.options.fork = true
@@ -211,7 +270,6 @@ allprojects {
 }
 EOF
 echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
-
 
 
 # Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
