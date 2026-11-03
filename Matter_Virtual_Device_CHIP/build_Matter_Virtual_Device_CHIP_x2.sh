@@ -154,12 +154,12 @@ allprojects {
 
         // Corrección de Kapt: Forzado robusto de argumentos de JVM
         if (project.plugins.hasPlugin("kotlin-kapt")) {
-            project.extensions.findByType(org.jetbrains.kotlin.gradle.plugin.KaptExtension)?.shadowClosure {
+            project.extensions.findByName("kapt")?.shadowClosure {
                 arguments {
-                    // Forzar a los daemons de procesamiento de Kapt a usar 8MB de Stack
+                    // Forzar a los daemons de procesamiento de Kapt a usar 8MB de Stack                
                     javacArgs("-Xss8m", "-Xmx4g")
                 }
-            }
+            }        
         }
     }
 }
