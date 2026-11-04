@@ -333,11 +333,62 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 
-# 2. Generar el script init.gradle definitivo y compatible
-echo "🛡️ INFRA: Injected Compatible JVM and Metaspace Stack Shield..."
+# # 2. Generar el script init.gradle definitivo y compatible
+# echo "🛡️ INFRA: Injected Compatible JVM and Metaspace Stack Shield..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     // Desactivar cachés incrementales que puedan estar arrastrando estados binarios rotos
+#     gradle.taskGraph.whenReady { taskGraph ->
+#         taskGraph.allTasks.each { task ->
+#             if (task.class.name.contains("KotlinCompile") || task.class.name.contains("Kapt")) {
+#                 try {
+#                     task.setProperty("incremental", false)
+#                 } catch (Exception e) {}
+#             }
+#         }
+#     }
+
+#     afterEvaluate { project ->
+#         // Inyección segura de banderas de mitigación de metadatos al compilador de Kotlin
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
+#             try {
+#                 if (task.hasProperty('kotlinOptions')) {
+#                     task.kotlinOptions {
+#                         freeCompilerArgs += [
+#                             "-Xskip-metadata-version-check",
+#                             "-Xskip-prerelease-check",
+#                             "-Xallow-no-source-files"
+#                         ]
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         // Forzado robusto de argumentos de JVM a nivel de compilación (Solución definitiva al StackOverflow)
+#         project.tasks.withType(JavaCompile).configureEach { task ->
+#             try {
+#                 task.options.fork = true
+#                 task.options.forkOptions.with {
+#                     memoryMaximumSize = "4g"
+#                     if (jvmArgs == null) {
+#                         jvmArgs = ["-Xss8m", "-XX:MaxMetaspaceSize=1g"]
+#                     } else {
+#                         jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+#     }
+# }
+# EOF
+# echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
+
+
+# 2. Generar el script init.gradle definitivo con System Properties para el Daemon de Kotlin
+echo "🛡️ INFRA: Injected Compatible JVM and Global Metadata Bypass Shield..."
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
-    // Desactivar cachés incrementales que puedan estar arrastrando estados binarios rotos
+    // Desactivar cachés incrementales corruptas
     gradle.taskGraph.whenReady { taskGraph ->
         taskGraph.allTasks.each { task ->
             if (task.class.name.contains("KotlinCompile") || task.class.name.contains("Kapt")) {
@@ -349,7 +400,7 @@ allprojects {
     }
 
     afterEvaluate { project ->
-        // Inyección segura de banderas de mitigación de metadatos al compilador de Kotlin
+        // Forzar a todas las tareas de compilación y stubs de Kotlin a ignorar los metadatos binarios corruptos
         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
                 if (task.hasProperty('kotlinOptions')) {
@@ -364,7 +415,7 @@ allprojects {
             } catch (Exception e) {}
         }
 
-        // Forzado robusto de argumentos de JVM a nivel de compilación (Solución definitiva al StackOverflow)
+        // Forzado robusto de argumentos de JVM (Mantiene la inmunidad al StackOverflow)
         project.tasks.withType(JavaCompile).configureEach { task ->
             try {
                 task.options.fork = true
@@ -381,8 +432,11 @@ allprojects {
     }
 }
 EOF
-echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
+# Forzar al Demonio de Kotlin a nivel de entorno global a ignorar la verificación de versiones de metadatos
+export GRADLE_OPTS="$GRADLE_OPTS -Dkotlin.skip.metadata.version.check=true"
+
+echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 
 # Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
