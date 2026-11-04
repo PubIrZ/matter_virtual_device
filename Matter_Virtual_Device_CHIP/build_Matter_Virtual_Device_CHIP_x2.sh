@@ -546,6 +546,34 @@ echo "  ✅ Metadata Inspector and JVM Validator saved to ~/.gradle/init.gradle"
 
 
 
+# echo "🛡️ INFRA: Añadiendo bloque de compatibilidad Kotlin 1.8 al final de buildSrc..."
+# cat << 'EOF' >> examples/virtual-device-app/android/App/buildSrc/build.gradle.kts
+
+# // Bloque de compatibilidad inyectado automáticamente
+# tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+#     kotlinOptions {
+#         languageVersion = "1.8"
+#         apiVersion = "1.8"
+#         jvmTarget = "1.8"
+#     }
+# }
+# EOF
+# echo "  ✅ Bloque añadido con éxito."
+
+
+echo "🛡️ INFRA: Inyectando banderas de mitigación de metadatos en el build.gradle.kts raíz..."
+cat << 'EOF' >> examples/virtual-device-app/android/App/build.gradle.kts
+
+// Forzar la omisión del chequeo de versiones de metadatos en todas las tareas de Kotlin
+subprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        kotlinOptions {
+            freeCompilerArgs = freeCompilerArgs + listOf("-Xskip-metadata-version-check", "-Xskip-prerelease-check")
+        }
+    }
+}
+EOF
+echo "  ✅ Banderas inyectadas con éxito en el archivo raíz."
 
 # # Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
 # export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m" # -Dorg.gradle.logging.level=info"
