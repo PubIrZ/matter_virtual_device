@@ -51,18 +51,74 @@ git checkout -- scripts/build/builders/android.py || true
 echo "========================================================================="
 echo ""
 
-# =========================================================================
-# 🛡️ BLINDAJE GLOBAL: STACK, GRADLE COMPILER (MEMORY FORCE + HEAP DUMP)
-# =========================================================================
+# # =========================================================================
+# # 🛡️ BLINDAJE GLOBAL: STACK, GRADLE COMPILER (MEMORY FORCE + HEAP DUMP)
+# # =========================================================================
+# echo "INFRA: Configurando blindaje de memoria JVM y ruta de telemetría..."
+# # Limpiamos el archivo global para el ciclo incremental
+# mkdir -p ~/.gradle
+# rm -f ~/.gradle/gradle.properties || true
+# touch ~/.gradle/gradle.properties
+
+# # 1. Configurar la memoria del proceso principal de Gradle y el Bypass de metadatos
+# export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dkotlin.skip.metadata.version.check=true"
+
+# echo "INFRA: Configurando inyecciones funcionales de JVM y Compilador en archivos físicos..."
+
+# # 2. La ÚNICA forma real de pasarle argumentos JVM al Demonio de Kotlin de forma global
+# # Creamos o añadimos al archivo gradle.properties global los 8MB de Stack y el bypass de metadatos
+# cat << 'EOF' >> ~/.gradle/gradle.properties
+# # Parámetros reales para el demonio donde corren Kotlin y Kapt:
+# org.gradle.jvmargs=-Xmx4g -Xss8m -XX:MaxMetaspaceSize=1024m -Dkotlin.skip.metadata.version.check=true
+# kotlin.daemon.jvmopts=-Xmx4g -Xss8m -Dkotlin.skip.metadata.version.check=true
+# EOF
+
+# # Forzamos directivas en el archivo global de usuario
+# echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
+# echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
+# echo "org.gradle.java.home=$MATTER_TARGET_JAVA_HOME" >> ~/.gradle/gradle.properties
+
+# # Inyección de memoria JVM unificada (Eliminamos ThreadStackSize conflictivos y dejamos -Xss8m limpio)
+# echo "org.gradle.jvmargs=-Xmx4096m -Xms2048m -Xss8m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$DUMP_DIR/gradle_oom_dump.hprof -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+
+
+
+# echo "🛡️ INFRA: Configurando memoria JVM y el Bypass de metadatos en ~/.gradle/gradle.properties"
+
 echo "INFRA: Configurando blindaje de memoria JVM y ruta de telemetría..."
+# 1. Limpieza y preparación del archivo de propiedades global
 # Limpiamos el archivo global para el ciclo incremental
 mkdir -p ~/.gradle
 rm -f ~/.gradle/gradle.properties || true
 touch ~/.gradle/gradle.properties
 
-# Ruta para volcado de memoria si hay OOM en Jetifier/Kotlin
-DUMP_DIR="${GITHUB_WORKSPACE}/matter-sdk/examples/virtual-device-app/android/App/app/build/outputs/reports"
-mkdir -p "$DUMP_DIR"
+# 2. Configurar la memoria del proceso principal de Gradle (CLI) y el Bypass de metadatos
+export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m -Dkotlin.skip.metadata.version.check=true"
+
+# 3. Escritura unificada de parámetros reales en el archivo gradle.properties
+cat << EOF > ~/.gradle/gradle.properties
+# =====================================================================
+# CONFIGURACIÓN DE MEMORIA Y ARRANQUE DE JVM (Evita StackOverflowError)
+# =====================================================================
+org.gradle.jvmargs=-Xmx4096m -Xms2048m -Xss8m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$DUMP_DIR/gradle_oom_dump.hprof -Dfile.encoding=UTF-8 -Dkotlin.skip.metadata.version.check=true
+
+# Parámetros para el subproceso del Demonio de Kotlin y procesos aislados de Kapt
+kotlin.daemon.jvmopts=-Xmx4g -Xss8m -Dkotlin.skip.metadata.version.check=true
+
+# =====================================================================
+# DIRECTIVAS GLOBALES DEL ECOSISTEMA ANDROID Y ENTORNO
+# =====================================================================
+android.useAndroidX=true
+android.enableJetifier=true
+org.gradle.java.home=$MATTER_TARGET_JAVA_HOME
+EOF
+
+echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
+
+
+# # Ruta para volcado de memoria si hay OOM en Jetifier/Kotlin
+# DUMP_DIR="${GITHUB_WORKSPACE}/matter-sdk/examples/virtual-device-app/android/App/app/build/outputs/reports"
+# mkdir -p "$DUMP_DIR"
 
 # # Forzamos directivas en el archivo global de usuario (Prevalencia absoluta)
 # echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
@@ -116,15 +172,7 @@ mkdir -p "$DUMP_DIR"
 # export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m  -XX:ThreadStackSize=4096 -XX:CompilerThreadStackSize=4096 -Dorg.jetbrains.kotlin.compiler.arguments=-Xskip-metadata-version-check -Dorg.jetbrains.kotlin.compiler.arguments=-Xallow-no-source-files" # -Dorg.gradle.logging.level=info"
 
 
-# Forzamos directivas en el archivo global de usuario
-echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
-echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
-echo "org.gradle.java.home=$MATTER_TARGET_JAVA_HOME" >> ~/.gradle/gradle.properties
 
-# Inyección de memoria JVM unificada (Eliminamos ThreadStackSize conflictivos y dejamos -Xss8m limpio)
-echo "org.gradle.jvmargs=-Xmx4096m -Xms2048m -Xss8m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$DUMP_DIR/gradle_oom_dump.hprof -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
-
-echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 
 # # 2. Generar el script init.gradle corregido para Kotlin y Kapt
 # echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.8.10 mapping..."
@@ -496,20 +544,21 @@ allprojects {
 EOF
 echo "  ✅ Metadata Inspector and JVM Validator saved to ~/.gradle/init.gradle"
 
-# Forzar la omisión de chequeo de metadatos tanto en Gradle como en el Demonio de Kotlin
-# Forzar al Demonio de Kotlin a nivel de entorno global a ignorar la verificación de versiones de metadatos
-export GRADLE_OPTS="$GRADLE_OPTS -Dkotlin.skip.metadata.version.check=true"
-export KOTLIN_DAEMON_ARGS="-Dkotlin.skip.metadata.version.check=true"
-
-echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 
-# Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
-export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m" # -Dorg.gradle.logging.level=info"
 
-echo "INFRA: Configurando inhibidores de error y metadatos en el motor de Kotlin..."
-export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check -Xallow-no-source-files"
-export KOTLINC_ARGS="-nowarn"
+# # Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
+# export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m" # -Dorg.gradle.logging.level=info"
+
+# echo "INFRA: Configurando inhibidores de error y metadatos en el motor de Kotlin..."
+# export KOTLIN_COMPILER_ARGS="-nowarn -warn:0 -Xskip-metadata-version-check -Xallow-no-source-files"
+# export KOTLINC_ARGS="-nowarn"
+
+# # Forzar la omisión de chequeo de metadatos tanto en Gradle como en el Demonio de Kotlin
+# # Forzar al Demonio de Kotlin a nivel de entorno global a ignorar la verificación de versiones de metadatos
+# export GRADLE_OPTS="$GRADLE_OPTS -Dkotlin.skip.metadata.version.check=true"
+# export KOTLIN_DAEMON_ARGS="-Dkotlin.skip.metadata.version.check=true"
+
 
 echo "========================================================================="
 echo "🔍 DIAGNÓSTICO AVANZADO DE ENTORNO EN EL RUNNER (HOST VIRTUAL)"
