@@ -491,11 +491,11 @@ allprojects {
             try {
                 task.doFirst {
                     println "🔍 [METADATA AUDIT] Iniciando tarea :${project.name}:${task.name}"
-                }
+                }  
                 task.doLast { taskInstance ->
                     taskInstance.outputs.files.each { outputDir ->
                         if (outputDir.exists() && outputDir.isDirectory()) {
-                            outputDir.walkTopDown().each { file ->
+                            outputDir.eachFileRecurse { file ->
                                 // Analizar tanto archivos .class individuales como archivos de empaquetado de módulos
                                 if (file.name.endsWith(".class") || file.name.endsWith(".kotlin_module")) {
                                     try {
