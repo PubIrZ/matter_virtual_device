@@ -271,25 +271,76 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # EOF
 #echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
-# 2. Generar el script init.gradle corregido para Kotlin 1.9.24 y Kapt robusto
-echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.9.24 mapping..."
+# # 2. Generar el script init.gradle corregido para Kotlin 1.9.24 y Kapt robusto
+# echo "🛡️ INFRA: Injected Global Resolution Shield to force Kotlin 1.9.24 mapping..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     configurations.all {
+#         resolutionStrategy {
+#             eachDependency { DependencyResolveDetails details ->
+#                 // Mapear todas las librerías del ecosistema de Kotlin a una versión moderna estable
+#                 if (details.requested.group == 'org.jetbrains.kotlin') {
+#                     details.useVersion '1.9.24'
+#                 }
+#             }
+#         }
+#     }
+
+#     // Desactivar cachés incrementales de Kotlin que retienen metadatos corruptos
+#     gradle.taskGraph.whenReady { taskGraph ->
+#         taskGraph.allTasks.each { task ->
+#             if (task.class.name.contains("KotlinCompile") || task.class.name.contains("KaptGenerateStubs")) {
+#                 try {
+#                     task.setProperty("incremental", false)
+#                 } catch (Exception e) {}
+#             }
+#         }
+#     }
+
+#     afterEvaluate { project ->
+#         // Mitigar problemas de metadatos estrictos en las tareas del compilador
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
+#             try {
+#                 if (task.hasProperty('kotlinOptions')) {
+#                     task.kotlinOptions {
+#                         freeCompilerArgs += [
+#                             "-Xskip-metadata-version-check",
+#                             "-Xskip-prerelease-check",
+#                             "-Xallow-no-source-files"
+#                         ]
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         // Forzado robusto de argumentos de JVM (Evita el StackOverflow original)
+#         project.tasks.withType(JavaCompile).configureEach { task ->
+#             try {
+#                 task.options.fork = true
+#                 task.options.forkOptions.with {
+#                     memoryMaximumSize = "4g"
+#                     if (jvmArgs == null) {
+#                         jvmArgs = ["-Xss8m", "-XX:MaxMetaspaceSize=1g"]
+#                     } else {
+#                         jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+#     }
+# }
+# EOF
+# echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
+
+
+# 2. Generar el script init.gradle definitivo y compatible
+echo "🛡️ INFRA: Injected Compatible JVM and Metaspace Stack Shield..."
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
-    configurations.all {
-        resolutionStrategy {
-            eachDependency { DependencyResolveDetails details ->
-                // Mapear todas las librerías del ecosistema de Kotlin a una versión moderna estable
-                if (details.requested.group == 'org.jetbrains.kotlin') {
-                    details.useVersion '1.9.24'
-                }
-            }
-        }
-    }
-
-    // Desactivar cachés incrementales de Kotlin que retienen metadatos corruptos
+    // Desactivar cachés incrementales que puedan estar arrastrando estados binarios rotos
     gradle.taskGraph.whenReady { taskGraph ->
         taskGraph.allTasks.each { task ->
-            if (task.class.name.contains("KotlinCompile") || task.class.name.contains("KaptGenerateStubs")) {
+            if (task.class.name.contains("KotlinCompile") || task.class.name.contains("Kapt")) {
                 try {
                     task.setProperty("incremental", false)
                 } catch (Exception e) {}
@@ -298,7 +349,7 @@ allprojects {
     }
 
     afterEvaluate { project ->
-        // Mitigar problemas de metadatos estrictos en las tareas del compilador
+        // Inyección segura de banderas de mitigación de metadatos al compilador de Kotlin
         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
                 if (task.hasProperty('kotlinOptions')) {
@@ -313,7 +364,7 @@ allprojects {
             } catch (Exception e) {}
         }
 
-        // Forzado robusto de argumentos de JVM (Evita el StackOverflow original)
+        // Forzado robusto de argumentos de JVM a nivel de compilación (Solución definitiva al StackOverflow)
         project.tasks.withType(JavaCompile).configureEach { task ->
             try {
                 task.options.fork = true
@@ -331,6 +382,8 @@ allprojects {
 }
 EOF
 echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
+
+
 
 # Exportamos GRADLE_OPTS corregido (Unificando a 8MB reales y removiendo flags duplicados)
 export GRADLE_OPTS="-Xmx4g -Xms2g -Xss8m -XX:MaxMetaspaceSize=1024m" # -Dorg.gradle.logging.level=info"
