@@ -22,6 +22,47 @@ unset PW_ZAP_CIPD_RELEASE
 export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
+FORCE_CLEAR_CACHE="true"
+
+echo "Estado de la caché: $FORCE_CLEAR_CACHE" 
+
+# =========================================================================
+# ☕ FORZADO DINÁMICO DE KOTLIN 1.8.10 EN EL RUNNER
+# =========================================================================
+echo "🔍 INFRA: Comprobando versión actual de kotlinc en el sistema..."
+
+# 1. Capturar la salida de versión actual de kotlinc (si existe) silenciosamente
+CURRENT_KT_VER=$(kotlinc -version 2>&1 || echo "none")
+
+if [[ "$CURRENT_KT_VER" == *"1.8.10"* ]]; then
+    echo "  ✅ REUTILIZADO: El compilador de Kotlin ya está alineado en la versión 1.8.10 para Ninja."
+else
+    echo "  ⚠️ DESAJUSTE: Se requiere Kotlin 1.8.10 (Detectado: $CURRENT_KT_VER). Iniciando descarga segura..."
+    
+    # Guardar el directorio actual de forma segura
+    ORIGINAL_DIR=$(pwd)
+
+    # Definición limpia y concatenada de variables para la URL
+    KT_BASE_URL="https://github.com"
+    KT_VERSION="v1.8.10"
+    KT_ZIP="kotlin-compiler-1.8.10.zip"
+    KT_FULL_URL="${KT_BASE_URL}/${KT_VERSION}/${KT_ZIP}"
+
+    # Descargar y extraer en la ruta absoluta del sistema de forma limpia
+    sudo wget -q --show-progress "$KT_FULL_URL" -O "/usr/local/lib/${KT_ZIP}"
+    sudo unzip -q "/usr/local/lib/${KT_ZIP}" -d "/usr/local/lib"
+    sudo rm -f "/usr/local/lib/${KT_ZIP}"
+
+    # Forzar el PATH prioritario global de forma inmediata
+    export PATH="/usr/local/lib/kotlinc/bin:$PATH"
+
+    # Confirmar de forma visual la inyección en el flujo actual
+    echo "  ↳ ✅ Modificación del PATH aplicada con éxito. Nueva versión activa para Ninja:"
+    kotlinc -version
+
+    # Regresar de forma segura al directorio de trabajo original
+    cd "$ORIGINAL_DIR"
+fi
 
 # =========================================================================
 # ☕ FORZADO DINÁMICO DE JDK 11 USANDO LAS VARIABLES DEL RUNNER
