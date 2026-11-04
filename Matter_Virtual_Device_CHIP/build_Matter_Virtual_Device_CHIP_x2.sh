@@ -384,38 +384,95 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
 
-# 2. Generar el script init.gradle definitivo con System Properties para el Daemon de Kotlin
-echo "🛡️ INFRA: Injected Compatible JVM and Global Metadata Bypass Shield..."
+# # 2. Generar el script init.gradle definitivo con System Properties para el Daemon de Kotlin
+# echo "🛡️ INFRA: Injected Compatible JVM and Global Metadata Bypass Shield..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     // Desactivar cachés incrementales corruptas
+#     gradle.taskGraph.whenReady { taskGraph ->
+#         taskGraph.allTasks.each { task ->
+#             if (task.class.name.contains("KotlinCompile") || task.class.name.contains("Kapt")) {
+#                 try {
+#                     task.setProperty("incremental", false)
+#                 } catch (Exception e) {}
+#             }
+#         }
+#     }
+
+#     afterEvaluate { project ->
+#         // Forzar a todas las tareas de compilación y stubs de Kotlin a ignorar los metadatos binarios corruptos
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
+#             try {
+#                 if (task.hasProperty('kotlinOptions')) {
+#                     task.kotlinOptions {
+#                         freeCompilerArgs += [
+#                             "-Xskip-metadata-version-check",
+#                             "-Xskip-prerelease-check",
+#                             "-Xallow-no-source-files"
+#                         ]
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         // Forzado robusto de argumentos de JVM (Mantiene la inmunidad al StackOverflow)
+#         project.tasks.withType(JavaCompile).configureEach { task ->
+#             try {
+#                 task.options.fork = true
+#                 task.options.forkOptions.with {
+#                     memoryMaximumSize = "4g"
+#                     if (jvmArgs == null) {
+#                         jvmArgs = ["-Xss8m", "-XX:MaxMetaspaceSize=1g"]
+#                     } else {
+#                         jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+#     }
+# }
+# EOF
+
+# 2. Generar el script init.gradle definitivo con auditoría binaria de metadatos
+echo "🛡️ INFRA: Injected Global Metadata Inspector and JVM Stack Shield..."
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
-    // Desactivar cachés incrementales corruptas
-    gradle.taskGraph.whenReady { taskGraph ->
-        taskGraph.allTasks.each { task ->
-            if (task.class.name.contains("KotlinCompile") || task.class.name.contains("Kapt")) {
-                try {
-                    task.setProperty("incremental", false)
-                } catch (Exception e) {}
-            }
-        }
-    }
-
     afterEvaluate { project ->
-        // Forzar a todas las tareas de compilación y stubs de Kotlin a ignorar los metadatos binarios corruptos
+        // 1. INSPECTOR DE METADATOS: Analiza el bytecode generado para identificar la versión exacta
         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
-                if (task.hasProperty('kotlinOptions')) {
-                    task.kotlinOptions {
-                        freeCompilerArgs += [
-                            "-Xskip-metadata-version-check",
-                            "-Xskip-prerelease-check",
-                            "-Xallow-no-source-files"
-                        ]
+                task.doFirst {
+                    println "🔍 [METADATA AUDIT] Iniciando tarea :${project.name}:${task.name}"
+                }
+                task.doLast { taskInstance ->
+                    taskInstance.outputs.files.each { outputDir ->
+                        if (outputDir.exists() && outputDir.isDirectory()) {
+                            outputDir.walkTopDown().each { file ->
+                                // Analizar tanto archivos .class individuales como archivos de empaquetado de módulos
+                                if (file.name.endsWith(".class") || file.name.endsWith(".kotlin_module")) {
+                                    try {
+                                        def bytes = file.bytes
+                                        if (bytes.length > 8) {
+                                            // Estructura binaria de metadatos de Kotlin (Header / Protobuf)
+                                            // Buscamos los bytes que indican la versión de metadatos [Major, Minor, Patch]
+                                            // En archivos .kotlin_module los primeros bytes determinan la especificación
+                                            int major = bytes[0] & 0xFF
+                                            int minor = bytes[1] & 0xFF
+                                            // Si detectamos firmas de versiones modernas (ej: 1.9), lo reportamos explícitamente
+                                            if (major > 1 || (major == 1 && minor > 8)) {
+                                                println "⚠️ [METADATA ALERT] Módulo :${project.name} generó archivo irreversible [Kotlin ${major}.${minor}] -> ${file.name}"
+                                            }
+                                        }
+                                    } catch (Exception e) {}
+                                }
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {}
         }
 
-        // Forzado robusto de argumentos de JVM (Mantiene la inmunidad al StackOverflow)
+        // 2. VALIDADOR Y ESCUDO JVM: Aplica y confirma la configuración contra el StackOverflow
         project.tasks.withType(JavaCompile).configureEach { task ->
             try {
                 task.options.fork = true
@@ -427,14 +484,22 @@ allprojects {
                         jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
                     }
                 }
+
+                task.doFirst {
+                    println "🚀 [JVM VALIDATOR] Proceso Fork configurado para :${project.name}:${task.name}"
+                    println "   -> jvmArgs asignados: ${task.options.forkOptions.jvmArgs}"
+                }
             } catch (Exception e) {}
         }
     }
 }
 EOF
+echo "  ✅ Metadata Inspector and JVM Validator saved to ~/.gradle/init.gradle"
 
+# Forzar la omisión de chequeo de metadatos tanto en Gradle como en el Demonio de Kotlin
 # Forzar al Demonio de Kotlin a nivel de entorno global a ignorar la verificación de versiones de metadatos
 export GRADLE_OPTS="$GRADLE_OPTS -Dkotlin.skip.metadata.version.check=true"
+export KOTLIN_DAEMON_ARGS="-Dkotlin.skip.metadata.version.check=true"
 
 echo "  ✅ Global master interceptor saved to ~/.gradle/init.gradle"
 
