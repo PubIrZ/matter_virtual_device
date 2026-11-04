@@ -22,7 +22,7 @@ unset PW_ZAP_CIPD_RELEASE
 export -n PW_ZAP_CIPD_RELEASE 2>/dev/null || true
 
 FORCE_CLEAR_CACHE="${FORCE_CLEAR_CACHE:-false}"
-FORCE_CLEAR_CACHE="true"
+#FORCE_CLEAR_CACHE="true"
 
 echo "Estado de la caché: $FORCE_CLEAR_CACHE" 
 
@@ -537,37 +537,176 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # }
 # EOF
 
-# 2. Generar el script init.gradle definitivo con auditoría binaria de metadatos
+# # 2. Generar el script init.gradle definitivo con auditoría binaria de metadatos
+# echo "🛡️ INFRA: Injected Global Metadata Inspector and JVM Stack Shield..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     afterEvaluate { project ->
+#         // 1. INSPECTOR DE METADATOS: Analiza el bytecode generado para identificar la versión exacta
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
+#             try {
+#                 task.doFirst {
+#                     println "🔍 [METADATA AUDIT] Iniciando tarea :${project.name}:${task.name}"
+#                 }  
+#                 task.doLast { taskInstance ->
+#                     taskInstance.outputs.files.each { outputDir ->
+#                         if (outputDir.exists() && outputDir.isDirectory()) {
+#                             outputDir.eachFileRecurse { file ->
+#                                 // Analizar tanto archivos .class individuales como archivos de empaquetado de módulos
+#                                 if (file.name.endsWith(".class") || file.name.endsWith(".kotlin_module")) {
+#                                     try {
+#                                         def bytes = file.bytes
+#                                         if (bytes.length > 8) {
+#                                             // Estructura binaria de metadatos de Kotlin (Header / Protobuf)
+#                                             // Buscamos los bytes que indican la versión de metadatos [Major, Minor, Patch]
+#                                             // En archivos .kotlin_module los primeros bytes determinan la especificación
+#                                             int major = bytes[0] & 0xFF
+#                                             int minor = bytes[1] & 0xFF
+#                                             // Si detectamos firmas de versiones modernas (ej: 1.9), lo reportamos explícitamente
+#                                             if (major > 1 || (major == 1 && minor > 8)) {
+#                                                 println "⚠️ [METADATA ALERT] Módulo :${project.name} generó archivo irreversible [Kotlin ${major}.${minor}] -> ${file.name}"
+#                                             }
+#                                         }
+#                                     } catch (Exception e) {}
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         // 2. VALIDADOR Y ESCUDO JVM: Aplica y confirma la configuración contra el StackOverflow
+#         project.tasks.withType(JavaCompile).configureEach { task ->
+#             try {
+#                 task.options.fork = true
+#                 task.options.forkOptions.with {
+#                     memoryMaximumSize = "4g"
+#                     if (jvmArgs == null) {
+#                         jvmArgs = ["-Xss8m", "-XX:MaxMetaspaceSize=1g"]
+#                     } else {
+#                         jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
+#                     }
+#                 }
+
+#                 task.doFirst {
+#                     println "🚀 [JVM VALIDATOR] Proceso Fork configurado para :${project.name}:${task.name}"
+#                     println "   -> jvmArgs asignados: ${task.options.forkOptions.jvmArgs}"
+#                 }
+#             } catch (Exception e) {}
+#         }
+#     }
+# }
+# EOF
+# echo "  ✅ Metadata Inspector and JVM Validator saved to ~/.gradle/init.gradle"
+
+
 echo "🛡️ INFRA: Injected Global Metadata Inspector and JVM Stack Shield..."
 cat << 'EOF' > ~/.gradle/init.gradle
+// ====================================================================
+// 0. CONFIGURACIÓN DEL SCRIPT (Añade ASM al ClassLoader del init.gradle)
+// ====================================================================
+initscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        // Traemos la última versión estable de ASM de forma segura para este script
+        classpath 'org.ow2.asm:asm:9.7'
+    }
+}
+
+import java.io.InputStream
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.AnnotationVisitor
+import org.objectweb.asm.Opcodes
+
 allprojects {
+    // ==========================================
+    // 1. AUDITORÍA ESTÁTICA (Plugins/Dependencias)
+    // ==========================================
+    def auditVersion = { pluginInstance ->
+        if (pluginInstance && pluginInstance.hasProperty('kotlinPluginVersion')) {
+            def version = pluginInstance.kotlinPluginVersion
+            def parts = version.split('\\.')
+            if (parts.length >= 2) {
+                try {
+                    int major = parts[0].toInteger()
+                    int minor = parts[1].toInteger()
+                    if (major > 1 || (major == 1 && minor > 8)) {
+                        println "⚠️ [KOTLIN PLUGIN ALERT] Módulo :${project.name} configurado con Kotlin ${version} (Superior a 1.8)"
+                    }
+                } catch (NumberFormatException e) {}
+            }
+        }
+    }
+
+    plugins.withId("org.jetbrains.kotlin.jvm") { plugin -> auditVersion(plugin) }
+    plugins.withId("org.jetbrains.kotlin.android") { plugin -> auditVersion(plugin) }
+    plugins.withId("org.jetbrains.kotlin.multiplatform") { plugin -> auditVersion(plugin) }
+
+    // ==========================================
+    // 2. AUDITORÍA BINARIA (Bytecode .class real)
+    // ==========================================
     afterEvaluate { project ->
-        // 1. INSPECTOR DE METADATOS: Analiza el bytecode generado para identificar la versión exacta
         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
-                task.doFirst {
-                    println "🔍 [METADATA AUDIT] Iniciando tarea :${project.name}:${task.name}"
-                }  
                 task.doLast { taskInstance ->
                     taskInstance.outputs.files.each { outputDir ->
                         if (outputDir.exists() && outputDir.isDirectory()) {
+                            
+                            // Variables estables para las clases internas anónimas
+                            final String currentProject = project.name
+                            
                             outputDir.eachFileRecurse { file ->
-                                // Analizar tanto archivos .class individuales como archivos de empaquetado de módulos
-                                if (file.name.endsWith(".class") || file.name.endsWith(".kotlin_module")) {
-                                    try {
-                                        def bytes = file.bytes
-                                        if (bytes.length > 8) {
-                                            // Estructura binaria de metadatos de Kotlin (Header / Protobuf)
-                                            // Buscamos los bytes que indican la versión de metadatos [Major, Minor, Patch]
-                                            // En archivos .kotlin_module los primeros bytes determinan la especificación
-                                            int major = bytes[0] & 0xFF
-                                            int minor = bytes[1] & 0xFF
-                                            // Si detectamos firmas de versiones modernas (ej: 1.9), lo reportamos explícitamente
-                                            if (major > 1 || (major == 1 && minor > 8)) {
-                                                println "⚠️ [METADATA ALERT] Módulo :${project.name} generó archivo irreversible [Kotlin ${major}.${minor}] -> ${file.name}"
-                                            }
+                                if (file.name.endsWith(".class")) {
+                                    final String currentFile = file.name
+                                    file.withInputStream { is ->
+                                        try {
+                                            ClassReader cr = new ClassReader(is)
+                                            
+                                            // Implementación limpia heredando de ClassVisitor pasándole ASM9 al super()
+                                            cr.accept(new ClassVisitor(Opcodes.ASM9) {
+                                                @Override
+                                                AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                                                    if (descriptor == "Lkotlin/Metadata;") {
+                                                        // Heredamos de AnnotationVisitor pasándole ASM9 al super()
+                                                        return new AnnotationVisitor(Opcodes.ASM9) {
+                                                            @Override
+                                                            AnnotationVisitor visitArray(String name) {
+                                                                if (name == "mv") {
+                                                                    def versionNumbers = []
+                                                                    return new AnnotationVisitor(Opcodes.ASM9) {
+                                                                        @Override
+                                                                        void visit(String arrayName, Object value) {
+                                                                            if (value instanceof Integer) {
+                                                                                versionNumbers << value
+                                                                            }
+                                                                        }
+                                                                        @Override
+                                                                        void visitEnd() {
+                                                                            if (versionNumbers.size() >= 2) {
+                                                                                int major = versionNumbers[0]
+                                                                                int minor = versionNumbers[1]
+                                                                                if (major > 1 || (major == 1 && minor > 8)) {
+                                                                                    println "⚠️ [METADATA ALERT] Módulo :${currentProject} generó archivo irreversible [Kotlin ${major}.${minor}] -> ${currentFile}"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                return super.visitArray(name)
+                                                            }
+                                                        }
+                                                    }
+                                                    return super.visitAnnotation(descriptor, visible)
+                                                }
+                                            }, 0)
+                                        } catch (Throwable e) {
+                                            // Ignora clases puras de Java o archivos corruptos de forma segura
                                         }
-                                    } catch (Exception e) {}
+                                    }
                                 }
                             }
                         }
@@ -575,30 +714,11 @@ allprojects {
                 }
             } catch (Exception e) {}
         }
-
-        // 2. VALIDADOR Y ESCUDO JVM: Aplica y confirma la configuración contra el StackOverflow
-        project.tasks.withType(JavaCompile).configureEach { task ->
-            try {
-                task.options.fork = true
-                task.options.forkOptions.with {
-                    memoryMaximumSize = "4g"
-                    if (jvmArgs == null) {
-                        jvmArgs = ["-Xss8m", "-XX:MaxMetaspaceSize=1g"]
-                    } else {
-                        jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
-                    }
-                }
-
-                task.doFirst {
-                    println "🚀 [JVM VALIDATOR] Proceso Fork configurado para :${project.name}:${task.name}"
-                    println "   -> jvmArgs asignados: ${task.options.forkOptions.jvmArgs}"
-                }
-            } catch (Exception e) {}
-        }
     }
 }
 EOF
 echo "  ✅ Metadata Inspector and JVM Validator saved to ~/.gradle/init.gradle"
+
 
 
 
