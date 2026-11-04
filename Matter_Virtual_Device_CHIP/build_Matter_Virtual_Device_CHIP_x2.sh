@@ -44,17 +44,32 @@ else
 
     # Definición limpia y concatenada de variables para la URL
     KT_BASE_URL="https://github.com"
-    KT_VERSION="v1.8.10"
-    KT_ZIP="kotlin-compiler-1.8.10.zip"
-    KT_FULL_URL="${KT_BASE_URL}/${KT_VERSION}/${KT_ZIP}"
+    KT_VERSION_PATH="JetBrains/kotlin/releases/download/v1.8.10"
+    KT_VERSION_ZIP="kotlin-compiler-1.8.10.zip"
+    KT_FULL_URL="${KT_BASE_URL}/${KT_VERSION_PATH}/${KT_VERSION_ZIP}"
+    KT_DEST_ZIP="/usr/local/lib/${KT_VERSION_ZIP}"
 
+    # Limpiar cualquier rastro antiguo corrupto
+    sudo rm -f "$KT_DEST_ZIP"
+    
     # Descargar y extraer en la ruta absoluta del sistema de forma limpia
-    sudo wget -q --show-progress "$KT_FULL_URL" -O "/usr/local/lib/${KT_ZIP}"
-    sudo unzip -q "/usr/local/lib/${KT_ZIP}" -d "/usr/local/lib"
-    sudo rm -f "/usr/local/lib/${KT_ZIP}"
+    sudo wget -q --show-progress "$KT_FULL_URL" -O "$KT_DEST_ZIP"
+    
+    # 3. Verificación final antes de descomprimir
+    if [ -s "$KT_DEST_ZIP" ]; then
+        echo "  📦 Archivo ZIP validado con éxito. Extrayendo componentes..."
+        sudo unzip -q "$KT_DEST_ZIP" -d "/usr/local/lib"
+        sudo rm -f "$KT_DEST_ZIP"
 
-    # Forzar el PATH prioritario global de forma inmediata
-    export PATH="/usr/local/lib/kotlinc/bin:$PATH"
+        # Forzar el PATH prioritario global de forma inmediata
+        export PATH="/usr/local/lib/kotlinc/bin:$PATH"
+        if [ -n "$GITHUB_PATH" ]; then
+            echo "/usr/local/lib/kotlinc/bin" >> "$GITHUB_PATH"
+        fi
+        echo "  ↳ ✅ Kotlin 1.8.10 inyectado correctamente en el entorno del runner."
+    else
+        echo "  ❌ ERROR CRÍTICO: No se pudo descargar el compilador por ninguna vía de red."
+    fi    
 
     # Confirmar de forma visual la inyección en el flujo actual
     echo "  ↳ ✅ Modificación del PATH aplicada con éxito. Nueva versión activa para Ninja:"
