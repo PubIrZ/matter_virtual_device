@@ -537,6 +537,7 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # }
 # EOF
 
+############# DA DATOS INEXACTOS AL MIRAR LOS .CLASS Y LOS .JAR
 # # 2. Generar el script init.gradle definitivo con auditoría binaria de metadatos
 # echo "🛡️ INFRA: Injected Global Metadata Inspector and JVM Stack Shield..."
 # cat << 'EOF' > ~/.gradle/init.gradle
@@ -600,28 +601,129 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # EOF
 # echo "  ✅ Metadata Inspector and JVM Validator saved to ~/.gradle/init.gradle"
 
+############### NO DA ERROR PERO NO FUNCIONA
+# echo "🛡️ INFRA: Injected Global Metadata Inspector and JVM Stack Shield..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# // ====================================================================
+# // 0. CONFIGURACIÓN DEL SCRIPT (Añade ASM al ClassLoader del init.gradle)
+# // ====================================================================
+# initscript {
+#     repositories {
+#         mavenCentral()
+#     }
+#     dependencies {
+#         // Traemos la última versión estable de ASM de forma segura para este script
+#         classpath 'org.ow2.asm:asm:9.7'
+#     }
+# }
+
+# import java.io.InputStream
+# import org.objectweb.asm.ClassReader
+# import org.objectweb.asm.ClassVisitor
+# import org.objectweb.asm.AnnotationVisitor
+# import org.objectweb.asm.Opcodes
+
+# allprojects {
+#     // ==========================================
+#     // 1. AUDITORÍA ESTÁTICA (Plugins/Dependencias)
+#     // ==========================================
+#     def auditVersion = { pluginInstance ->
+#         if (pluginInstance && pluginInstance.hasProperty('kotlinPluginVersion')) {
+#             def version = pluginInstance.kotlinPluginVersion
+#             def parts = version.split('\\.')
+#             if (parts.length >= 2) {
+#                 try {
+#                     int major = parts[0].toInteger()
+#                     int minor = parts[1].toInteger()
+#                     if (major > 1 || (major == 1 && minor > 8)) {
+#                         println "⚠️ [KOTLIN PLUGIN ALERT] Módulo :${project.name} configurado con Kotlin ${version} (Superior a 1.8)"
+#                     }
+#                 } catch (NumberFormatException e) {}
+#             }
+#         }
+#     }
+
+#     plugins.withId("org.jetbrains.kotlin.jvm") { plugin -> auditVersion(plugin) }
+#     plugins.withId("org.jetbrains.kotlin.android") { plugin -> auditVersion(plugin) }
+#     plugins.withId("org.jetbrains.kotlin.multiplatform") { plugin -> auditVersion(plugin) }
+
+#     // ==========================================
+#     // 2. AUDITORÍA BINARIA (Bytecode .class real)
+#     // ==========================================
+#     afterEvaluate { project ->
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
+#             try {
+#                 task.doLast { taskInstance ->
+#                     taskInstance.outputs.files.each { outputDir ->
+#                         if (outputDir.exists() && outputDir.isDirectory()) {
+                            
+#                             // Variables estables para las clases internas anónimas
+#                             final String currentProject = project.name
+                            
+#                             outputDir.eachFileRecurse { file ->
+#                                 if (file.name.endsWith(".class")) {
+#                                     final String currentFile = file.name
+#                                     file.withInputStream { is ->
+#                                         try {
+#                                             ClassReader cr = new ClassReader(is)
+                                            
+#                                             // Implementación limpia heredando de ClassVisitor pasándole ASM9 al super()
+#                                             cr.accept(new ClassVisitor(Opcodes.ASM9) {
+#                                                 @Override
+#                                                 AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+#                                                     if (descriptor == "Lkotlin/Metadata;") {
+#                                                         // Heredamos de AnnotationVisitor pasándole ASM9 al super()
+#                                                         return new AnnotationVisitor(Opcodes.ASM9) {
+#                                                             @Override
+#                                                             AnnotationVisitor visitArray(String name) {
+#                                                                 if (name == "mv") {
+#                                                                     def versionNumbers = []
+#                                                                     return new AnnotationVisitor(Opcodes.ASM9) {
+#                                                                         @Override
+#                                                                         void visit(String arrayName, Object value) {
+#                                                                             if (value instanceof Integer) {
+#                                                                                 versionNumbers << value
+#                                                                             }
+#                                                                         }
+#                                                                         @Override
+#                                                                         void visitEnd() {
+#                                                                             if (versionNumbers.size() >= 2) {
+#                                                                                 int major = versionNumbers[0]
+#                                                                                 int minor = versionNumbers[1]
+#                                                                                 if (major > 1 || (major == 1 && minor > 8)) {
+#                                                                                     println "⚠️ [METADATA ALERT] Módulo :${currentProject} generó archivo irreversible [Kotlin ${major}.${minor}] -> ${currentFile}"
+#                                                                                 }
+#                                                                             }
+#                                                                         }
+#                                                                     }
+#                                                                 }
+#                                                                 return super.visitArray(name)
+#                                                             }
+#                                                         }
+#                                                     }
+#                                                     return super.visitAnnotation(descriptor, visible)
+#                                                 }
+#                                             }, 0)
+#                                         } catch (Throwable e) {
+#                                             // Ignora clases puras de Java o archivos corruptos de forma segura
+#                                         }
+#                                     }
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+#     }
+# }
+# EOF
+# echo "  ✅ Metadata Inspector and JVM Validator saved to ~/.gradle/init.gradle"
+
+
 
 echo "🛡️ INFRA: Injected Global Metadata Inspector and JVM Stack Shield..."
 cat << 'EOF' > ~/.gradle/init.gradle
-// ====================================================================
-// 0. CONFIGURACIÓN DEL SCRIPT (Añade ASM al ClassLoader del init.gradle)
-// ====================================================================
-initscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        // Traemos la última versión estable de ASM de forma segura para este script
-        classpath 'org.ow2.asm:asm:9.7'
-    }
-}
-
-import java.io.InputStream
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.Opcodes
-
 allprojects {
     // ==========================================
     // 1. AUDITORÍA ESTÁTICA (Plugins/Dependencias)
@@ -647,7 +749,7 @@ allprojects {
     plugins.withId("org.jetbrains.kotlin.multiplatform") { plugin -> auditVersion(plugin) }
 
     // ==========================================
-    // 2. AUDITORÍA BINARIA (Bytecode .class real)
+    // 2. AUDITORÍA BINARIA (.kotlin_module sin dependencias)
     // ==========================================
     afterEvaluate { project ->
         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
@@ -655,58 +757,29 @@ allprojects {
                 task.doLast { taskInstance ->
                     taskInstance.outputs.files.each { outputDir ->
                         if (outputDir.exists() && outputDir.isDirectory()) {
-                            
-                            // Variables estables para las clases internas anónimas
-                            final String currentProject = project.name
+                            final String projectName = project.name
                             
                             outputDir.eachFileRecurse { file ->
-                                if (file.name.endsWith(".class")) {
-                                    final String currentFile = file.name
-                                    file.withInputStream { is ->
-                                        try {
-                                            ClassReader cr = new ClassReader(is)
+                                try {
+                                    if (file.name.endsWith(".kotlin_module")) {
+                                        def bytes = file.bytes
+                                        if (bytes.length >= 6) {
+                                            // Extraemos la versión binaria mapeando a enteros positivos libres de signo
+                                            int major = bytes[4] & 0xFF
+                                            int minor = bytes[5] & 0xFF
                                             
-                                            // Implementación limpia heredando de ClassVisitor pasándole ASM9 al super()
-                                            cr.accept(new ClassVisitor(Opcodes.ASM9) {
-                                                @Override
-                                                AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                                                    if (descriptor == "Lkotlin/Metadata;") {
-                                                        // Heredamos de AnnotationVisitor pasándole ASM9 al super()
-                                                        return new AnnotationVisitor(Opcodes.ASM9) {
-                                                            @Override
-                                                            AnnotationVisitor visitArray(String name) {
-                                                                if (name == "mv") {
-                                                                    def versionNumbers = []
-                                                                    return new AnnotationVisitor(Opcodes.ASM9) {
-                                                                        @Override
-                                                                        void visit(String arrayName, Object value) {
-                                                                            if (value instanceof Integer) {
-                                                                                versionNumbers << value
-                                                                            }
-                                                                        }
-                                                                        @Override
-                                                                        void visitEnd() {
-                                                                            if (versionNumbers.size() >= 2) {
-                                                                                int major = versionNumbers[0]
-                                                                                int minor = versionNumbers[1]
-                                                                                if (major > 1 || (major == 1 && minor > 8)) {
-                                                                                    println "⚠️ [METADATA ALERT] Módulo :${currentProject} generó archivo irreversible [Kotlin ${major}.${minor}] -> ${currentFile}"
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                                return super.visitArray(name)
-                                                            }
-                                                        }
-                                                    }
-                                                    return super.visitAnnotation(descriptor, visible)
+                                            // Filtro de seguridad: Evitar procesar bytes vacíos o corruptos
+                                            if (major > 0 || minor > 0) {
+                                                if (major > 1 || (major == 1 && minor > 8)) {
+                                                    println "⚠️ [METADATA ALERT] Módulo :${projectName} contiene metadatos incompatibles [Kotlin ${major}.${minor}] -> ${file.name}"
+                                                } else {
+                                                    println "✅ [METADATA INFO] Módulo :${projectName} verificado correctamente [Kotlin ${major}.${minor}] -> ${file.name}"
                                                 }
-                                            }, 0)
-                                        } catch (Throwable e) {
-                                            // Ignora clases puras de Java o archivos corruptos de forma segura
+                                            }
                                         }
                                     }
+                                } catch (Exception e) {
+                                    // Evita caídas si el archivo está temporalmente bloqueado por el sistema operativo
                                 }
                             }
                         }
