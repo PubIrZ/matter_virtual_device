@@ -900,19 +900,152 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # EOF
 # echo "  ✅ Metadata Inspector, JVM Validator, and Native Optimizer saved to ~/.gradle/init.gradle"
 
-echo "🛡️ INFRA: Injected Global Metadata Inspector, JVM Stack Shield and Native Optimizer..."
+# echo "🛡️ INFRA: Injected Global Metadata Inspector, JVM Stack Shield and Native Optimizer..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     // =========================================================================
+#     // CONFIGURACIÓN DE OPTIMIZACIÓN GLOBAL
+#     // =========================================================================
+#     // Cambia a false si necesitas depurar crashes en C++ con símbolos completos
+#     def ENABLE_STRIP = true
+
+#     // =========================================================================
+#     // 1. AUDITORÍA ESTÁTICA: Monitoreo de plugins de Kotlin
+#     // =========================================================================
+#     def auditVersion = { pluginInstance ->
+#         if (pluginInstance && pluginInstance.hasProperty('kotlinPluginVersion')) {
+#             def version = pluginInstance.kotlinPluginVersion
+#             def parts = version.split('\\.')
+#             if (parts.length >= 2) {
+#                 try {
+#                     int major = parts[0].toInteger()
+#                     int minor = parts[1].toInteger()
+#                     if (major > 1 || (major == 1 && minor > 8)) {
+#                         println "⚠️ [KOTLIN PLUGIN ALERT] Módulo :${project.name} configurado con Kotlin ${version} (Superior a 1.8)"
+#                     }
+#                 } catch (NumberFormatException e) {}
+#             }
+#         }
+#     }
+
+#     plugins.withId("org.jetbrains.kotlin.jvm") { plugin -> auditVersion(plugin) }
+#     plugins.withId("org.jetbrains.kotlin.android") { plugin -> auditVersion(plugin) }
+#     plugins.withId("org.jetbrains.kotlin.multiplatform") { plugin -> auditVersion(plugin) }
+
+#     afterEvaluate { project ->
+#         // =========================================================================
+#         // 2. INSPECTOR DE METADATOS: Filtrado exclusivo de .kotlin_module
+#         // =========================================================================
+#         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
+#             try {
+#                 task.doFirst {
+#                     println "🔍 [METADATA AUDIT] Iniciando tarea :${project.name}:${task.name}"
+#                 }  
+#                 task.doLast { taskInstance ->
+#                     taskInstance.outputs.files.each { outputDir ->
+#                         if (outputDir.exists() && outputDir.isDirectory()) {
+#                             final String projectName = project.name
+#                             outputDir.eachFileRecurse { file ->
+#                                 // Filtrar ÚNICAMENTE los metadatos binarios del módulo Kotlin
+#                                 if (file.name.endsWith(".kotlin_module")) {
+#                                     try {
+#                                         def bytes = file.bytes
+#                                         if (bytes.length > 8) {
+#                                             // Firma binaria de especificación de metadatos de Kotlin
+#                                             int major = bytes[0] & 0xFF
+#                                             int minor = bytes[1] & 0xFF
+#                                             if (major > 1 || (major == 1 && minor > 8)) {
+#                                                 println "⚠️ [METADATA ALERT] Módulo :${projectName} contiene metadatos incompatibles [Kotlin ${major}.${minor}] -> ${file.name}"
+#                                             } else {
+#                                                 println "✅ [METADATA INFO] Módulo :${projectName} verificado correctamente [Kotlin ${major}.${minor}] -> ${file.name}"
+#                                             }
+#                                         }
+#                                     } catch (Exception e) {}
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         // =========================================================================
+#         // 3. VALIDADOR Y ESCUDO JVM: Evita StackOverflows en el compilador
+#         // =========================================================================
+#         project.tasks.withType(JavaCompile).configureEach { task ->
+#             try {
+#                 task.options.fork = true
+#                 task.options.forkOptions.with {
+#                     memoryMaximumSize = "4g"
+#                     if (jvmArgs == null) {
+#                         jvmArgs = ["-Xss8m", "-XX:MaxMetaspaceSize=1g"]
+#                     } else {
+#                         jvmArgs.addAll(["-Xss8m", "-XX:MaxMetaspaceSize=1g"])
+#                     }
+#                 }
+
+#                 task.doFirst {
+#                     println "🚀 [JVM VALIDATOR] Proceso Fork configurado para :${project.name}:${task.name}"
+#                     println "   -> jvmArgs asignados: ${task.options.forkOptions.jvmArgs}"
+#                 }
+#             } catch (Exception e) {}
+#         }
+
+#         // =========================================================================
+#         // 4. OPTIMIZACIÓN NATIVA: Reducción en caliente (.so) mediante llvm-strip
+#         // =========================================================================
+#         if (ENABLE_STRIP) {
+#             project.tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibs") }.configureEach { task ->
+#                 try {
+#                     task.doLast {
+#                         def androidExt = project.extensions.findByName("android")
+#                         if (!androidExt) return
+                        
+#                         // Localización segura del NDK mapeado por la instancia de ejecución
+#                         def ndkDir = androidExt.hasProperty("ndkDirectory") ? androidExt.ndkDirectory : null
+#                         if (ndkDir == null) return
+                        
+#                         def osName = System.getProperty("os.name").toLowerCase()
+#                         def hostOs = osName.contains("linux") ? "linux-x86_64" : 
+#                                      osName.contains("mac") ? "darwin-x86_64" : "windows-x86_64"
+                        
+#                         def stripExecutable = "${ndkDir}/toolchains/llvm/prebuilt/${hostOs}/bin/llvm-strip"
+#                         if (osName.contains("windows")) stripExecutable += ".exe"
+
+#                         if (new File(stripExecutable).exists()) {
+#                             task.outputs.files.each { fileOutput ->
+#                                 if (fileOutput.exists()) {
+#                                     project.fileTree(dir: fileOutput, include: "**/*.so").each { soFile ->
+#                                         println "🛡️ [OPTIMIZER] Aplicando llvm-strip a -> :${project.name}:${soFile.name}"
+#                                         project.exec {
+#                                             commandLine stripExecutable, '--strip-unneeded', soFile.absolutePath
+#                                             ignoreExitValue = true
+#                                         }
+#                                     }
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 } catch (Exception e) {}
+#             }
+#         }
+#     }
+# }
+# EOF
+# echo "  ... Fixed Metadata Inspector, JVM Validator, and Native Optimizer saved to ~/.gradle/init.gradle"
+
+echo "🛡️ INFRA: Injected Verbose Metadata Inspector, JVM Stack Shield and Universal Native Optimizer..."
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
     // =========================================================================
     // CONFIGURACIÓN DE OPTIMIZACIÓN GLOBAL
     // =========================================================================
-    // Cambia a false si necesitas depurar crashes en C++ con símbolos completos
     def ENABLE_STRIP = true
 
     // =========================================================================
-    // 1. AUDITORÍA ESTÁTICA: Monitoreo de plugins de Kotlin
+    // 1. AUDITORÍA ESTÁTICA: Monitoreo verboso de plugins de Kotlin
     // =========================================================================
-    def auditVersion = { pluginInstance ->
+    def auditVersion = { pluginInstance, currentProject ->
         if (pluginInstance && pluginInstance.hasProperty('kotlinPluginVersion')) {
             def version = pluginInstance.kotlinPluginVersion
             def parts = version.split('\\.')
@@ -920,21 +1053,26 @@ allprojects {
                 try {
                     int major = parts[0].toInteger()
                     int minor = parts[1].toInteger()
+                    
+                    // Imprime SIEMPRE la información del plugin para cada módulo
                     if (major > 1 || (major == 1 && minor > 8)) {
-                        println "⚠️ [KOTLIN PLUGIN ALERT] Módulo :${project.name} configurado con Kotlin ${version} (Superior a 1.8)"
+                        println "⚠️ [KOTLIN PLUGIN ALERT] Módulo :${currentProject.name} configurado con Kotlin ${version} (Superior a 1.8)"
+                    } else {
+                        println "✅ [KOTLIN PLUGIN INFO] Módulo :${currentProject.name} configurado con Kotlin ${version} (Correcto)"
                     }
                 } catch (NumberFormatException e) {}
             }
         }
     }
 
-    plugins.withId("org.jetbrains.kotlin.jvm") { plugin -> auditVersion(plugin) }
-    plugins.withId("org.jetbrains.kotlin.android") { plugin -> auditVersion(plugin) }
-    plugins.withId("org.jetbrains.kotlin.multiplatform") { plugin -> auditVersion(plugin) }
+    // Inyección segura pasando la instancia actual de 'project'
+    plugins.withId("org.jetbrains.kotlin.jvm") { plugin -> auditVersion(plugin, project) }
+    plugins.withId("org.jetbrains.kotlin.android") { plugin -> auditVersion(plugin, project) }
+    plugins.withId("org.jetbrains.kotlin.multiplatform") { plugin -> auditVersion(plugin, project) }
 
     afterEvaluate { project ->
         // =========================================================================
-        // 2. INSPECTOR DE METADATOS: Filtrado exclusivo de .kotlin_module
+        // 2. INSPECTOR VERBOSO DE METADATOS: Muestra siempre la versión de .kotlin_module
         // =========================================================================
         project.tasks.matching { it.class.name.contains("KotlinCompile") || it.class.name.contains("Kapt") }.configureEach { task ->
             try {
@@ -946,14 +1084,29 @@ allprojects {
                         if (outputDir.exists() && outputDir.isDirectory()) {
                             final String projectName = project.name
                             outputDir.eachFileRecurse { file ->
-                                // Filtrar ÚNICAMENTE los metadatos binarios del módulo Kotlin
                                 if (file.name.endsWith(".kotlin_module")) {
                                     try {
                                         def bytes = file.bytes
-                                        if (bytes.length > 8) {
-                                            // Firma binaria de especificación de metadatos de Kotlin
-                                            int major = bytes[0] & 0xFF
-                                            int minor = bytes[1] & 0xFF
+                                        if (bytes.length >= 6) {
+                                            int major = 0
+                                            int minor = 0
+                                            
+                                            // Escaneo seguro de cabecera binaria
+                                            for (int i = 0; i < bytes.length - 1; i++) {
+                                                if ((bytes[i] & 0xFF) == 0x08 && (bytes[i+1] & 0xFF) > 0) {
+                                                    if (i + 2 < bytes.length) {
+                                                        major = bytes[i+1] & 0xFF
+                                                        minor = bytes[i+2] & 0xFF
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if (major == 0) {
+                                                major = bytes[4] & 0xFF
+                                                minor = bytes[5] & 0xFF
+                                            }
+
                                             if (major > 1 || (major == 1 && minor > 8)) {
                                                 println "⚠️ [METADATA ALERT] Módulo :${projectName} contiene metadatos incompatibles [Kotlin ${major}.${minor}] -> ${file.name}"
                                             } else {
@@ -970,7 +1123,7 @@ allprojects {
         }
 
         // =========================================================================
-        // 3. VALIDADOR Y ESCUDO JVM: Evita StackOverflows en el compilador
+        // 3. VALIDADOR Y ESCUDO JVM: Previene StackOverflows
         // =========================================================================
         project.tasks.withType(JavaCompile).configureEach { task ->
             try {
@@ -986,22 +1139,23 @@ allprojects {
 
                 task.doFirst {
                     println "🚀 [JVM VALIDATOR] Proceso Fork configurado para :${project.name}:${task.name}"
-                    println "   -> jvmArgs asignados: ${task.options.forkOptions.jvmArgs}"
                 }
             } catch (Exception e) {}
         }
 
         // =========================================================================
-        // 4. OPTIMIZACIÓN NATIVA: Reducción en caliente (.so) mediante llvm-strip
+        // 4. OPTIMIZACIÓN NATIVA UNIVERSAL: Captura tanto Apps como Librerías (.so)
         // =========================================================================
         if (ENABLE_STRIP) {
-            project.tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibs") }.configureEach { task ->
+            project.tasks.matching { t ->
+                def nameLower = t.name.toLowerCase()
+                return nameLower.matches(/.*merge.*jnilibs.*/) || nameLower.matches(/.*strip.*debugsymbols.*/)
+            }.configureEach { task ->
                 try {
                     task.doLast {
                         def androidExt = project.extensions.findByName("android")
                         if (!androidExt) return
                         
-                        // Localización segura del NDK mapeado por la instancia de ejecución
                         def ndkDir = androidExt.hasProperty("ndkDirectory") ? androidExt.ndkDirectory : null
                         if (ndkDir == null) return
                         
@@ -1015,8 +1169,9 @@ allprojects {
                         if (new File(stripExecutable).exists()) {
                             task.outputs.files.each { fileOutput ->
                                 if (fileOutput.exists()) {
-                                    project.fileTree(dir: fileOutput, include: "**/*.so").each { soFile ->
-                                        println "🛡️ [OPTIMIZER] Aplicando llvm-strip a -> :${project.name}:${soFile.name}"
+                                    def tree = fileOutput.isDirectory() ? project.fileTree(fileOutput) : project.files(fileOutput)
+                                    tree.include("**/*.so").each { soFile ->
+                                        println "🛡️ [OPTIMIZER] Aplicando llvm-strip directo -> :${project.name}:${soFile.name}"
                                         project.exec {
                                             commandLine stripExecutable, '--strip-unneeded', soFile.absolutePath
                                             ignoreExitValue = true
@@ -1032,7 +1187,7 @@ allprojects {
     }
 }
 EOF
-echo "  ... Fixed Metadata Inspector, JVM Validator, and Native Optimizer saved to ~/.gradle/init.gradle"
+echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
 
 
 # echo "🛡️ INFRA: Añadiendo bloque de compatibilidad Kotlin 1.8 al final de buildSrc..."
