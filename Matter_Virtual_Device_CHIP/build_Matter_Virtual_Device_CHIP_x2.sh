@@ -1189,7 +1189,8 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # EOF
 # echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
 
-
+echo "🛡️ INFRA: Injected Verbose Metadata Inspector, JVM Stack Shield and Universal Native Optimizer..."
+cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
     // 1. AUDITORÍA ESTÁTICA COMEDIDA (API Oficial de Gradle)
     // Lee las propiedades registradas en los plugins aplicados, no los binarios generados.
@@ -1252,7 +1253,8 @@ def runStrip(String executable, File soFile) {
         ignoreExitValue = true
     }
 }
-
+EOF
+echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
 
 
 # echo "🛡️ INFRA: Añadiendo bloque de compatibilidad Kotlin 1.8 al final de buildSrc..."
