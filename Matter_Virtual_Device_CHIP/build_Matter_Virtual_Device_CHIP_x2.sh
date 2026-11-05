@@ -1189,51 +1189,125 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # EOF
 # echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
 
-echo "🛡️ INFRA: Injected Verbose Metadata Inspector, JVM Stack Shield and Universal Native Optimizer..."
+# echo "🛡️ INFRA: Injected Verbose Metadata Inspector, JVM Stack Shield and Universal Native Optimizer..."
+# cat << 'EOF' > ~/.gradle/init.gradle
+# allprojects {
+#     // 1. AUDITORÍA ESTÁTICA COMEDIDA (API Oficial de Gradle)
+#     // Lee las propiedades registradas en los plugins aplicados, no los binarios generados.
+#     def auditProjectPlugin = { currentProject ->
+#         def kotlinExtension = currentProject.extensions.findByName("kotlin")
+#         if (kotlinExtension && kotlinExtension.hasProperty("coreLibrariesVersion")) {
+#             def version = kotlinExtension.coreLibrariesVersion
+#             println "✅ [KOTLIN AUDIT] Módulo :${currentProject.name} usando SDK v${version}"
+#         }
+#     }
+
+#     afterEvaluate { project ->
+#         auditProjectPlugin(project)
+
+#         // 2. OPTIMIZACIÓN NATIVA ESTÁNDAR (AGP AndroidComponentsExtension)
+#         // Se ejecuta sobre el modelo de variantes oficial de Android, no sobre los directorios del FileSystem.
+#         def androidComponents = project.extensions.findByName("androidComponents")
+#         if (androidComponents != null) {
+#             androidComponents.onVariants { variant ->
+#                 // Buscamos la herramienta llvm-strip oficial asociada a la compilación
+#                 def androidExt = project.extensions.findByName("android")
+#                 if (androidExt && androidExt.hasProperty("ndkDirectory") && androidExt.ndkDirectory != null) {
+#                     def ndkDir = androidExt.ndkDirectory
+#                     def osName = System.getProperty("os.name").toLowerCase()
+#                     def hostOs = osName.contains("linux") ? "linux-x86_64" : 
+#                                  osName.contains("mac") ? "darwin-x86_64" : "windows-x86_64"
+                    
+#                     def stripExecutable = "${ndkDir}/toolchains/llvm/prebuilt/${hostOs}/bin/llvm-strip"
+#                     if (osName.contains("windows")) stripExecutable += ".exe"
+
+#                     // Si el binario existe, configuramos las tareas de empaquetado nativo de forma limpia
+#                     if (new File(stripExecutable).exists()) {
+#                         project.tasks.configureEach { task ->
+#                             def taskName = task.name.toLowerCase()
+#                             if (taskName.contains("strip") && taskName.contains("debugsymbols")) {
+#                                 task.doLast {
+#                                     task.outputs.files.each { output ->
+#                                         if (output.exists()) {
+#                                             if (output.isDirectory()) {
+#                                                 project.fileTree(dir: output, include: "**/*.so").each { runStrip(stripExecutable, it) }
+#                                             } else if (output.isFile() && output.name.endsWith(".so")) {
+#                                                 runStrip(stripExecutable, output)
+#                                             }
+#                                         }
+#                                     }
+#                                 }
+#                             }
+#                         }
+#                     }
+#                 }
+#             }
+#         }
+#     }
+# }
+
+# def runStrip(String executable, File soFile) {
+#     println "🛡️ [OPTIMIZER] Aplicando llvm-strip oficial -> ${soFile.name}"
+#     exec {
+#         commandLine executable, '--strip-unneeded', soFile.absolutePath
+#         ignoreExitValue = true
+#     }
+# }
+# EOF
+# echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
+
+
+
+# =========================================================================
+# 🛡️ PIPELINE DE INICIALIZACIÓN NATIVA (GRADLE GLOBAL OPTIMIZER)
+# =========================================================================
+mkdir -p ~/.gradle
+
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
-    // 1. AUDITORÍA ESTÁTICA COMEDIDA (API Oficial de Gradle)
-    // Lee las propiedades registradas en los plugins aplicados, no los binarios generados.
-    def auditProjectPlugin = { currentProject ->
-        def kotlinExtension = currentProject.extensions.findByName("kotlin")
-        if (kotlinExtension && kotlinExtension.hasProperty("coreLibrariesVersion")) {
-            def version = kotlinExtension.coreLibrariesVersion
-            println "✅ [KOTLIN AUDIT] Módulo :${currentProject.name} usando SDK v${version}"
-        }
-    }
-
     afterEvaluate { project ->
-        auditProjectPlugin(project)
+        // 1. AUDITORÍA NATIVA DEL COMPILADOR KOTLIN
+        def kotlinExt = project.extensions.findByName("kotlin")
+        if (kotlinExt && kotlinExt.hasProperty("coreLibrariesVersion")) {
+            println "✅ [KOTLIN AUDIT] Módulo :${project.name} operando bajo SDK v${kotlinExt.coreLibrariesVersion}"
+        }
 
-        // 2. OPTIMIZACIÓN NATIVA ESTÁNDAR (AGP AndroidComponentsExtension)
-        // Se ejecuta sobre el modelo de variantes oficial de Android, no sobre los directorios del FileSystem.
-        def androidComponents = project.extensions.findByName("androidComponents")
-        if (androidComponents != null) {
-            androidComponents.onVariants { variant ->
-                // Buscamos la herramienta llvm-strip oficial asociada a la compilación
-                def androidExt = project.extensions.findByName("android")
-                if (androidExt && androidExt.hasProperty("ndkDirectory") && androidExt.ndkDirectory != null) {
-                    def ndkDir = androidExt.ndkDirectory
-                    def osName = System.getProperty("os.name").toLowerCase()
-                    def hostOs = osName.contains("linux") ? "linux-x86_64" : 
-                                 osName.contains("mac") ? "darwin-x86_64" : "windows-x86_64"
-                    
-                    def stripExecutable = "${ndkDir}/toolchains/llvm/prebuilt/${hostOs}/bin/llvm-strip"
-                    if (osName.contains("windows")) stripExecutable += ".exe"
+        // 2. OPTIMIZACIÓN NATIVA ESTÁNDAR POR TAREAS (Sin APIs volátiles de AGP)
+        def androidExt = project.extensions.findByName("android")
+        if (androidExt && androidExt.hasProperty("ndkDirectory") && androidExt.ndkDirectory != null) {
+            def ndkDir = androidExt.ndkDirectory
+            def osName = System.getProperty("os.name").toLowerCase()
+            def hostOs = osName.contains("linux") ? "linux-x86_64" : 
+                         osName.contains("mac") ? "darwin-x86_64" : "windows-x86_64"
+            
+            def stripExecutable = "${ndkDir}/toolchains/llvm/prebuilt/${hostOs}/bin/llvm-strip"
+            if (osName.contains("windows")) stripExecutable += ".exe"
 
-                    // Si el binario existe, configuramos las tareas de empaquetado nativo de forma limpia
-                    if (new File(stripExecutable).exists()) {
-                        project.tasks.configureEach { task ->
-                            def taskName = task.name.toLowerCase()
-                            if (taskName.contains("strip") && taskName.contains("debugsymbols")) {
-                                task.doLast {
-                                    task.outputs.files.each { output ->
-                                        if (output.exists()) {
-                                            if (output.isDirectory()) {
-                                                project.fileTree(dir: output, include: "**/*.so").each { runStrip(stripExecutable, it) }
-                                            } else if (output.isFile() && output.name.endsWith(".so")) {
-                                                runStrip(stripExecutable, output)
+            if (new File(stripExecutable).exists()) {
+                project.tasks.configureEach { task ->
+                    def taskName = task.name.toLowerCase()
+                    // Captura exacta tanto de las tareas de empaquetado como las de despojado nativo
+                    if ((taskName.contains("strip") && taskName.contains("debugsymbols")) || 
+                        (taskName.contains("strip") && taskName.contains("releasesymbols")) ||
+                        (taskName.startsWith("merge") && taskName.endsWith("jnilibs"))) {
+                        
+                        task.doLast {
+                            task.outputs.files.each { output ->
+                                if (output.exists()) {
+                                    // Manejo polimórfico robusto: directorios (Apps) o archivos sueltos (Librerías)
+                                    if (output.isDirectory()) {
+                                        project.fileTree(dir: output, include: "**/*.so").each { soFile ->
+                                            println "🛡️ [OPTIMIZER] Aplicando llvm-strip -> :${project.name}:${soFile.name}"
+                                            project.exec {
+                                                commandLine stripExecutable, '--strip-unneeded', soFile.absolutePath
+                                                ignoreExitValue = true
                                             }
+                                        }
+                                    } else if (output.isFile() && output.name.endsWith(".so")) {
+                                        println "🛡️ [OPTIMIZER] Aplicando llvm-strip -> :${project.name}:${output.name}"
+                                        project.exec {
+                                            commandLine stripExecutable, '--strip-unneeded', output.absolutePath
+                                            ignoreExitValue = true
                                         }
                                     }
                                 }
@@ -1245,16 +1319,9 @@ allprojects {
         }
     }
 }
-
-def runStrip(String executable, File soFile) {
-    println "🛡️ [OPTIMIZER] Aplicando llvm-strip oficial -> ${soFile.name}"
-    exec {
-        commandLine executable, '--strip-unneeded', soFile.absolutePath
-        ignoreExitValue = true
-    }
-}
 EOF
-echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
+echo "✅ Ecosistema de optimización nativa inyectado con éxito en ~/.gradle/init.gradle"
+
 
 
 # echo "🛡️ INFRA: Añadiendo bloque de compatibilidad Kotlin 1.8 al final de buildSrc..."
