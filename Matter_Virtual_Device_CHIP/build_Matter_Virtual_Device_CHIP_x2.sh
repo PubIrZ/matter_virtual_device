@@ -1256,8 +1256,6 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # EOF
 # echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
 
-
-
 # =========================================================================
 # 🛡️ PIPELINE DE INICIALIZACIÓN NATIVA (GRADLE GLOBAL OPTIMIZER)
 # =========================================================================
@@ -1266,9 +1264,9 @@ mkdir -p ~/.gradle
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
     afterEvaluate { project ->
-        // 1. AUDITORÍA NATIVA DEL COMPILADOR KOTLIN
+        // 1. AUDITORÍA NATIVA DEL COMPILADOR KOTLIN (Validación segura contra NullPointer)
         def kotlinExt = project.extensions.findByName("kotlin")
-        if (kotlinExt && kotlinExt.hasProperty("coreLibrariesVersion")) {
+        if (kotlinExt != null && kotlinExt.hasProperty("coreLibrariesVersion")) {
             println "✅ [KOTLIN AUDIT] Módulo :${project.name} operando bajo SDK v${kotlinExt.coreLibrariesVersion}"
         }
 
@@ -1286,7 +1284,6 @@ allprojects {
             if (new File(stripExecutable).exists()) {
                 project.tasks.configureEach { task ->
                     def taskName = task.name.toLowerCase()
-                    // Captura exacta tanto de las tareas de empaquetado como las de despojado nativo
                     if ((taskName.contains("strip") && taskName.contains("debugsymbols")) || 
                         (taskName.contains("strip") && taskName.contains("releasesymbols")) ||
                         (taskName.startsWith("merge") && taskName.endsWith("jnilibs"))) {
@@ -1294,7 +1291,6 @@ allprojects {
                         task.doLast {
                             task.outputs.files.each { output ->
                                 if (output.exists()) {
-                                    // Manejo polimórfico robusto: directorios (Apps) o archivos sueltos (Librerías)
                                     if (output.isDirectory()) {
                                         project.fileTree(dir: output, include: "**/*.so").each { soFile ->
                                             println "🛡️ [OPTIMIZER] Aplicando llvm-strip -> :${project.name}:${soFile.name}"
@@ -1320,7 +1316,9 @@ allprojects {
     }
 }
 EOF
-echo "✅ Ecosistema de optimización nativa inyectado con éxito en ~/.gradle/init.gradle"
+
+echo "✅ Ecosistema de optimización nativa blindado e inyectado en ~/.gradle/init.gradle"
+
 
 
 
