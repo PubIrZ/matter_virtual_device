@@ -1391,20 +1391,107 @@ echo "INFRA: Parcheando dependencia crítica libgirepository en caliente..."
 sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 
 
+# # =========================================================================
+# # 🏗️ VALIDACIÓN ESTÁTICA: REEMPLAZO DE ARCHIVO .ZAP CON PARSER OFICIAL COMPATIBLE
+# # =========================================================================
+# ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+# echo "INFRA: Creando copia de seguridad del .zap original del repositorio..."
+# cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+
+# # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
+# trap 'echo "🚨 Revertiendo cambios por fallo en compilación..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true' ERR
+
+# echo "INFRA: Extrayendo plantilla de Luz On/Off nativa homologada del SDK..."
+# # Usamos el modelo estructural limpio de 'lighting-app' que ya contiene todos los defines de C++ 
+# # requeridos por zap_cluster_list.py, pero mapeando los IDs de los endpoints de la app de Android.
+# cat << 'EOF' > "$ZAP_FILE"
+# {
+#   "fileFormat": 2,
+#   "featureLevel": 100,
+#   "creator": "zap",
+#   "keyValuePairs": [
+#     { "key": "commandDiscovery", "value": "1" },
+#     { "key": "defaultResponsePolicy", "value": "always" },
+#     { "key": "manufacturerCodes", "value": "0x1002" }
+#   ],
+#   "package": [
+#     {
+#       "pathRelativity": "relativeToZap",
+#       "path": "../../../src/app/zap-templates/zcl/zcl.json",
+#       "type": "zcl-properties",
+#       "category": "matter",
+#       "version": 1
+#     },
+#     {
+#       "pathRelativity": "relativeToZap",
+#       "path": "../../../src/app/zap-templates/app-templates.json",
+#       "type": "gen-templates-json",
+#       "version": "chip-v1"
+#     }
+#   ],
+#   "endpointTypes": [
+#     {
+#       "id": 1,
+#       "name": "MA-rootdevice",
+#       "deviceTypeRef": { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" },
+#       "deviceTypes": [ { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" } ],
+#       "deviceVersions": [ 1 ], "deviceIdentifiers": [ 22 ], "deviceTypeName": "MA-rootdevice", "deviceTypeCode": 22, "deviceTypeProfileId": 259,
+#       "clusters": [
+#         { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Basic Information", "code": 40, "define": "BASIC_INFORMATION_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "General Commissioning", "code": 48, "define": "GENERAL_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Network Commissioning", "code": 49, "define": "NETWORK_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Operational Credentials", "code": 62, "define": "OPERATIONAL_CREDENTIALS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
+#       ]
+#     },
+#     {
+#       "id": 2,
+#       "name": "MA-onofflight",
+#       "deviceTypeRef": { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" },
+#       "deviceTypes": [ { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" } ],
+#       "deviceVersions": [ 1 ], "deviceIdentifiers": [ 256 ], "deviceTypeName": "MA-onofflight", "deviceTypeCode": 256, "deviceTypeProfileId": 259,
+#       "clusters": [
+#         { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Identify", "code": 3, "define": "IDENTIFY_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Groups", "code": 4, "define": "GROUPS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Scenes Management", "code": 98, "define": "SCENES_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "On/Off", "code": 6, "define": "ON_OFF_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
+#       ]
+#     }
+#   ],
+#   "endpoints": [
+#     { "endpointTypeName": "MA-rootdevice", "endpointTypeIndex": 0, "profileId": 259, "endpointId": 0, "networkId": 0, "parentEndpointIdentifier": null },
+#     { "endpointTypeName": "MA-onofflight", "endpointTypeIndex": 1, "profileId": 259, "endpointId": 1, "networkId": 0, "parentEndpointIdentifier": null }
+#   ]
+# }
+# EOF
+
+# echo "INFRA: Invocando la CLI de ZAP para regenerar los stubs C++ con la metadata correcta..."
+# ./scripts/tools/zap/generate.py "$ZAP_FILE"
+
+
+
 # =========================================================================
-# 🏗️ VALIDACIÓN ESTÁTICA: REEMPLAZO DE ARCHIVO .ZAP CON PARSER OFICIAL COMPATIBLE
+# 🏗️ SOLUCIÓN INTEGRAL: .ZAP HOMOLOGADO + INTERCEPTORES DE COMPILACIÓN C++
 # =========================================================================
 ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 
-echo "INFRA: Creando copia de seguridad del .zap original del repositorio..."
+# Rutas de los archivos C++ acoplados de Android que causan fallos de compilación
+SRC_COLOR="examples/virtual-device-app/android/java/ColorControlManager.cpp"
+SRC_LOCK="examples/virtual-device-app/android/java/ClusterChangeAttribute.cpp"
+SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
+
+echo "INFRA: Creando copias de seguridad de los archivos originales del repositorio..."
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+cp "$SRC_COLOR" "${SRC_COLOR}.bak"
+cp "$SRC_LOCK" "${SRC_LOCK}.bak"
+cp "$SRC_JNI" "${SRC_JNI}.bak"
 
 # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
-trap 'echo "🚨 Revertiendo cambios por fallo en compilación..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true' ERR
+trap 'echo "🚨 Revertiendo cambios por fallo en compilación..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_COLOR}.bak" "$SRC_COLOR" || true; mv "${SRC_LOCK}.bak" "$SRC_LOCK" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true' ERR
 
-echo "INFRA: Extrayendo plantilla de Luz On/Off nativa homologada del SDK..."
-# Usamos el modelo estructural limpio de 'lighting-app' que ya contiene todos los defines de C++ 
-# requeridos por zap_cluster_list.py, pero mapeando los IDs de los endpoints de la app de Android.
+echo "INFRA: Escribiendo tu plantilla .zap homologada de Luz On/Off limpia de clústeres..."
 cat << 'EOF' > "$ZAP_FILE"
 {
   "fileFormat": 2,
@@ -1467,9 +1554,15 @@ cat << 'EOF' > "$ZAP_FILE"
 }
 EOF
 
-echo "INFRA: Invocando la CLI de ZAP para regenerar los stubs C++ con la metadata correcta..."
-./scripts/tools/zap/generate.py "$ZAP_FILE"
+echo "INFRA: Levantando escudo interceptor C++ para desarmar el acoplamiento de macros..."
+# Inyectamos en la primera línea de cada archivo las macros requeridas inicializadas a 0
+sed -i '1i #define MATTER_DM_COLOR_CONTROL_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_COLOR"
+sed -i '1i #define MATTER_DM_DOOR_LOCK_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_LOCK"
+sed -i '1i #define MATTER_DM_DOOR_LOCK_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_JNI"
+sed -i '1i #define MATTER_DM_COLOR_CONTROL_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_JNI"
 
+echo "INFRA: Invocando la CLI de ZAP para regenerar la estructura reducida..."
+./scripts/tools/zap/generate.py "$ZAP_FILE"
 
 
 
@@ -1529,5 +1622,10 @@ if [ -x "$STRIP_TOOL" ] && [ -d "$JNI_TARGET_DIR" ]; then
     done
 fi
 
-echo "INFRA: Compilación completada con éxito. Restaurando el archivo .zap original de Git..."
+echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y cpp's originales de Git..."
 mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
+
+mv "${SRC_COLOR}.bak" "$SRC_COLOR" || true
+mv "${SRC_LOCK}.bak" "$SRC_LOCK" || true
+mv "${SRC_JNI}.bak" "$SRC_JNI" || true
+
