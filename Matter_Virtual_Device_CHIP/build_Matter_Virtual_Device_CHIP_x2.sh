@@ -1473,23 +1473,19 @@ sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 
 
 # =========================================================================
-# 🏗️ SOLUCIÓN INTEGRAL: .ZAP HOMOLOGADO + INTERCEPTORES DE COMPILACIÓN C++
+# 🏗️ SOLUCIÓN INTEGRAL: .ZAP HOMOLOGADO + RETIRADA DE .CPP e INTERCEPCIÓN JNI CORE
 # =========================================================================
+GN_FILE="examples/virtual-device-app/android/BUILD.gn"
+SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
 ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 
-# Rutas de los archivos C++ acoplados de Android que causan fallos de compilación
-SRC_COLOR="examples/virtual-device-app/android/java/ColorControlManager.cpp"
-SRC_LOCK="examples/virtual-device-app/android/java/ClusterChangeAttribute.cpp"
-SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
-
-echo "INFRA: Creando copias de seguridad de los archivos originales del repositorio..."
-cp "$ZAP_FILE" "${ZAP_FILE}.bak"
-cp "$SRC_COLOR" "${SRC_COLOR}.bak"
-cp "$SRC_LOCK" "${SRC_LOCK}.bak"
+echo "INFRA: Creando buffers de respaldo temporales para el ciclo incremental Git..."
+cp "$GN_FILE" "${GN_FILE}.bak"
 cp "$SRC_JNI" "${SRC_JNI}.bak"
+cp "$ZAP_FILE" "${ZAP_FILE}.bak"
 
-# Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
-trap 'echo "🚨 Revertiendo cambios por fallo en compilación..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_COLOR}.bak" "$SRC_COLOR" || true; mv "${SRC_LOCK}.bak" "$SRC_LOCK" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true' ERR
+# Disparador de seguridad: si el pipeline se interrumpe, Git vuelve a su estado limpio original
+trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 
 echo "INFRA: Escribiendo tu plantilla .zap homologada de Luz On/Off limpia de clústeres..."
 cat << 'EOF' > "$ZAP_FILE"
@@ -1554,12 +1550,28 @@ cat << 'EOF' > "$ZAP_FILE"
 }
 EOF
 
-echo "INFRA: Levantando escudo interceptor C++ para desarmar el acoplamiento de macros..."
-# Inyectamos en la primera línea de cada archivo las macros requeridas inicializadas a 0
-sed -i '1i #define MATTER_DM_COLOR_CONTROL_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_COLOR"
-sed -i '1i #define MATTER_DM_DOOR_LOCK_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_LOCK"
-sed -i '1i #define MATTER_DM_DOOR_LOCK_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_JNI"
-sed -i '1i #define MATTER_DM_COLOR_CONTROL_CLUSTER_SERVER_ENDPOINT_COUNT 0' "$SRC_JNI"
+
+echo "INFRA: Dando de baja los archivos .cpp conflictivos de la lista de fuentes de BUILD.gn..."
+sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
+sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
+sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
+
+echo "INFRA: Neutralizando los cuerpos de las funciones acopladas en DeviceApp-JNI.cpp..."
+# 1. Comentar las inclusiones de cabecera de los managers eliminados
+sed -i 's|#include "ColorControlManager.h"|// #include "ColorControlManager.h"|g' "$SRC_JNI"
+sed -i 's|#include "DoorLockManager.h"|// #include "DoorLockManager.h"|g' "$SRC_JNI"
+
+# 2. Reemplazar los bloques ejecutores internos por retornos seguros nulos (void/jboolean) para que compilen en vacío
+sed -i '/setColorControlManager/,/^}/ { s|ColorControlManager::NewManager.*|/* removido */| }' "$SRC_JNI"
+sed -i '/setDoorLockManager/,/^}/ { s|DoorLockManager::NewManager.*|/* removido */| }' "$SRC_JNI"
+sed -i '/setLockType/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+sed -i '/setLockState/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+sed -i '/setActuatorEnabled/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+sed -i '/setAutoRelockTime/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+sed -i '/setOperatingMode/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+sed -i '/setSupportedOperatingModes/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+sed -i '/sendLockAlarmEvent/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+
 
 echo "INFRA: Invocando la CLI de ZAP para regenerar la estructura reducida..."
 ./scripts/tools/zap/generate.py "$ZAP_FILE"
