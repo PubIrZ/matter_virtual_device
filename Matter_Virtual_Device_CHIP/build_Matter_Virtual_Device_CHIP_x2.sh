@@ -1390,6 +1390,84 @@ find . -name "zap.json" -exec sh -c 'echo "{\"packages\": []}" > "{}"' \;
 echo "INFRA: Parcheando dependencia crítica libgirepository en caliente..."
 sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 
+
+# =========================================================================
+# 🏗️ VALIDACIÓN ESTÁTICA: CONFIGURACIÓN DE MODELO ZAP SIMPLIFICADO DESDE CERO
+# =========================================================================
+ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+echo "INFRA: Creando copia de seguridad del .zap original del repositorio..."
+cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+
+# Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
+trap 'echo "🚨 Revertiendo cambios por fallo en compilación..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true' ERR
+
+echo "INFRA: Sobrescribiendo con un modelo ZAP minimalista de Luz On/Off pura..."
+cat << 'EOF' > "$ZAP_FILE"
+{
+  "fileFormat": 2,
+  "featureLevel": 100,
+  "creator": "zap",
+  "keyValuePairs": [
+    { "key": "commandDiscovery", "value": "1" },
+    { "key": "defaultResponsePolicy", "value": "always" },
+    { "key": "manufacturerCodes", "value": "0x1002" }
+  ],
+  "package": [
+    {
+      "pathRelativity": "relativeToZap",
+      "path": "../../../src/app/zap-templates/zcl/zcl.json",
+      "type": "zcl-properties",
+      "category": "matter",
+      "version": 1
+    },
+    {
+      "pathRelativity": "relativeToZap",
+      "path": "../../../src/app/zap-templates/app-templates.json",
+      "type": "gen-templates-json",
+      "version": "chip-v1"
+    }
+  ],
+  "endpointTypes": [
+    {
+      "id": 1,
+      "name": "MA-rootdevice",
+      "deviceTypeCode": 22,
+      "deviceTypeName": "MA-rootdevice",
+      "clusters": [
+        { "name": "Descriptor", "code": 29, "enabled": 1, "side": "server" },
+        { "name": "Basic Information", "code": 40, "enabled": 1, "side": "server" },
+        { "name": "General Commissioning", "code": 48, "enabled": 1, "side": "server" },
+        { "name": "Network Commissioning", "code": 49, "enabled": 1, "side": "server" },
+        { "name": "Operational Credentials", "code": 62, "enabled": 1, "side": "server" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "MA-onofflight",
+      "deviceTypeCode": 256,
+      "deviceTypeName": "MA-onofflight",
+      "clusters": [
+        { "name": "Descriptor", "code": 29, "enabled": 1, "side": "server" },
+        { "name": "Identify", "code": 3, "enabled": 1, "side": "server" },
+        { "name": "Groups", "code": 4, "enabled": 1, "side": "server" },
+        { "name": "Scenes Management", "code": 98, "enabled": 1, "side": "server" },
+        { "name": "OnOff", "code": 6, "enabled": 1, "side": "server" }
+      ]
+    }
+  ],
+  "endpoints": [
+    { "endpointTypeName": "MA-rootdevice", "endpointTypeIndex": 0, "endpointId": 0 },
+    { "endpointTypeName": "MA-onofflight", "endpointTypeIndex": 1, "endpointId": 1 }
+  ]
+}
+EOF
+
+echo "INFRA: Invocando la CLI de ZAP para regenerar los archivos de cabecera C++ limpios..."
+./scripts/tools/zap/generate.py "$ZAP_FILE"
+
+
+
 # INICIALIZACIÓN DEL ENTORNO DE COMPILACIÓN DE MATTER
 echo "INFRA: Inicializando el entorno virtual aislado de Pigweed..."
 source scripts/activate.sh
@@ -1445,3 +1523,6 @@ if [ -x "$STRIP_TOOL" ] && [ -d "$JNI_TARGET_DIR" ]; then
         $STRIP_TOOL --strip-unneeded "$so_file" -o "${base_name}_small.so"
     done
 fi
+
+echo "INFRA: Compilación completada con éxito. Restaurando el archivo .zap original de Git..."
+mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
