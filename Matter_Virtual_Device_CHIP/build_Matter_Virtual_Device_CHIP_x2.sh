@@ -1264,6 +1264,9 @@ mkdir -p ~/.gradle
 
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
+    // CONFIGURACIÓN DE OPTIMIZACIÓN GLOBAL
+    def ENABLE_STRIP = false
+
     // 1. AUDITORÍA NATIVA DEL COMPILADOR KOTLIN
     afterEvaluate { project ->
         def kotlinExt = project.extensions.findByName("kotlin")
@@ -1273,48 +1276,50 @@ allprojects {
     }
 
     // 2. OPTIMIZACIÓN NATIVA BLINDADA MEDIANTE VARIABLES DE ENTORNO DEL RUNNER
-    tasks.configureEach { task ->
-        def taskName = task.name.toLowerCase()
-        if ((taskName.contains("strip") && taskName.contains("debugsymbols")) || 
-            (taskName.contains("strip") && taskName.contains("releasesymbols")) ||
-            (taskName.startsWith("merge") && taskName.endsWith("jnilibs"))) {
-            
-            task.doLast {
-                // Leemos directamente el mapa de entorno del Runner inyectado por GitHub Actions
-                def ndkPath = System.getenv("ANDROID_NDK_ROOT") ?: System.getenv("ANDROID_NDK_HOME")
+    if (ENABLE_STRIP) {
+      tasks.configureEach { task ->
+          def taskName = task.name.toLowerCase()
+          if ((taskName.contains("strip") && taskName.contains("debugsymbols")) || 
+              (taskName.contains("strip") && taskName.contains("releasesymbols")) ||
+              (taskName.startsWith("merge") && taskName.endsWith("jnilibs"))) {
+              
+              task.doLast {
+                  // Leemos directamente el mapa de entorno del Runner inyectado por GitHub Actions
+                  def ndkPath = System.getenv("ANDROID_NDK_ROOT") ?: System.getenv("ANDROID_NDK_HOME")
                 
-                if (ndkPath != null && !ndkPath.isEmpty()) {
-                    def osName = System.getProperty("os.name").toLowerCase()
-                    def hostOs = osName.contains("linux") ? "linux-x86_64" : 
-                                 osName.contains("mac") ? "darwin-x86_64" : "windows-x86_64"
+                  if (ndkPath != null && !ndkPath.isEmpty()) {
+                      def osName = System.getProperty("os.name").toLowerCase()
+                      def hostOs = osName.contains("linux") ? "linux-x86_64" : 
+                                   osName.contains("mac") ? "darwin-x86_64" : "windows-x86_64"
                     
-                    def stripExecutable = "${ndkPath}/toolchains/llvm/prebuilt/${hostOs}/bin/llvm-strip"
-                    if (osName.contains("windows")) stripExecutable += ".exe"
+                      def stripExecutable = "${ndkPath}/toolchains/llvm/prebuilt/${hostOs}/bin/llvm-strip"
+                      if (osName.contains("windows")) stripExecutable += ".exe"
 
-                    if (new File(stripExecutable).exists()) {
-                        task.outputs.files.each { output ->
-                            if (output.exists()) {
-                                if (output.isDirectory()) {
-                                    project.fileTree(dir: output, include: "**/*.so").each { soFile ->
-                                        println "🛡️ [OPTIMIZER] Aplicando llvm-strip -> :${project.name}:${soFile.name}"
-                                        project.exec {
-                                            commandLine stripExecutable, '--strip-unneeded', soFile.absolutePath
-                                            ignoreExitValue = true
-                                        }
-                                    }
-                                } else if (output.isFile() && output.name.endsWith(".so")) {
-                                    println "🛡️ [OPTIMIZER] Aplicando llvm-strip -> :${project.name}:${output.name}"
-                                    project.exec {
-                                        commandLine stripExecutable, '--strip-unneeded', output.absolutePath
-                                        ignoreExitValue = true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+                      if (new File(stripExecutable).exists()) {
+                          task.outputs.files.each { output ->
+                              if (output.exists()) {
+                                  if (output.isDirectory()) {
+                                      project.fileTree(dir: output, include: "**/*.so").each { soFile ->
+                                          println "🛡️ [OPTIMIZER] Aplicando llvm-strip -> :${project.name}:${soFile.name}"
+                                          project.exec {
+                                              commandLine stripExecutable, '--strip-unneeded', soFile.absolutePath
+                                              ignoreExitValue = true
+                                          }
+                                      }
+                                  } else if (output.isFile() && output.name.endsWith(".so")) {
+                                      println "🛡️ [OPTIMIZER] Aplicando llvm-strip -> :${project.name}:${output.name}"
+                                      project.exec {
+                                          commandLine stripExecutable, '--strip-unneeded', output.absolutePath
+                                          ignoreExitValue = true
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+       }
     }
 }
 EOF
