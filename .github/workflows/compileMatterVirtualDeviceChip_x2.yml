@@ -309,7 +309,8 @@ jobs:
 
               echo ""
               echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-              cat build_Matter_Virtual_Device_CHIP_x2.sh
+              #cat build_Matter_Virtual_Device_CHIP_x2.sh
+              awk -v n=3 '/^[[:space:]]*#/ {l[c++]=$0; next} {if(c>0 && c<=n) for(i=0;i<c;i++) print l[i]; c=0; print} END {if(c>0 && c<=n) for(i=0;i<c;i++) print l[i]}' build_Matter_Virtual_Device_CHIP_x2.sh
               echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
               echo ""
               
@@ -362,7 +363,8 @@ jobs:
       # ---------------------------------------------------------------------
       # EXTRACCIÓN Y SUBIDA COMPLETA DE TODO EL ENTORNO CONSTRUIDO (BUILD OUTPUT)
       - name: Upload All Build Output Directory Structure
-        if: always()        # Sube los archivos incluso si el bucle se detiene manualmente o falla a medias
+        if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
+        #if: always()        # Sube los archivos incluso si el bucle se detiene manualmente o falla a medias
         uses: actions/upload-artifact@v4
         with:
           name: app-virtual-device-chip-all_outputs
@@ -373,7 +375,8 @@ jobs:
 
       # All Compilation Logs & Reports
       - name: Upload All Compilation Logs & Reports
-        if: always()        # Sube los archivos incluso si el bucle se detiene manualmente o falla a medias    
+        if: false # 🛑 Forzado a false: GitHub Actions siempre se saltará este paso
+        #if: always()        # Sube los archivos incluso si el bucle se detiene manualmente o falla a medias    
         uses: actions/upload-artifact@v4
         with:
           name: app-virtual-device-chip-logs  # ZIP reports-and-compilacion-logs 
