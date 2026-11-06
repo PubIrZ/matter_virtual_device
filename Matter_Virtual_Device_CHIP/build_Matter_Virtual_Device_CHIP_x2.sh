@@ -1573,6 +1573,7 @@ cat << 'EOF' > "$SRC_JNI"
 #include "credentials/DeviceAttestationCredsProvider.h"
 #include <app/server/java/AndroidAppServerWrapper.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
+#include <app/util/af-types.h> // 🔑 CRÍTICO: Define EmberAfDeviceType
 #include <jni.h>
 #include <lib/core/CHIPError.h>
 #include <lib/support/CHIPJNIError.h>
@@ -1609,7 +1610,7 @@ JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
 JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { OnOffManager::NewManager(endpoint, manager); }
 JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) { return true; }
 
-// STUBS DE ENLACE DINÁMICO EN VACÍO (Impiden fallos en tiempo de ejecución de Gradle)
+// STUBS DE ENLACE DINÁMICO EN VACÍO
 JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint ep, jobject m) {}
 JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint ep, jint v) { return true; }
 JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint ep, jobject m) {}
