@@ -1478,9 +1478,162 @@ sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 # ./scripts/tools/zap/generate.py "$ZAP_FILE"
 
 
+########## COMPILO LA APP <<----------------
+# # =========================================================================
+# # 🏗️ SOLUCIÓN INTEGRAL: .ZAP HOMOLOGADO + RETIRADA DE .CPP e INTERCEPCIÓN JNI CORE
+# # =========================================================================
+# GN_FILE="examples/virtual-device-app/android/BUILD.gn"
+# SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
+# ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+# echo "INFRA: Creando buffers de respaldo temporales para Git..."
+# cp "$GN_FILE" "${GN_FILE}.bak"
+# cp "$SRC_JNI" "${SRC_JNI}.bak"
+# cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+
+# # Registrar el disparador de restauración en caso de error en el pipeline
+# trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
+
+
+# echo "INFRA: Escribiendo tu plantilla .zap homologada de Luz On/Off limpia de clústeres..."
+# cat << 'EOF' > "$ZAP_FILE"
+# {
+#   "fileFormat": 2,
+#   "featureLevel": 100,
+#   "creator": "zap",
+#   "keyValuePairs": [
+#     { "key": "commandDiscovery", "value": "1" },
+#     { "key": "defaultResponsePolicy", "value": "always" },
+#     { "key": "manufacturerCodes", "value": "0x1002" }
+#   ],
+#   "package": [
+#     {
+#       "pathRelativity": "relativeToZap",
+#       "path": "../../../src/app/zap-templates/zcl/zcl.json",
+#       "type": "zcl-properties",
+#       "category": "matter",
+#       "version": 1
+#     },
+#     {
+#       "pathRelativity": "relativeToZap",
+#       "path": "../../../src/app/zap-templates/app-templates.json",
+#       "type": "gen-templates-json",
+#       "version": "chip-v1"
+#     }
+#   ],
+#   "endpointTypes": [
+#     {
+#       "id": 1,
+#       "name": "MA-rootdevice",
+#       "deviceTypeRef": { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" },
+#       "deviceTypes": [ { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" } ],
+#       "deviceVersions": [ 1 ], "deviceIdentifiers": [ 22 ], "deviceTypeName": "MA-rootdevice", "deviceTypeCode": 22, "deviceTypeProfileId": 259,
+#       "clusters": [
+#         { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Basic Information", "code": 40, "define": "BASIC_INFORMATION_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "General Commissioning", "code": 48, "define": "GENERAL_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Network Commissioning", "code": 49, "define": "NETWORK_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Operational Credentials", "code": 62, "define": "OPERATIONAL_CREDENTIALS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
+#       ]
+#     },
+#     {
+#       "id": 2,
+#       "name": "MA-onofflight",
+#       "deviceTypeRef": { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" },
+#       "deviceTypes": [ { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" } ],
+#       "deviceVersions": [ 1 ], "deviceIdentifiers": [ 256 ], "deviceTypeName": "MA-onofflight", "deviceTypeCode": 256, "deviceTypeProfileId": 259,
+#       "clusters": [
+#         { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Identify", "code": 3, "define": "IDENTIFY_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Groups", "code": 4, "define": "GROUPS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "Scenes Management", "code": 98, "define": "SCENES_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+#         { "name": "On/Off", "code": 6, "define": "ON_OFF_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
+#       ]
+#     }
+#   ],
+#   "endpoints": [
+#     { "endpointTypeName": "MA-rootdevice", "endpointTypeIndex": 0, "profileId": 259, "endpointId": 0, "networkId": 0, "parentEndpointIdentifier": null },
+#     { "endpointTypeName": "MA-onofflight", "endpointTypeIndex": 1, "profileId": 259, "endpointId": 1, "networkId": 0, "parentEndpointIdentifier": null }
+#   ]
+# }
+# EOF
+
+# echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
+# # Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
+# sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
+# sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
+# sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
+
+# echo "INFRA: Reescribiendo el envoltorio JNI core limpio de llamadas obsoletas..."
+# cat << 'EOF' > "$SRC_JNI"
+# #include "DeviceApp-JNI.h"
+# #include "AppImpl.h"
+# #include "JNIDACProvider.h"
+# #include "OnOffManager.h"
+# #include "credentials/DeviceAttestationCredsProvider.h"
+# #include <app/server/java/AndroidAppServerWrapper.h>
+# #include <credentials/examples/DeviceAttestationCredsExample.h>
+# #include <app/util/af-types.h> // 🔑 CRÍTICO: Define EmberAfDeviceType
+# #include <jni.h>
+# #include <lib/core/CHIPError.h>
+# #include <lib/support/CHIPJNIError.h>
+# #include <lib/support/JniReferences.h>
+
+# using namespace chip;
+
+# #define JNI_METHOD(RETURN, METHOD_NAME) \
+#     extern "C" JNIEXPORT RETURN JNICALL Java_com_matter_virtual_device_app_DeviceApp_##METHOD_NAME
+
+# EmberAfDeviceType gDeviceTypeIds[] = { { 0, 1 } };
+# DeviceAppJNI DeviceAppJNI::sInstance;
+
+# void DeviceAppJNI::InitializeWithObjects(jobject app) {
+#     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
+#     if (env != nullptr) { mDeviceAppObject.Init(app); }
+# }
+# void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint) {}
+# void DeviceAppJNI::PostEvent(int event) {}
+
+# jint JNI_OnLoad(JavaVM * jvm, void * reserved) { return AndroidAppServerJNI_OnLoad(jvm, reserved); }
+# void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(jvm, reserved); }
+
+# JNI_METHOD(void, nativeInit)(JNIEnv *, jobject app) { DeviceAppJNIMgr().InitializeWithObjects(app); }
+# JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app) { PreServerInit(); }
+# JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId) {
+#     gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
+# }
+# JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
+#     if (!chip::Credentials::IsDeviceAttestationCredentialsProviderSet()) {
+#         chip::Credentials::SetDeviceAttestationCredentialsProvider(chip::Credentials::Examples::GetExampleDACProvider());
+#     }
+# }
+# JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { OnOffManager::NewManager(endpoint, manager); }
+# JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) { return true; }
+
+# // STUBS DE ENLACE DINÁMICO EN VACÍO
+# JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setLockState)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setActuatorEnabled)(JNIEnv *, jobject, jint ep, jboolean v) { return true; }
+# JNI_METHOD(jboolean, setAutoRelockTime)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setOperatingMode)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setSupportedOperatingModes)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, sendLockAlarmEvent)(JNIEnv *, jobject, jint ep) { return true; }
+# EOF
+
+# echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
+# ./scripts/tools/zap/generate.py "$ZAP_FILE"
+
 
 # =========================================================================
-# 🏗️ SOLUCIÓN INTEGRAL: .ZAP HOMOLOGADO + RETIRADA DE .CPP e INTERCEPCIÓN JNI CORE
+# 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + DESACOPLAMIENTO DE FUENTES C++
 # =========================================================================
 GN_FILE="examples/virtual-device-app/android/BUILD.gn"
 SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
@@ -1491,74 +1644,51 @@ cp "$GN_FILE" "${GN_FILE}.bak"
 cp "$SRC_JNI" "${SRC_JNI}.bak"
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
 
-# Registrar el disparador de restauración en caso de error en el pipeline
+# Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
 trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 
+echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
+python3 - << 'EOF'
+import json
 
-echo "INFRA: Escribiendo tu plantilla .zap homologada de Luz On/Off limpia de clústeres..."
-cat << 'EOF' > "$ZAP_FILE"
-{
-  "fileFormat": 2,
-  "featureLevel": 100,
-  "creator": "zap",
-  "keyValuePairs": [
-    { "key": "commandDiscovery", "value": "1" },
-    { "key": "defaultResponsePolicy", "value": "always" },
-    { "key": "manufacturerCodes", "value": "0x1002" }
-  ],
-  "package": [
-    {
-      "pathRelativity": "relativeToZap",
-      "path": "../../../src/app/zap-templates/zcl/zcl.json",
-      "type": "zcl-properties",
-      "category": "matter",
-      "version": 1
-    },
-    {
-      "pathRelativity": "relativeToZap",
-      "path": "../../../src/app/zap-templates/app-templates.json",
-      "type": "gen-templates-json",
-      "version": "chip-v1"
-    }
-  ],
-  "endpointTypes": [
-    {
-      "id": 1,
-      "name": "MA-rootdevice",
-      "deviceTypeRef": { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" },
-      "deviceTypes": [ { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" } ],
-      "deviceVersions": [ 1 ], "deviceIdentifiers": [ 22 ], "deviceTypeName": "MA-rootdevice", "deviceTypeCode": 22, "deviceTypeProfileId": 259,
-      "clusters": [
-        { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "Basic Information", "code": 40, "define": "BASIC_INFORMATION_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "General Commissioning", "code": 48, "define": "GENERAL_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "Network Commissioning", "code": 49, "define": "NETWORK_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "Operational Credentials", "code": 62, "define": "OPERATIONAL_CREDENTIALS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
-      ]
-    },
-    {
-      "id": 2,
-      "name": "MA-onofflight",
-      "deviceTypeRef": { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" },
-      "deviceTypes": [ { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" } ],
-      "deviceVersions": [ 1 ], "deviceIdentifiers": [ 256 ], "deviceTypeName": "MA-onofflight", "deviceTypeCode": 256, "deviceTypeProfileId": 259,
-      "clusters": [
-        { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "Identify", "code": 3, "define": "IDENTIFY_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "Groups", "code": 4, "define": "GROUPS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "Scenes Management", "code": 98, "define": "SCENES_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
-        { "name": "On/Off", "code": 6, "define": "ON_OFF_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
-      ]
-    }
-  ],
-  "endpoints": [
-    { "endpointTypeName": "MA-rootdevice", "endpointTypeIndex": 0, "profileId": 259, "endpointId": 0, "networkId": 0, "parentEndpointIdentifier": null },
-    { "endpointTypeName": "MA-onofflight", "endpointTypeIndex": 1, "profileId": 259, "endpointId": 1, "networkId": 0, "parentEndpointIdentifier": null }
-  ]
-}
+zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+with open(zap_path, 'r') as f:
+    data = json.load(f)
+
+for endpoint_type in data.get("endpointTypes", []):
+    if endpoint_type.get("id") == 2 or endpoint_type.get("name") == "MA-videoplayer":
+        endpoint_type["name"] = "MA-onofflight"
+        endpoint_type["deviceTypeCode"] = 256
+        endpoint_type["deviceTypeName"] = "MA-onofflight"
+        if "deviceTypeRef" in endpoint_type:
+            endpoint_type["deviceTypeRef"]["code"] = 256
+            endpoint_type["deviceTypeRef"]["label"] = "MA-onofflight"
+            endpoint_type["deviceTypeRef"]["name"] = "MA-onofflight"
+        if "deviceTypes" in endpoint_type:
+            for dt in endpoint_type["deviceTypes"]:
+                dt["code"] = 256
+                dt["label"] = "MA-onofflight"
+                dt["name"] = "MA-onofflight"
+        if "deviceIdentifiers" in endpoint_type:
+            endpoint_type["deviceIdentifiers"] = [256]
+
+        original_clusters = endpoint_type.get("clusters", [])
+        filtered_clusters = [
+            c for c in original_clusters 
+            if c.get("code") != 257 and c.get("code") != 768
+        ]
+        endpoint_type["clusters"] = filtered_clusters
+
+for ep in data.get("endpoints", []):
+    if ep.get("endpointId") == 1 or ep.get("endpointTypeName") == "MA-videoplayer":
+        ep["endpointTypeName"] = "MA-onofflight"
+
+with open(zap_path, 'w') as f:
+    json.dump(data, f, indent=2)
+
+print("✅ INFRA PYTHON: Archivo .zap purgado con éxito manteniendo atributos mandatorios.")
 EOF
-
-
 
 echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
 # Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
