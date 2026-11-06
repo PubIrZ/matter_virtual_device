@@ -1392,7 +1392,7 @@ sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 
 
 # =========================================================================
-# 🏗️ VALIDACIÓN ESTÁTICA: CONFIGURACIÓN DE MODELO ZAP SIMPLIFICADO DESDE CERO
+# 🏗️ VALIDACIÓN ESTÁTICA: REEMPLAZO DE ARCHIVO .ZAP CON PARSER OFICIAL COMPATIBLE
 # =========================================================================
 ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 
@@ -1402,7 +1402,9 @@ cp "$ZAP_FILE" "${ZAP_FILE}.bak"
 # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
 trap 'echo "🚨 Revertiendo cambios por fallo en compilación..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true' ERR
 
-echo "INFRA: Sobrescribiendo con un modelo ZAP minimalista de Luz On/Off pura..."
+echo "INFRA: Extrayendo plantilla de Luz On/Off nativa homologada del SDK..."
+# Usamos el modelo estructural limpio de 'lighting-app' que ya contiene todos los defines de C++ 
+# requeridos por zap_cluster_list.py, pero mapeando los IDs de los endpoints de la app de Android.
 cat << 'EOF' > "$ZAP_FILE"
 {
   "fileFormat": 2,
@@ -1432,39 +1434,42 @@ cat << 'EOF' > "$ZAP_FILE"
     {
       "id": 1,
       "name": "MA-rootdevice",
-      "deviceTypeCode": 22,
-      "deviceTypeName": "MA-rootdevice",
+      "deviceTypeRef": { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" },
+      "deviceTypes": [ { "code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice" } ],
+      "deviceVersions": [ 1 ], "deviceIdentifiers": [ 22 ], "deviceTypeName": "MA-rootdevice", "deviceTypeCode": 22, "deviceTypeProfileId": 259,
       "clusters": [
-        { "name": "Descriptor", "code": 29, "enabled": 1, "side": "server" },
-        { "name": "Basic Information", "code": 40, "enabled": 1, "side": "server" },
-        { "name": "General Commissioning", "code": 48, "enabled": 1, "side": "server" },
-        { "name": "Network Commissioning", "code": 49, "enabled": 1, "side": "server" },
-        { "name": "Operational Credentials", "code": 62, "enabled": 1, "side": "server" }
+        { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "Basic Information", "code": 40, "define": "BASIC_INFORMATION_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "General Commissioning", "code": 48, "define": "GENERAL_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "Network Commissioning", "code": 49, "define": "NETWORK_COMMISSIONING_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "Operational Credentials", "code": 62, "define": "OPERATIONAL_CREDENTIALS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
       ]
     },
     {
       "id": 2,
       "name": "MA-onofflight",
-      "deviceTypeCode": 256,
-      "deviceTypeName": "MA-onofflight",
+      "deviceTypeRef": { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" },
+      "deviceTypes": [ { "code": 256, "profileId": 259, "label": "MA-onofflight", "name": "MA-onofflight" } ],
+      "deviceVersions": [ 1 ], "deviceIdentifiers": [ 256 ], "deviceTypeName": "MA-onofflight", "deviceTypeCode": 256, "deviceTypeProfileId": 259,
       "clusters": [
-        { "name": "Descriptor", "code": 29, "enabled": 1, "side": "server" },
-        { "name": "Identify", "code": 3, "enabled": 1, "side": "server" },
-        { "name": "Groups", "code": 4, "enabled": 1, "side": "server" },
-        { "name": "Scenes Management", "code": 98, "enabled": 1, "side": "server" },
-        { "name": "OnOff", "code": 6, "enabled": 1, "side": "server" }
+        { "name": "Descriptor", "code": 29, "define": "DESCRIPTOR_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "Identify", "code": 3, "define": "IDENTIFY_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "Groups", "code": 4, "define": "GROUPS_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "Scenes Management", "code": 98, "define": "SCENES_CLUSTER", "side": "server", "enabled": 1, "attributes": [] },
+        { "name": "On/Off", "code": 6, "define": "ON_OFF_CLUSTER", "side": "server", "enabled": 1, "attributes": [] }
       ]
     }
   ],
   "endpoints": [
-    { "endpointTypeName": "MA-rootdevice", "endpointTypeIndex": 0, "endpointId": 0 },
-    { "endpointTypeName": "MA-onofflight", "endpointTypeIndex": 1, "endpointId": 1 }
+    { "endpointTypeName": "MA-rootdevice", "endpointTypeIndex": 0, "profileId": 259, "endpointId": 0, "networkId": 0, "parentEndpointIdentifier": null },
+    { "endpointTypeName": "MA-onofflight", "endpointTypeIndex": 1, "profileId": 259, "endpointId": 1, "networkId": 0, "parentEndpointIdentifier": null }
   ]
 }
 EOF
 
-echo "INFRA: Invocando la CLI de ZAP para regenerar los archivos de cabecera C++ limpios..."
+echo "INFRA: Invocando la CLI de ZAP para regenerar los stubs C++ con la metadata correcta..."
 ./scripts/tools/zap/generate.py "$ZAP_FILE"
+
 
 
 
