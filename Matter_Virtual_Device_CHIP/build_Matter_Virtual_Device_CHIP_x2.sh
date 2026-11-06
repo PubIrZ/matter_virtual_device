@@ -1484,7 +1484,7 @@ cp "$GN_FILE" "${GN_FILE}.bak"
 cp "$SRC_JNI" "${SRC_JNI}.bak"
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
 
-# Registrar un disparador para que si el compilador falla, limpie los archivos antes de salir
+# Registrar el disparador de restauración en caso de error en el pipeline
 trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 
 
@@ -1553,19 +1553,22 @@ EOF
 
 
 
-echo "INFRA: Dando de baja los archivos .cpp conflictivos de la lista de fuentes de BUILD.gn..."
-echo "INFRA: Purgando los archivos .cpp del sistema de construcción BUILD.gn..."
+echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
+# Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
 sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
+sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
+sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
 sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
+sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
+sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 
-echo "INFRA: Sobrescribiendo DeviceApp-JNI.cpp con una versión reducida libre de dependencias rotas..."
+echo "INFRA: Reescribiendo el envoltorio JNI core limpio de llamadas obsoletas..."
 cat << 'EOF' > "$SRC_JNI"
 #include "DeviceApp-JNI.h"
 #include "AppImpl.h"
 #include "JNIDACProvider.h"
 #include "OnOffManager.h"
-#include "PowerSourceManager.h"
 #include "credentials/DeviceAttestationCredsProvider.h"
 #include <app/server/java/AndroidAppServerWrapper.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
@@ -1587,7 +1590,7 @@ void DeviceAppJNI::InitializeWithObjects(jobject app) {
     if (env != nullptr) { mDeviceAppObject.Init(app); }
 }
 void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint) {}
-void DeviceAppJNINI::PostEvent(int event) {}
+void DeviceAppJNI::PostEvent(int event) {}
 
 jint JNI_OnLoad(JavaVM * jvm, void * reserved) { return AndroidAppServerJNI_OnLoad(jvm, reserved); }
 void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(jvm, reserved); }
@@ -1604,10 +1607,10 @@ JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
 }
 JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { OnOffManager::NewManager(endpoint, manager); }
 JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) { return true; }
-JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { PowerSourceManager::NewManager(endpoint, manager); }
-JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint endpoint, jint value) { return true; }
 
-// STUBS DE SEGURIDAD PARA LLAMADAS JAVA QUE NO VAMOS A UTILIZAR (Evita errores de linkado)
+// STUBS DE ENLACE DINÁMICO EN VACÍO (Impiden fallos en tiempo de ejecución de Gradle)
+JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint ep, jint v) { return true; }
 JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint ep, jobject m) {}
 JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint ep, jobject m) {}
 JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint ep, jint v) { return true; }
