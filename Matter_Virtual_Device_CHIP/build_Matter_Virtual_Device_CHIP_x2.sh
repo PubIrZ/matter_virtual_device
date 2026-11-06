@@ -1479,13 +1479,14 @@ GN_FILE="examples/virtual-device-app/android/BUILD.gn"
 SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
 ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 
-echo "INFRA: Creando buffers de respaldo temporales para el ciclo incremental Git..."
+echo "INFRA: Creando buffers de respaldo temporales para Git..."
 cp "$GN_FILE" "${GN_FILE}.bak"
 cp "$SRC_JNI" "${SRC_JNI}.bak"
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
 
-# Disparador de seguridad: si el pipeline se interrumpe, Git vuelve a su estado limpio original
+# Registrar un disparador para que si el compilador falla, limpie los archivos antes de salir
 trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
+
 
 echo "INFRA: Escribiendo tu plantilla .zap homologada de Luz On/Off limpia de clústeres..."
 cat << 'EOF' > "$ZAP_FILE"
@@ -1551,31 +1552,77 @@ cat << 'EOF' > "$ZAP_FILE"
 EOF
 
 
+
 echo "INFRA: Dando de baja los archivos .cpp conflictivos de la lista de fuentes de BUILD.gn..."
+echo "INFRA: Purgando los archivos .cpp del sistema de construcción BUILD.gn..."
 sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
 
-echo "INFRA: Neutralizando los cuerpos de las funciones acopladas en DeviceApp-JNI.cpp..."
-# 1. Comentar las inclusiones de cabecera de los managers eliminados
-sed -i 's|#include "ColorControlManager.h"|// #include "ColorControlManager.h"|g' "$SRC_JNI"
-sed -i 's|#include "DoorLockManager.h"|// #include "DoorLockManager.h"|g' "$SRC_JNI"
+echo "INFRA: Sobrescribiendo DeviceApp-JNI.cpp con una versión reducida libre de dependencias rotas..."
+cat << 'EOF' > "$SRC_JNI"
+#include "DeviceApp-JNI.h"
+#include "AppImpl.h"
+#include "JNIDACProvider.h"
+#include "OnOffManager.h"
+#include "PowerSourceManager.h"
+#include "credentials/DeviceAttestationCredsProvider.h"
+#include <app/server/java/AndroidAppServerWrapper.h>
+#include <credentials/examples/DeviceAttestationCredsExample.h>
+#include <jni.h>
+#include <lib/core/CHIPError.h>
+#include <lib/support/CHIPJNIError.h>
+#include <lib/support/JniReferences.h>
 
-# 2. Reemplazar los bloques ejecutores internos por retornos seguros nulos (void/jboolean) para que compilen en vacío
-sed -i '/setColorControlManager/,/^}/ { s|ColorControlManager::NewManager.*|/* removido */| }' "$SRC_JNI"
-sed -i '/setDoorLockManager/,/^}/ { s|DoorLockManager::NewManager.*|/* removido */| }' "$SRC_JNI"
-sed -i '/setLockType/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
-sed -i '/setLockState/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
-sed -i '/setActuatorEnabled/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
-sed -i '/setAutoRelockTime/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
-sed -i '/setOperatingMode/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
-sed -i '/setSupportedOperatingModes/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
-sed -i '/sendLockAlarmEvent/,/^}/ { s|return DeviceLayer::SystemLayer.*|return true;| }' "$SRC_JNI"
+using namespace chip;
 
+#define JNI_METHOD(RETURN, METHOD_NAME) \
+    extern "C" JNIEXPORT RETURN JNICALL Java_com_matter_virtual_device_app_DeviceApp_##METHOD_NAME
 
-echo "INFRA: Invocando la CLI de ZAP para regenerar la estructura reducida..."
+EmberAfDeviceType gDeviceTypeIds[] = { { 0, 1 } };
+DeviceAppJNI DeviceAppJNI::sInstance;
+
+void DeviceAppJNI::InitializeWithObjects(jobject app) {
+    JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
+    if (env != nullptr) { mDeviceAppObject.Init(app); }
+}
+void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint) {}
+void DeviceAppJNINI::PostEvent(int event) {}
+
+jint JNI_OnLoad(JavaVM * jvm, void * reserved) { return AndroidAppServerJNI_OnLoad(jvm, reserved); }
+void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(jvm, reserved); }
+
+JNI_METHOD(void, nativeInit)(JNIEnv *, jobject app) { DeviceAppJNIMgr().InitializeWithObjects(app); }
+JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app) { PreServerInit(); }
+JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId) {
+    gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
+}
+JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
+    if (!chip::Credentials::IsDeviceAttestationCredentialsProviderSet()) {
+        chip::Credentials::SetDeviceAttestationCredentialsProvider(chip::Credentials::Examples::GetExampleDACProvider());
+    }
+}
+JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { OnOffManager::NewManager(endpoint, manager); }
+JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) { return true; }
+JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { PowerSourceManager::NewManager(endpoint, manager); }
+JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint endpoint, jint value) { return true; }
+
+// STUBS DE SEGURIDAD PARA LLAMADAS JAVA QUE NO VAMOS A UTILIZAR (Evita errores de linkado)
+JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+JNI_METHOD(jboolean, setLockState)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+JNI_METHOD(jboolean, setActuatorEnabled)(JNIEnv *, jobject, jint ep, jboolean v) { return true; }
+JNI_METHOD(jboolean, setAutoRelockTime)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+JNI_METHOD(jboolean, setOperatingMode)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+JNI_METHOD(jboolean, setSupportedOperatingModes)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+JNI_METHOD(jboolean, sendLockAlarmEvent)(JNIEnv *, jobject, jint ep) { return true; }
+EOF
+
+echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
 ./scripts/tools/zap/generate.py "$ZAP_FILE"
 
+#######################################################################################################################################
 
 
 # INICIALIZACIÓN DEL ENTORNO DE COMPILACIÓN DE MATTER
@@ -1634,10 +1681,13 @@ if [ -x "$STRIP_TOOL" ] && [ -d "$JNI_TARGET_DIR" ]; then
     done
 fi
 
+
+###############################################################################################################
+
 echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y cpp's originales de Git..."
 mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
 
-mv "${SRC_COLOR}.bak" "$SRC_COLOR" || true
-mv "${SRC_LOCK}.bak" "$SRC_LOCK" || true
+mv "${GN_FILE}.bak" "$GN_FILE" || true
 mv "${SRC_JNI}.bak" "$SRC_JNI" || true
+
 
