@@ -1647,47 +1647,105 @@ cp "$ZAP_FILE" "${ZAP_FILE}.bak"
 # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
 trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 
+# echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
+# python3 - << 'EOF'
+# import json
+
+# zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+# with open(zap_path, 'r') as f:
+#     data = json.load(f)
+
+# for endpoint_type in data.get("endpointTypes", []):
+#     if endpoint_type.get("id") == 2 or endpoint_type.get("name") == "MA-videoplayer":
+#         endpoint_type["name"] = "MA-onofflight"
+#         endpoint_type["deviceTypeCode"] = 256
+#         endpoint_type["deviceTypeName"] = "MA-onofflight"
+#         if "deviceTypeRef" in endpoint_type:
+#             endpoint_type["deviceTypeRef"]["code"] = 256
+#             endpoint_type["deviceTypeRef"]["label"] = "MA-onofflight"
+#             endpoint_type["deviceTypeRef"]["name"] = "MA-onofflight"
+#         if "deviceTypes" in endpoint_type:
+#             for dt in endpoint_type["deviceTypes"]:
+#                 dt["code"] = 256
+#                 dt["label"] = "MA-onofflight"
+#                 dt["name"] = "MA-onofflight"
+#         if "deviceIdentifiers" in endpoint_type:
+#             endpoint_type["deviceIdentifiers"] = [256]
+
+#         original_clusters = endpoint_type.get("clusters", [])
+#         filtered_clusters = [
+#             c for c in original_clusters 
+#             if c.get("code") != 257 and c.get("code") != 768
+#         ]
+#         endpoint_type["clusters"] = filtered_clusters
+
+# for ep in data.get("endpoints", []):
+#     if ep.get("endpointId") == 1 or ep.get("endpointTypeName") == "MA-videoplayer":
+#         ep["endpointTypeName"] = "MA-onofflight"
+
+# with open(zap_path, 'w') as f:
+#     json.dump(data, f, indent=2)
+
+# print("✅ INFRA PYTHON: Archivo .zap purgado con éxito manteniendo atributos mandatorios.")
+# EOF
+
+
 echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
 python3 - << 'EOF'
 import json
 
 zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 
+# 1. Cargar el JSON original del repositorio con todos sus atributos y comandos mandatorios
 with open(zap_path, 'r') as f:
     data = json.load(f)
 
+# 2. Mutar el Endpoint 1 para que sea una Luz On/Off (0x0100 -> 256) idéntica a matter.js
 for endpoint_type in data.get("endpointTypes", []):
     if endpoint_type.get("id") == 2 or endpoint_type.get("name") == "MA-videoplayer":
         endpoint_type["name"] = "MA-onofflight"
         endpoint_type["deviceTypeCode"] = 256
         endpoint_type["deviceTypeName"] = "MA-onofflight"
+        
         if "deviceTypeRef" in endpoint_type:
             endpoint_type["deviceTypeRef"]["code"] = 256
             endpoint_type["deviceTypeRef"]["label"] = "MA-onofflight"
             endpoint_type["deviceTypeRef"]["name"] = "MA-onofflight"
+            
         if "deviceTypes" in endpoint_type:
             for dt in endpoint_type["deviceTypes"]:
                 dt["code"] = 256
                 dt["label"] = "MA-onofflight"
                 dt["name"] = "MA-onofflight"
+                
         if "deviceIdentifiers" in endpoint_type:
             endpoint_type["deviceIdentifiers"] = [256]
 
+        # 3. LISTA BLANCA ESTRICTA (Clon exacto de OnOffLightDevice en matter.js)
+        # Mantiene únicamente:
+        #   - 3  (0x0003): Identify
+        #   - 4  (0x0004): Groups
+        #   - 6  (0x0006): On/Off
+        #   - 29 (0x001D): Descriptor
+        # Elimina: Power Source Config (47), Scenes (98), Door Lock (257) y Color Control (768)
         original_clusters = endpoint_type.get("clusters", [])
         filtered_clusters = [
             c for c in original_clusters 
-            if c.get("code") != 257 and c.get("code") != 768
+            if c.get("code") in [3, 4, 6, 29]
         ]
         endpoint_type["clusters"] = filtered_clusters
 
+# 4. Actualizar el mapeo en el array de instanciación de los Endpoints
 for ep in data.get("endpoints", []):
     if ep.get("endpointId") == 1 or ep.get("endpointTypeName") == "MA-videoplayer":
         ep["endpointTypeName"] = "MA-onofflight"
 
+# 5. Guardar el archivo .zap purgado listo para generar el código C++
 with open(zap_path, 'w') as f:
     json.dump(data, f, indent=2)
 
-print("✅ INFRA PYTHON: Archivo .zap purgado con éxito manteniendo atributos mandatorios.")
+print("✅ INFRA PYTHON: Archivo .zap purgado con lista blanca [3, 4, 6, 29] (Clon exacto de matter.js).")
 EOF
 
 echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
