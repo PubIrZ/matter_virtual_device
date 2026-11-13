@@ -1257,6 +1257,7 @@ echo "  ✅ Propiedades globales aplicadas en ~/.gradle/gradle.properties"
 # EOF
 # echo "  ✅ Fully Verbose Pipeline saved successfully to ~/.gradle/init.gradle"
 
+
 # =========================================================================
 # 🛡️ PIPELINE DE INICIALIZACIÓN NATIVA (GRADLE GLOBAL OPTIMIZER)
 # =========================================================================
@@ -1632,20 +1633,21 @@ sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 # ./scripts/tools/zap/generate.py "$ZAP_FILE"
 
 
-# =========================================================================
-# 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + DESACOPLAMIENTO DE FUENTES C++
-# =========================================================================
-GN_FILE="examples/virtual-device-app/android/BUILD.gn"
-SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
-ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+# ########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v3 <<----------------
+# # =========================================================================
+# # 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + DESACOPLAMIENTO DE FUENTES C++
+# # =========================================================================
+# GN_FILE="examples/virtual-device-app/android/BUILD.gn"
+# SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
+# ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 
-echo "INFRA: Creando buffers de respaldo temporales para Git..."
-cp "$GN_FILE" "${GN_FILE}.bak"
-cp "$SRC_JNI" "${SRC_JNI}.bak"
-cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+# echo "INFRA: Creando buffers de respaldo temporales para Git..."
+# cp "$GN_FILE" "${GN_FILE}.bak"
+# cp "$SRC_JNI" "${SRC_JNI}.bak"
+# cp "$ZAP_FILE" "${ZAP_FILE}.bak"
 
-# Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
-trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
+# # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
+# trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 
 # echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
 # python3 - << 'EOF'
@@ -1690,6 +1692,245 @@ trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak
 # print("✅ INFRA PYTHON: Archivo .zap purgado con éxito manteniendo atributos mandatorios.")
 # EOF
 
+# echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
+# # Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
+# sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
+# sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
+# sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
+
+# echo "INFRA: Reescribiendo el envoltorio JNI core limpio de llamadas obsoletas..."
+# cat << 'EOF' > "$SRC_JNI"
+# #include "DeviceApp-JNI.h"
+# #include "AppImpl.h"
+# #include "JNIDACProvider.h"
+# #include "OnOffManager.h"
+# #include "credentials/DeviceAttestationCredsProvider.h"
+# #include <app/server/java/AndroidAppServerWrapper.h>
+# #include <credentials/examples/DeviceAttestationCredsExample.h>
+# #include <app/util/af-types.h> // 🔑 CRÍTICO: Define EmberAfDeviceType
+# #include <jni.h>
+# #include <lib/core/CHIPError.h>
+# #include <lib/support/CHIPJNIError.h>
+# #include <lib/support/JniReferences.h>
+
+# using namespace chip;
+
+# #define JNI_METHOD(RETURN, METHOD_NAME) \
+#     extern "C" JNIEXPORT RETURN JNICALL Java_com_matter_virtual_device_app_DeviceApp_##METHOD_NAME
+
+# EmberAfDeviceType gDeviceTypeIds[] = { { 0, 1 } };
+# DeviceAppJNI DeviceAppJNI::sInstance;
+
+# void DeviceAppJNI::InitializeWithObjects(jobject app) {
+#     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
+#     if (env != nullptr) { mDeviceAppObject.Init(app); }
+# }
+# void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint) {}
+# void DeviceAppJNI::PostEvent(int event) {}
+
+# jint JNI_OnLoad(JavaVM * jvm, void * reserved) { return AndroidAppServerJNI_OnLoad(jvm, reserved); }
+# void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(jvm, reserved); }
+
+# JNI_METHOD(void, nativeInit)(JNIEnv *, jobject app) { DeviceAppJNIMgr().InitializeWithObjects(app); }
+# JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app) { PreServerInit(); }
+# JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId) {
+#     gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
+# }
+# JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
+#     if (!chip::Credentials::IsDeviceAttestationCredentialsProviderSet()) {
+#         chip::Credentials::SetDeviceAttestationCredentialsProvider(chip::Credentials::Examples::GetExampleDACProvider());
+#     }
+# }
+# JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { OnOffManager::NewManager(endpoint, manager); }
+# JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) { return true; }
+
+# // STUBS DE ENLACE DINÁMICO EN VACÍO
+# JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setLockState)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setActuatorEnabled)(JNIEnv *, jobject, jint ep, jboolean v) { return true; }
+# JNI_METHOD(jboolean, setAutoRelockTime)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setOperatingMode)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setSupportedOperatingModes)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, sendLockAlarmEvent)(JNIEnv *, jobject, jint ep) { return true; }
+# EOF
+
+# echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
+# ./scripts/tools/zap/generate.py "$ZAP_FILE"
+
+
+
+
+########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v4 (version minimalista = la de node.js <<----------------
+# # =========================================================================
+# # 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + DESACOPLAMIENTO DE FUENTES C++
+# # =========================================================================
+# GN_FILE="examples/virtual-device-app/android/BUILD.gn"
+# SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
+# ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+# echo "INFRA: Creando buffers de respaldo temporales para Git..."
+# cp "$GN_FILE" "${GN_FILE}.bak"
+# cp "$SRC_JNI" "${SRC_JNI}.bak"
+# cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+
+# # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
+# trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
+
+# echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
+# python3 - << 'EOF'
+# import json
+
+# zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+# # 1. Cargar el JSON original del repositorio con todos sus atributos y comandos mandatorios
+# with open(zap_path, 'r') as f:
+#     data = json.load(f)
+
+# # 2. Mutar el Endpoint 1 para que sea una Luz On/Off (0x0100 -> 256) idéntica a matter.js
+# for endpoint_type in data.get("endpointTypes", []):
+#     if endpoint_type.get("id") == 2 or endpoint_type.get("name") == "MA-videoplayer":
+#         endpoint_type["name"] = "MA-onofflight"
+#         endpoint_type["deviceTypeCode"] = 256
+#         endpoint_type["deviceTypeName"] = "MA-onofflight"
+        
+#         if "deviceTypeRef" in endpoint_type:
+#             endpoint_type["deviceTypeRef"]["code"] = 256
+#             endpoint_type["deviceTypeRef"]["label"] = "MA-onofflight"
+#             endpoint_type["deviceTypeRef"]["name"] = "MA-onofflight"
+            
+#         if "deviceTypes" in endpoint_type:
+#             for dt in endpoint_type["deviceTypes"]:
+#                 dt["code"] = 256
+#                 dt["label"] = "MA-onofflight"
+#                 dt["name"] = "MA-onofflight"
+                
+#         if "deviceIdentifiers" in endpoint_type:
+#             endpoint_type["deviceIdentifiers"] = [256]
+
+#         # 3. LISTA BLANCA ESTRICTA (Clon exacto de OnOffLightDevice en matter.js)
+#         # Mantiene únicamente:
+#         #   - 3  (0x0003): Identify
+#         #   - 4  (0x0004): Groups
+#         #   - 6  (0x0006): On/Off
+#         #   - 29 (0x001D): Descriptor
+#         # Elimina: Power Source Config (47), Scenes (98), Door Lock (257) y Color Control (768)
+#         original_clusters = endpoint_type.get("clusters", [])
+#         filtered_clusters = [
+#             c for c in original_clusters 
+#             if c.get("code") in [3, 4, 6, 29]
+#         ]
+#         endpoint_type["clusters"] = filtered_clusters
+
+# # 4. Actualizar el mapeo en el array de instanciación de los Endpoints
+# for ep in data.get("endpoints", []):
+#     if ep.get("endpointId") == 1 or ep.get("endpointTypeName") == "MA-videoplayer":
+#         ep["endpointTypeName"] = "MA-onofflight"
+
+# # 5. Guardar el archivo .zap purgado listo para generar el código C++
+# with open(zap_path, 'w') as f:
+#     json.dump(data, f, indent=2)
+
+# print("✅ INFRA PYTHON: Archivo .zap purgado con lista blanca [3, 4, 6, 29] (Clon exacto de matter.js).")
+# EOF
+
+# echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
+# # Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
+# sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
+# sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
+# sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
+# sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
+
+# echo "INFRA: Reescribiendo el envoltorio JNI core limpio de llamadas obsoletas..."
+# cat << 'EOF' > "$SRC_JNI"
+# #include "DeviceApp-JNI.h"
+# #include "AppImpl.h"
+# #include "JNIDACProvider.h"
+# #include "OnOffManager.h"
+# #include "credentials/DeviceAttestationCredsProvider.h"
+# #include <app/server/java/AndroidAppServerWrapper.h>
+# #include <credentials/examples/DeviceAttestationCredsExample.h>
+# #include <app/util/af-types.h> // 🔑 CRÍTICO: Define EmberAfDeviceType
+# #include <jni.h>
+# #include <lib/core/CHIPError.h>
+# #include <lib/support/CHIPJNIError.h>
+# #include <lib/support/JniReferences.h>
+
+# using namespace chip;
+
+# #define JNI_METHOD(RETURN, METHOD_NAME) \
+#     extern "C" JNIEXPORT RETURN JNICALL Java_com_matter_virtual_device_app_DeviceApp_##METHOD_NAME
+
+# EmberAfDeviceType gDeviceTypeIds[] = { { 0, 1 } };
+# DeviceAppJNI DeviceAppJNI::sInstance;
+
+# void DeviceAppJNI::InitializeWithObjects(jobject app) {
+#     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
+#     if (env != nullptr) { mDeviceAppObject.Init(app); }
+# }
+# void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint) {}
+# void DeviceAppJNI::PostEvent(int event) {}
+
+# jint JNI_OnLoad(JavaVM * jvm, void * reserved) { return AndroidAppServerJNI_OnLoad(jvm, reserved); }
+# void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(jvm, reserved); }
+
+# JNI_METHOD(void, nativeInit)(JNIEnv *, jobject app) { DeviceAppJNIMgr().InitializeWithObjects(app); }
+# JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app) { PreServerInit(); }
+# JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId) {
+#     gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
+# }
+# JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
+#     if (!chip::Credentials::IsDeviceAttestationCredentialsProviderSet()) {
+#         chip::Credentials::SetDeviceAttestationCredentialsProvider(chip::Credentials::Examples::GetExampleDACProvider());
+#     }
+# }
+# JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { OnOffManager::NewManager(endpoint, manager); }
+# JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) { return true; }
+
+# // STUBS DE ENLACE DINÁMICO EN VACÍO
+# JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint ep, jobject m) {}
+# JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setLockState)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setActuatorEnabled)(JNIEnv *, jobject, jint ep, jboolean v) { return true; }
+# JNI_METHOD(jboolean, setAutoRelockTime)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setOperatingMode)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, setSupportedOperatingModes)(JNIEnv *, jobject, jint ep, jint v) { return true; }
+# JNI_METHOD(jboolean, sendLockAlarmEvent)(JNIEnv *, jobject, jint ep) { return true; }
+# EOF
+
+# echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
+# ./scripts/tools/zap/generate.py "$ZAP_FILE"
+
+
+
+########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v5 <<----------------
+# =========================================================================
+# 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + DESACOPLAMIENTO DE FUENTES C++
+# =========================================================================
+GN_FILE="examples/virtual-device-app/android/BUILD.gn"
+SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
+ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+
+echo "INFRA: Creando buffers de respaldo temporales para Git..."
+cp "$GN_FILE" "${GN_FILE}.bak"
+cp "$SRC_JNI" "${SRC_JNI}.bak"
+cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+
+# Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
+trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 
 echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
 python3 - << 'EOF'
@@ -1758,7 +1999,7 @@ sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp"
 sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 
-echo "INFRA: Reescribiendo el envoltorio JNI core limpio de llamadas obsoletas..."
+echo "INFRA: Reescribiendo DeviceApp-JNI.cpp con notificaciones de eventos restauradas..."
 cat << 'EOF' > "$SRC_JNI"
 #include "DeviceApp-JNI.h"
 #include "AppImpl.h"
@@ -1767,7 +2008,7 @@ cat << 'EOF' > "$SRC_JNI"
 #include "credentials/DeviceAttestationCredsProvider.h"
 #include <app/server/java/AndroidAppServerWrapper.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
-#include <app/util/af-types.h> // 🔑 CRÍTICO: Define EmberAfDeviceType
+#include <app/util/af-types.h>
 #include <jni.h>
 #include <lib/core/CHIPError.h>
 #include <lib/support/CHIPJNIError.h>
@@ -1781,12 +2022,42 @@ using namespace chip;
 EmberAfDeviceType gDeviceTypeIds[] = { { 0, 1 } };
 DeviceAppJNI DeviceAppJNI::sInstance;
 
-void DeviceAppJNI::InitializeWithObjects(jobject app) {
+// 1. RESTAURADO: Obtiene las referencias a los métodos Java de notificación
+void DeviceAppJNI::InitializeWithObjects(jobject app)
+{
     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
-    if (env != nullptr) { mDeviceAppObject.Init(app); }
+    VerifyOrReturn(env != nullptr, ChipLogError(Zcl, "Failed to GetEnvForCurrentThread"));
+    VerifyOrReturn(mDeviceAppObject.Init(app) == CHIP_NO_ERROR, ChipLogError(Zcl, "Failed to init mDeviceAppObject"));
+
+    jclass managerClass = env->GetObjectClass(app);
+    VerifyOrReturn(managerClass != nullptr, ChipLogError(Zcl, "Failed to get DeviceApp Java class"));
+
+    mPostClusterInitMethod = env->GetMethodID(managerClass, "postClusterInit", "(JI)V");
+    if (mPostClusterInitMethod == nullptr) { env->ExceptionClear(); }
+
+    mPostEventMethod = env->GetMethodID(managerClass, "postEvent", "(J)V");
+    if (mPostEventMethod == nullptr) { env->ExceptionClear(); }
 }
-void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint) {}
-void DeviceAppJNI::PostEvent(int event) {}
+
+// 2. RESTAURADO: Avisa a Java cuando el clúster OnOff inicializa
+void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint)
+{
+    JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
+    VerifyOrReturn(env != nullptr && mDeviceAppObject.HasValidObjectRef() && mPostClusterInitMethod != nullptr);
+
+    env->CallVoidMethod(mDeviceAppObject.ObjectRef(), mPostClusterInitMethod, static_cast<jlong>(clusterId), static_cast<jint>(endpoint));
+    if (env->ExceptionCheck()) { env->ExceptionClear(); }
+}
+
+// 3. RESTAURADO: Avisa a Java cuando termina el comisionamiento (kCommissioningComplete)
+void DeviceAppJNI::PostEvent(int event)
+{
+    JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
+    VerifyOrReturn(env != nullptr && mDeviceAppObject.HasValidObjectRef() && mPostEventMethod != nullptr);
+
+    env->CallVoidMethod(mDeviceAppObject.ObjectRef(), mPostEventMethod, static_cast<jlong>(event));
+    if (env->ExceptionCheck()) { env->ExceptionClear(); }
+}
 
 jint JNI_OnLoad(JavaVM * jvm, void * reserved) { return AndroidAppServerJNI_OnLoad(jvm, reserved); }
 void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(jvm, reserved); }
@@ -1794,7 +2065,8 @@ void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(
 JNI_METHOD(void, nativeInit)(JNIEnv *, jobject app) { DeviceAppJNIMgr().InitializeWithObjects(app); }
 JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app) { PreServerInit(); }
 JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId) {
-    gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
+    gDeviceTypeIds.deviceId = static_cast<uint16_t>(deviceTypeId);
+    emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
 }
 JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
     if (!chip::Credentials::IsDeviceAttestationCredentialsProviderSet()) {
@@ -1802,9 +2074,11 @@ JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
     }
 }
 JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager) { OnOffManager::NewManager(endpoint, manager); }
-JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) { return true; }
+JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value) {
+    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { OnOffManager::SetOnOff(endpoint, value); }) == CHIP_NO_ERROR;
+}
 
-// STUBS DE ENLACE DINÁMICO EN VACÍO
+// STUBS DE ENLACE EN VACÍO PARA CLÚSTERES ELIMINADOS
 JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint ep, jobject m) {}
 JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint ep, jint v) { return true; }
 JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint ep, jobject m) {}
@@ -1817,6 +2091,7 @@ JNI_METHOD(jboolean, setOperatingMode)(JNIEnv *, jobject, jint ep, jint v) { ret
 JNI_METHOD(jboolean, setSupportedOperatingModes)(JNIEnv *, jobject, jint ep, jint v) { return true; }
 JNI_METHOD(jboolean, sendLockAlarmEvent)(JNIEnv *, jobject, jint ep) { return true; }
 EOF
+
 
 echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
 ./scripts/tools/zap/generate.py "$ZAP_FILE"
