@@ -2118,6 +2118,9 @@ JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
     chip::DeviceLayer::StackLock lock;
     ChipLogProgress(Zcl, "DeviceAppJNI::postServerInit");
 
+    // Forzamos 256 (0x0100 - On/Off Light) ignorando el parámetro de Java para coincidir con el .zap purgado y pasar el filtro de Alexa
+    deviceTypeId = 256;
+    
     gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
     emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
 }
