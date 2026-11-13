@@ -1999,7 +1999,7 @@ sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp"
 sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 
-echo "INFRA: Reescribiendo DeviceApp-JNI.cpp con notificaciones de eventos restauradas..."
+echo "INFRA: Reescribiendo DeviceApp-JNI.cpp con notificaciones de eventos y cabeceras completas..."
 cat << 'EOF' > "$SRC_JNI"
 #include "DeviceApp-JNI.h"
 #include "AppImpl.h"
@@ -2007,12 +2007,14 @@ cat << 'EOF' > "$SRC_JNI"
 #include "OnOffManager.h"
 #include "credentials/DeviceAttestationCredsProvider.h"
 #include <app/server/java/AndroidAppServerWrapper.h>
-#include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <app/util/af-types.h>
+#include <app/util/util.h>
+#include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <jni.h>
 #include <lib/core/CHIPError.h>
 #include <lib/support/CHIPJNIError.h>
 #include <lib/support/JniReferences.h>
+#include <platform/CHIPDeviceLayer.h>
 
 using namespace chip;
 
@@ -2022,7 +2024,6 @@ using namespace chip;
 EmberAfDeviceType gDeviceTypeIds[] = { { 0, 1 } };
 DeviceAppJNI DeviceAppJNI::sInstance;
 
-// 1. RESTAURADO: Obtiene las referencias a los métodos Java de notificación
 void DeviceAppJNI::InitializeWithObjects(jobject app)
 {
     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
@@ -2039,7 +2040,6 @@ void DeviceAppJNI::InitializeWithObjects(jobject app)
     if (mPostEventMethod == nullptr) { env->ExceptionClear(); }
 }
 
-// 2. RESTAURADO: Avisa a Java cuando el clúster OnOff inicializa
 void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint)
 {
     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
@@ -2049,7 +2049,6 @@ void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint)
     if (env->ExceptionCheck()) { env->ExceptionClear(); }
 }
 
-// 3. RESTAURADO: Avisa a Java cuando termina el comisionamiento (kCommissioningComplete)
 void DeviceAppJNI::PostEvent(int event)
 {
     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
@@ -2065,7 +2064,7 @@ void JNI_OnUnload(JavaVM * jvm, void * reserved) { AndroidAppServerJNI_OnUnload(
 JNI_METHOD(void, nativeInit)(JNIEnv *, jobject app) { DeviceAppJNIMgr().InitializeWithObjects(app); }
 JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app) { PreServerInit(); }
 JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId) {
-    gDeviceTypeIds.deviceId = static_cast<uint16_t>(deviceTypeId);
+    gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
     emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
 }
 JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider) {
