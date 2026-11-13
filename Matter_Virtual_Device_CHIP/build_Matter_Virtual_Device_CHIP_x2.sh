@@ -1923,14 +1923,18 @@ sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 GN_FILE="examples/virtual-device-app/android/BUILD.gn"
 SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
 ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+SRC_ATTR="examples/virtual-device-app/android/java/ClusterChangeAttribute.cpp"
 
+
+# (Añade 'mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true' en tu trap y en la limpieza final)
 echo "INFRA: Creando buffers de respaldo temporales para Git..."
 cp "$GN_FILE" "${GN_FILE}.bak"
 cp "$SRC_JNI" "${SRC_JNI}.bak"
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+cp "$SRC_ATTR" "${SRC_ATTR}.bak"
 
 # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
-trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
+trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 
 echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
 python3 - << 'EOF'
@@ -1995,7 +1999,7 @@ sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "
 sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
-sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
+#sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 
@@ -2165,6 +2169,42 @@ EOF
 
 
 
+echo "INFRA: Escribiendo ClusterChangeAttribute.cpp limpio solo con soporte On/Off..."
+cat << 'EOF' > "$SRC_ATTR"
+#include "OnOffManager.h"
+#include <app-common/zap-generated/attributes/Accessors.h>
+#include <app-common/zap-generated/ids/Attributes.h>
+#include <app-common/zap-generated/ids/Clusters.h>
+#include <app/ConcreteAttributePath.h>
+#include <lib/support/logging/CHIPLogging.h>
+
+using namespace chip;
+using namespace ::chip::app::Clusters;
+
+static void OnOffClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size, uint8_t * value)
+{
+    if (attributePath.mAttributeId == OnOff::Attributes::OnOff::Id)
+    {
+        bool onoff = static_cast<bool>(*value);
+        ChipLogProgress(Zcl, "Received on/off command endpoint %d value = %d", static_cast<int>(attributePath.mEndpointId), onoff);
+        OnOffManager().PostOnOffChanged(attributePath.mEndpointId, onoff);
+    }
+}
+
+void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
+                                       uint8_t * value)
+{
+    ChipLogProgress(Zcl, "[Device] clusterId:%d,attributeId:%d,endpoint:%d", attributePath.mClusterId, attributePath.mAttributeId,
+                    static_cast<int>(attributePath.mEndpointId));
+
+    if (attributePath.mClusterId == OnOff::Id)
+    {
+        OnOffClusterAttributeChangeCallback(attributePath, size, value);
+    }
+}
+EOF
+
+
 echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
 ./scripts/tools/zap/generate.py "$ZAP_FILE"
 
@@ -2235,5 +2275,5 @@ mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
 
 mv "${GN_FILE}.bak" "$GN_FILE" || true
 mv "${SRC_JNI}.bak" "$SRC_JNI" || true
-
+mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true
 
