@@ -1266,7 +1266,7 @@ mkdir -p ~/.gradle
 cat << 'EOF' > ~/.gradle/init.gradle
 allprojects {
     // CONFIGURACIÓN DE OPTIMIZACIÓN GLOBAL
-    def ENABLE_STRIP = false
+    def ENABLE_STRIP = true
 
     // 1. AUDITORÍA NATIVA DEL COMPILADOR KOTLIN
     afterEvaluate { project ->
