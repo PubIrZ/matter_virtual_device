@@ -650,176 +650,142 @@ cleanup_on_error() {
 trap cleanup_on_error ERR
 
 
-echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
 echo "INFRA: Generando archivo .zap compuesto para MiTele..."
+echo "INFRA: Fusionando .zap original del SDK con clústeres oficiales para MiTele..."
 python3 - << 'EOF'
 import json
+import copy
+import os
 
-zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+base_zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
+all_zap_path  = "examples/all-clusters-app/all-clusters-common/all-clusters-app.zap"
+wc_zap_path   = "examples/window-app/common/window-app.zap"
+rvc_zap_path  = "examples/rvc-app/rvc-common/rvc-app.zap"
+dw_zap_path   = "examples/dishwasher-app/dishwasher-common/dishwasher-app.zap"
 
-def make_cluster(name, code, define, attrs=None, cmds=None):
-    return {
-        "name": name,
-        "code": code,
-        "define": define,
-        "side": "server",
-        "enabled": 1,
-        "attributes": attrs or [],
-        "commands": cmds or []
-    }
+with open(base_zap_path, "r", encoding="utf-8") as f:
+    zap_obj = json.load(f)
 
-def make_attr(name, code, type_str, default_val, writable=0):
-    return {
-        "name": name,
-        "code": code,
-        "type": type_str,
-        "side": "server",
-        "included": 1,
-        "storageOption": "RAM",
-        "singleton": 0,
-        "bounded": 0,
-        "defaultValue": str(default_val),
-        "reportable": 1,
-        "minInterval": 1,
-        "maxInterval": 65534,
-        "reportableChange": 0
-    }
+def extract_cluster(zap_files, cluster_code):
+    """Busca un clúster servidor en la lista ordenada de .zap y lo devuelve habilitado."""
+    for zfile in zap_files:
+        if not os.path.exists(zfile):
+            continue
+        with open(zfile, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for ep_t in data.get("endpointTypes", []):
+            for c in ep_t.get("clusters", []):
+                if c.get("code") == cluster_code and c.get("side") == "server":
+                    c_copy = copy.deepcopy(c)
+                    c_copy["enabled"] = 1
+                    return c_copy
+    return None
 
-def make_cmd(name, code):
-    return {
-        "name": name,
-        "code": code,
-        "source": "client",
-        "incoming": 1,
-        "outgoing": 0
-    }
+# 1. Mantener INTACTO el Endpoint 0 (Root Device) y fijar ProductName/NodeLabel = "MiTele"
+for ep_t in zap_obj.get("endpointTypes", []):
+    if ep_t.get("deviceTypeCode") == 22 or ep_t.get("id") == 1:
+        for c in ep_t.get("clusters", []):
+            if c.get("code") == 40:  # Basic Information (0x0028)
+                for attr in c.get("attributes", []):
+                    if attr.get("code") in {3, 5}:  # ProductName (3) y NodeLabel (5)
+                        attr["included"] = 1
+                        attr["defaultValue"] = "MiTele"
 
-# Clústeres Endpoint 0 (Root Device)
-ep0_clusters = [
-    make_cluster("Descriptor", 29, "DESCRIPTOR_CLUSTER"),
-    make_cluster("Basic Information", 40, "BASIC_INFORMATION_CLUSTER", attrs=[
-        make_attr("ProductName", 3, "char_string", "MiTele"),
-        make_attr("NodeLabel", 5, "char_string", "MiTele", writable=1)
-    ]),
-    make_cluster("General Commissioning", 48, "GENERAL_COMMISSIONING_CLUSTER"),
-    make_cluster("Network Commissioning", 49, "NETWORK_COMMISSIONING_CLUSTER"),
-    make_cluster("Operational Credentials", 62, "OPERATIONAL_CREDENTIALS_CLUSTER")
-]
+# 2. Extraer cada clúster desde su app dedicada (con fallback a all-clusters-app.zap)
+c_level    = extract_cluster(list((all_zap_path,)), 8)               # 0x0008 Level Control
+c_wc       = extract_cluster(list((wc_zap_path, all_zap_path)), 258) # 0x0102 Window Covering
+c_dw_mode  = extract_cluster(list((dw_zap_path, all_zap_path)), 89)  # 0x0059 Dishwasher Mode
+c_op_stat  = extract_cluster(list((dw_zap_path, all_zap_path)), 96)  # 0x0060 Operational State
+c_rvc_run  = extract_cluster(list((rvc_zap_path, all_zap_path)), 84) # 0x0054 RVC Run Mode
+c_rvc_cln  = extract_cluster(list((rvc_zap_path, all_zap_path)), 85) # 0x0055 RVC Clean Mode
+c_rvc_stat = extract_cluster(list((rvc_zap_path, all_zap_path)), 97) # 0x0061 RVC Operational State
 
-# Clústeres Endpoint 1 (MiTele Compuesto)
-ep1_clusters = [
-    make_cluster("Identify", 3, "IDENTIFY_CLUSTER"),
-    make_cluster("Groups", 4, "GROUPS_CLUSTER"),
-    make_cluster("Descriptor", 29, "DESCRIPTOR_CLUSTER"),
-    make_cluster("On/Off", 6, "ON_OFF_CLUSTER", attrs=[
-        make_attr("OnOff", 0, "boolean", "1")
-    ], cmds=[
-        make_cmd("Off", 0), make_cmd("On", 1), make_cmd("Toggle", 2)
-    ]),
-    make_cluster("Level Control", 8, "LEVEL_CONTROL_CLUSTER", attrs=[
-        make_attr("CurrentLevel", 0, "int8u", "76"),
-        make_attr("MinLevel", 2, "int8u", "1"),
-        make_attr("MaxLevel", 3, "int8u", "254"),
-        make_attr("Options", 15, "bitmap8", "1")
-    ], cmds=[
-        make_cmd("MoveToLevel", 0), make_cmd("MoveToLevelWithOnOff", 4)
-    ]),
-    make_cluster("Window Covering", 258, "WINDOW_COVERING_CLUSTER", attrs=[
-        make_attr("Type", 0, "enum8", "0"),
-        make_attr("ConfigStatus", 7, "bitmap8", "11"),
-        make_attr("OperationalStatus", 10, "bitmap8", "0"),
-        make_attr("CurrentPositionLiftPercentage", 8, "percent", "70"),
-        make_attr("TargetPositionLiftPercent100ths", 11, "percent100ths", "7000"),
-        make_attr("CurrentPositionLiftPercent100ths", 14, "percent100ths", "7000"),
-        make_attr("FeatureMap", 65532, "bitmap32", "5")
-    ], cmds=[
-        make_cmd("UpOrOpen", 0), make_cmd("DownOrClose", 1), make_cmd("StopMotion", 2), make_cmd("GoToLiftPercentage", 5)
-    ]),
-    make_cluster("Dishwasher Mode", 89, "DISHWASHER_MODE_CLUSTER", attrs=[
-        make_attr("SupportedModes", 0, "array", ""),
-        make_attr("CurrentMode", 1, "int8u", "4")
-    ], cmds=[make_cmd("ChangeToMode", 0)]),
-    make_cluster("Operational State", 96, "OPERATIONAL_STATE_CLUSTER", attrs=[
-        make_attr("OperationalStateList", 3, "array", ""),
-        make_attr("OperationalState", 4, "enum8", "0")
-    ], cmds=[make_cmd("Pause", 0), make_cmd("Stop", 1), make_cmd("Start", 2), make_cmd("Resume", 3)]),
-    make_cluster("RVC Run Mode", 84, "RVC_RUN_MODE_CLUSTER", attrs=[
-        make_attr("SupportedModes", 0, "array", ""),
-        make_attr("CurrentMode", 1, "int8u", "0")
-    ], cmds=[make_cmd("ChangeToMode", 0)]),
-    make_cluster("RVC Clean Mode", 85, "RVC_CLEAN_MODE_CLUSTER", attrs=[
-        make_attr("SupportedModes", 0, "array", ""),
-        make_attr("CurrentMode", 1, "int8u", "0")
-    ], cmds=[make_cmd("ChangeToMode", 0)]),
-    make_cluster("RVC Operational State", 97, "RVC_OPERATIONAL_STATE_CLUSTER", attrs=[
-        make_attr("OperationalStateList", 3, "array", ""),
-        make_attr("OperationalState", 4, "enum8", "1")
-    ], cmds=[make_cmd("Pause", 0), make_cmd("Resume", 3), make_cmd("GoHome", 128)])
-]
+# 3. Ajustar valores iniciales específicos de MiTele en Level Control (8)
+if c_level:
+    for attr in c_level.get("attributes", []):
+        if attr.get("code") == 0:      # CurrentLevel = 76 (~30%)
+            attr["included"] = 1
+            attr["defaultValue"] = "76"
+        elif attr.get("code") == 2:    # MinLevel = 1
+            attr["included"] = 1
+            attr["defaultValue"] = "1"
+        elif attr.get("code") == 3:    # MaxLevel = 254
+            attr["included"] = 1
+            attr["defaultValue"] = "254"
+        elif attr.get("code") == 15:   # Options = 1 (executeIfOff = true)
+            attr["included"] = 1
+            attr["defaultValue"] = "1"
 
-zap_obj = {
-    "fileFormat": 2,
-    "featureLevel": 100,
-    "creator": "zap",
-    "keyValuePairs": [
-        {"key": "commandDiscovery", "value": "1"},
-        {"key": "defaultResponsePolicy", "value": "always"},
-        {"key": "manufacturerCodes", "value": "0x1002"}
-    ],
-    "package": [
-        {"pathRelativity": "relativeToZap", "path": "../../../src/app/zap-templates/zcl/zcl.json", "type": "zcl-properties", "category": "matter", "version": 1},
-        {"pathRelativity": "relativeToZap", "path": "../../../src/app/zap-templates/app-templates.json", "type": "gen-templates-json", "version": "chip-v1"}
-    ],
-    "endpointTypes": [
-        {
-            "id": 1, "name": "MA-rootdevice",
-            "deviceTypeRef": {"code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice"},
-            "deviceTypes": [{"code": 22, "profileId": 259, "label": "MA-rootdevice", "name": "MA-rootdevice"}],
-            "deviceVersions": [1], 
-			"deviceIdentifiers": [22],   # Corresponde a 0x0016 Root Node
-			"deviceTypeName": "MA-rootdevice", 
-			"deviceTypeCode": 22,   
-			"deviceTypeProfileId": 259,
-            "clusters": ep0_clusters
-        },
-        {
-            "id": 2, "name": "MA-mitele-composite",
-            "deviceTypeRef": {"code": 266, "profileId": 259, "label": "MA-onoffpluginunit", "name": "MA-onoffpluginunit"},
-			
-#            "deviceTypes": [
-#                {"code": 266, "profileId": 259, "label": "MA-onoffpluginunit", "name": "MA-onoffpluginunit"},
-#                {"code": 257, "profileId": 259, "label": "MA-dimmablelight", "name": "MA-dimmablelight"},
-#                {"code": 514, "profileId": 259, "label": "MA-windowcovering", "name": "MA-windowcovering"},
-#                {"code": 117, "profileId": 259, "label": "MA-dishwasher", "name": "MA-dishwasher"},
-#                {"code": 116, "profileId": 259, "label": "MA-roboticvacuum", "name": "MA-roboticvacuum"}
-#            ],
-#            "deviceVersions": [3, 3, 2, 1, 1],
-#            "deviceIdentifiers": [266, 257, 514, 117, 116],  # Corresponden a 0x010A Enchufe (On/Off Plug-in Unit), 0x0101 Dimmable Light, 0x0202 Window Covering, 0x0075 Dishwasher y 0x0074 Robotic Vacuum Cleaner
+# 4. Ajustar valores iniciales específicos de MiTele en Window Covering (258)
+if c_wc:
+    for attr in c_wc.get("attributes", []):
+        if attr.get("code") == 0:            # Type = 0 (Rollershade)
+            attr["included"] = 1
+            attr["defaultValue"] = "0"
+        elif attr.get("code") == 7:          # ConfigStatus = 11
+            attr["included"] = 1
+            attr["defaultValue"] = "11"
+        elif attr.get("code") == 8:          # CurrentPositionLiftPercentage = 70
+            attr["included"] = 1
+            attr["defaultValue"] = "70"
+        elif attr.get("code") in {11, 14}:   # Target & Current Lift 100ths = 7000
+            attr["included"] = 1
+            attr["defaultValue"] = "7000"
+        elif attr.get("code") == 65532:      # FeatureMap = 5 (Lift + PositionAwareLift)
+            attr["included"] = 1
+            attr["defaultValue"] = "5"
 
-#           Modificacion: Zap da error si hay mas de un deviceType. En DeviceApp-JNI.cpp, en tiempo de ejecución, se sobrescribe dinámicamente  
-#           la lista completa de los 5 tipos de dispositivo mediante la función oficial del SDK emberAfSetDeviceTypeList
-            "deviceTypes": [
-                {"code": 266, "profileId": 259, "label": "MA-onoffpluginunit", "name": "MA-onoffpluginunit"}
-            ],
-            "deviceVersions": [3],
-            "deviceIdentifiers": [266],  # Corresponde a 0x010A Enchufe (On/Off Plug-in Unit)
-			
-            "deviceTypeName": "MA-onoffpluginunit",
-			"deviceTypeCode": 266,
-			"deviceTypeProfileId": 259,
-            "clusters": ep1_clusters
+# 5. Mutar el Endpoint 1 conservando sus clústeres base (Identify=3, Groups=4, On/Off=6, Descriptor=29)
+for ep_t in zap_obj.get("endpointTypes", []):
+    if ep_t.get("id") == 2 or ep_t.get("name") == "MA-videoplayer":
+        ep_t["name"] = "MA-mitele-composite"
+        ep_t["deviceTypeName"] = "MA-onoffpluginunit"
+        ep_t["deviceTypeCode"] = 266
+        ep_t["deviceTypeProfileId"] = 259
+        ep_t["deviceTypeRef"] = {
+            "code": 266,
+            "profileId": 259,
+            "label": "MA-onoffpluginunit",
+            "name": "MA-onoffpluginunit"
         }
-    ],
-    "endpoints": [
-        {"endpointTypeName": "MA-rootdevice", "endpointTypeIndex": 0, "profileId": 259, "endpointId": 0, "networkId": 0, "parentEndpointIdentifier": None},
-        {"endpointTypeName": "MA-mitele-composite", "endpointTypeIndex": 1, "profileId": 259, "endpointId": 1, "networkId": 0, "parentEndpointIdentifier": None}
-    ]
-}
+        ep_t["deviceTypes"] = list((ep_t["deviceTypeRef"],))
+        ep_t["deviceVersions"] = list((3,))
+        ep_t["deviceIdentifiers"] = list((266,))
 
-with open(zap_path, "w", encoding="utf-8") as f:
+        # Conservar los clústeres válidos originales del Endpoint 1 (3, 4, 6, 29)
+        base_clusters = list((
+            c for c in ep_t.get("clusters", ())
+            if c.get("code") in {3, 4, 6, 29} and c.get("side") == "server"
+        ))
+
+        # Encender On/Off (6) por defecto (OnOff = 1)
+        for c in base_clusters:
+            c["enabled"] = 1
+            if c.get("code") == 6:
+                for attr in c.get("attributes", []):
+                    if attr.get("code") == 0:
+                        attr["included"] = 1
+                        attr["defaultValue"] = "1"
+
+        # Inyectar todos los clústeres extraídos del SDK
+        extra_list = (c_level, c_wc, c_dw_mode, c_op_stat, c_rvc_run, c_rvc_cln, c_rvc_stat)
+        for extra_c in extra_list:
+            if extra_c is not None:
+                base_clusters.append(extra_c)
+            else:
+                print("⚠️ AVISO: No se encontró uno de los clústeres solicitados en los .zap de origen.")
+
+        ep_t["clusters"] = base_clusters
+
+# 6. Actualizar el mapeo del Endpoint 1
+for ep in zap_obj.get("endpoints", []):
+    if ep.get("endpointId") == 1 or ep.get("endpointTypeName") == "MA-videoplayer":
+        ep["endpointTypeName"] = "MA-mitele-composite"
+
+with open(base_zap_path, "w", encoding="utf-8") as f:
     json.dump(zap_obj, f, indent=2)
 
-print("✅ INFRA PYTHON: Archivo .zap compuesto generado con éxito para MiTele.")
+print("✅ INFRA PYTHON: .zap fusionado con éxito (Endpoint 0 intacto + 11 clústeres en Endpoint 1) para MiTele.")
 EOF
 
 
@@ -1304,3 +1270,4 @@ echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y
 
 trap - ERR     # Desactiva el trap (disparador) de error 
 cleanup_files  # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
+
