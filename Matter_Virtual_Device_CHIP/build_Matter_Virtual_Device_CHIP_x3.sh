@@ -1324,11 +1324,12 @@ public:
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
     }
 
-    void HandleGoHomeCallback(OperationalState::GenericOperationalError & err) override {
+/*    void HandleGoHomeCallback(OperationalState::GenericOperationalError & err) override {
         ChipLogProgress(Zcl, "[MiTele - %s] Comando GO HOME recibido", mName);
         GetInstance()->SetOperationalState(to_underlying(RvcOperationalState::OperationalStateEnum::kSeekingCharger));
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
     }
+*/
 
 private:
     const char * mName;
