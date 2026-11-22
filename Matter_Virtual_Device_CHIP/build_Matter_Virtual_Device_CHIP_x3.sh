@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#exit 0 
+exit 0 
  
 
 # =========================================================================
@@ -637,17 +637,19 @@ cp "$SRC_ATTR" "${SRC_ATTR}.bak"
 #trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true; rm -f "$SRC_DELEGATES" || true' ERR
 
 # 1. Definir una función de limpieza
-cleanup_on_error() {
+restore_overwritten_files() {
     echo "🚨 Revertiendo parches de fuentes nativos..."
     mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
+	
     mv "${SRC_JNI}.bak" "$SRC_JNI" || true
     mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true
     mv "${GN_FILE}.bak" "$GN_FILE" || true
+	
     rm -f "$SRC_DELEGATES" || true
 }
 
 # 2. Registrar la función en el trap (disparador) ERR
-trap cleanup_on_error ERR
+trap restore_overwritten_files ERR
 
 
 echo "INFRA: Generando archivo .zap compuesto para MiTele..."
@@ -1468,7 +1470,7 @@ echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y
 #
 #rm -f "$SRC_DELEGATES" || true
 
-trap - ERR     # Desactiva el trap (disparador) de error 
-cleanup_files  # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
+trap - ERR                  # Desactiva el trap (disparador) de error 
+restore_overwritten_files   # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
 
 
