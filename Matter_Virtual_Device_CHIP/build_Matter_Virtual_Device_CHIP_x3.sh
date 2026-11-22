@@ -1034,7 +1034,165 @@ void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attrib
 }
 EOF
 
-echo "INFRA: Creando delegados C++ de Modos, Estados y Persiana para MiTele..."
+#echo "INFRA: MiTeleDelegates.cpp - Creando delegados C++ de Modos, Estados y Persiana para MiTele..."
+#cat << 'EOF' > "$SRC_DELEGATES"
+##include <app/clusters/mode-base-server/mode-base-server.h>
+##include <app/clusters/operational-state-server/operational-state-server.h>
+##include <app/clusters/window-covering-server/window-covering-server.h>
+##include <app-common/zap-generated/ids/Clusters.h>
+##include <lib/support/logging/CHIPLogging.h>
+##include <vector>
+#
+#using namespace chip;
+#using namespace chip::app;
+#using namespace chip::app::Clusters;
+#
+#namespace {
+#
+#struct ModeItem {
+#    const char * label;
+#    uint8_t mode;
+#    uint16_t tag;
+#};
+#
+#// Delegado genérico reutilizable para DishwasherMode (0x0059), RvcRunMode (0x0054) y RvcCleanMode (0x0055)
+#class GenericTvModeDelegate : public ModeBase::DelegateBase {
+#public:
+#    GenericTvModeDelegate(const char * name, std::vector<ModeItem> items) : mName(name), mItems(std::move(items)) {}
+#
+#    CHIP_ERROR Init() override { return CHIP_NO_ERROR; }
+#
+#    void HandleChangeToMode(uint8_t NewMode, ModeBase::Commands::ChangeToModeResponse::Type & response) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Cambio de modo solicitado -> %u", mName, NewMode);
+#        response.status = to_underlying(ModeBase::StatusCode::kSuccess);
+#    }
+#
+#    CHIP_ERROR GetModeLabelByIndex(uint8_t modeIndex, MutableCharSpan & label) override {
+#        if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
+#        return CopyCharSpanToMutableCharSpan(CharSpan::fromCharString(mItems[modeIndex].label), label);
+#    }
+#
+#    CHIP_ERROR GetModeValueByIndex(uint8_t modeIndex, uint8_t & value) override {
+#        if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
+#        value = mItems[modeIndex].mode;
+#        return CHIP_NO_ERROR;
+#    }
+#
+#    CHIP_ERROR GetModeTagsByIndex(uint8_t modeIndex, DataModel::List<detail::Structs::ModeTagStruct::Type> & tags) override {
+#        if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
+#        if (tags.size() < 1) return CHIP_ERROR_BUFFER_TOO_SMALL;
+#        tags[0].value = mItems[modeIndex].tag;
+#        tags.reduce_size(1);
+#        return CHIP_NO_ERROR;
+#    }
+#
+#private:
+#    const char * mName;
+#    std::vector<ModeItem> mItems;
+#};
+#
+#// Delegado para OperationalState (0x0060) y RvcOperationalState (0x0061)
+#class TvOperationalStateDelegate : public OperationalState::Delegate {
+#public:
+#    TvOperationalStateDelegate(const char * name, std::vector<uint8_t> states) : mName(name), mStates(std::move(states)) {}
+#
+#    DataModel::Nullable<uint32_t> GetCountdownTime() override { return DataModel::NullNullable; }
+#
+#    CHIP_ERROR GetOperationalStateAtIndex(size_t index, OperationalState::GenericOperationalState & operationalState) override {
+#        if (index >= mStates.size()) return CHIP_ERROR_NOT_FOUND;
+#        operationalState.operationalStateId = mStates[index];
+#        return CHIP_NO_ERROR;
+#    }
+#
+#    CHIP_ERROR GetOperationalPhaseAtIndex(size_t index, MutableCharSpan & operationalPhase) override {
+#        return CHIP_ERROR_NOT_FOUND;
+#    }
+#
+#    void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kPaused));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#    void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#    void HandleStartStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando START recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#    void HandleStopStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando STOP recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kStopped));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#private:
+#    const char * mName;
+#    std::vector<uint8_t> mStates;
+#};
+#
+#// Instancias estáticas en Endpoint 1
+#GenericTvModeDelegate * gDishwasherDelegate = nullptr;
+#ModeBase::Instance * gDishwasherInstance = nullptr;
+#
+#GenericTvModeDelegate * gRvcRunDelegate = nullptr;
+#ModeBase::Instance * gRvcRunInstance = nullptr;
+#
+#GenericTvModeDelegate * gRvcCleanDelegate = nullptr;
+#ModeBase::Instance * gRvcCleanInstance = nullptr;
+#
+#TvOperationalStateDelegate * gOpStateDelegate = nullptr;
+#OperationalState::Instance * gOpStateInstance = nullptr;
+#
+#TvOperationalStateDelegate * gRvcOpStateDelegate = nullptr;
+#RvcOperationalState::Instance * gRvcOpStateInstance = nullptr;
+#
+#} // namespace
+#
+#void InitMiTeleClusters(EndpointId endpoint) {
+#    // 1. DishwasherMode (0x0059) - 8 Entradas/Apps
+#    gDishwasherDelegate = new GenericTvModeDelegate("Entradas", {
+#        {"HDMI 1", 0, 0x4000}, {"HDMI 2", 1, 0x4001}, {"TDT", 2, 0x0001}, {"YouTube", 3, 0x4002},
+#        {"Prime Video", 4, 0x4000}, {"Netflix", 5, 0x4000}, {"Disney Plus", 6, 0x4000}, {"Spotify", 7, 0x4000}
+#    });
+#    gDishwasherInstance = new ModeBase::Instance(gDishwasherDelegate, endpoint, DishwasherMode::Id, 0);
+#    gDishwasherInstance->Init();
+#
+#    // 2. RvcRunMode (0x0054) - 6 Modos de Imagen
+#    gRvcRunDelegate = new GenericTvModeDelegate("Imagen", {
+#        {"Modo Cine", 0, 0x4000}, {"Modo Deportes", 1, 0x4001}, {"Modo Juego", 2, 0x4002},
+#        {"Modo Estandar", 3, 0x4000}, {"Modo Noche", 4, 0x4000}, {"Modo Dinamico", 5, 0x4000}
+#    });
+#    gRvcRunInstance = new ModeBase::Instance(gRvcRunDelegate, endpoint, RvcRunMode::Id, 0);
+#    gRvcRunInstance->Init();
+#
+#    // 3. RvcCleanMode (0x0055) - 2 Modos de Sonido
+#    gRvcCleanDelegate = new GenericTvModeDelegate("Sonido", {
+#        {"Sonido Estandar", 0, 0x4000}, {"Sonido Graves", 1, 0x4001}
+#    });
+#    gRvcCleanInstance = new ModeBase::Instance(gRvcCleanDelegate, endpoint, RvcCleanMode::Id, 0);
+#    gRvcCleanInstance->Init();
+#
+#    // 4. OperationalState (0x0060)
+#    gOpStateDelegate = new TvOperationalStateDelegate("OpState", {0, 1});
+#    gOpStateInstance = new OperationalState::Instance(gOpStateDelegate, endpoint);
+#    gOpStateInstance->Init();
+#
+#    // 5. RvcOperationalState (0x0061)
+#    gRvcOpStateDelegate = new TvOperationalStateDelegate("RvcOpState", {0, 1, 2, 3, 0x40, 0x41, 0x42});
+#    gRvcOpStateInstance = new RvcOperationalState::Instance(gRvcOpStateDelegate, endpoint);
+#    gRvcOpStateInstance->Init();
+#}
+#EOF
+
+
+echo "INFRA: MiTeleDelegates.cpp - Creando delegados C++ de Modos, Estados y Persiana para MiTele..."
 cat << 'EOF' > "$SRC_DELEGATES"
 #include <app/clusters/mode-base-server/mode-base-server.h>
 #include <app/clusters/operational-state-server/operational-state-server.h>
@@ -1055,8 +1213,8 @@ struct ModeItem {
     uint16_t tag;
 };
 
-// Delegado genérico reutilizable para DishwasherMode (0x0059), RvcRunMode (0x0054) y RvcCleanMode (0x0055)
-class GenericTvModeDelegate : public ModeBase::DelegateBase {
+// Delegado genérico para DishwasherMode (0x0059), RvcRunMode (0x0054) y RvcCleanMode (0x0055)
+class GenericTvModeDelegate : public ModeBase::Delegate {
 public:
     GenericTvModeDelegate(const char * name, std::vector<ModeItem> items) : mName(name), mItems(std::move(items)) {}
 
@@ -1078,11 +1236,11 @@ public:
         return CHIP_NO_ERROR;
     }
 
-    CHIP_ERROR GetModeTagsByIndex(uint8_t modeIndex, DataModel::List<detail::Structs::ModeTagStruct::Type> & tags) override {
+    CHIP_ERROR GetModeTagsByIndex(uint8_t modeIndex, DataModel::List<chip::app::Clusters::detail::Structs::ModeTagStruct::Type> & modeTags) override {
         if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
-        if (tags.size() < 1) return CHIP_ERROR_BUFFER_TOO_SMALL;
-        tags[0].value = mItems[modeIndex].tag;
-        tags.reduce_size(1);
+        if (modeTags.size() < 1) return CHIP_ERROR_BUFFER_TOO_SMALL;
+        modeTags[0].value = mItems[modeIndex].tag;
+        modeTags.reduce_size(1);
         return CHIP_NO_ERROR;
     }
 
@@ -1091,7 +1249,7 @@ private:
     std::vector<ModeItem> mItems;
 };
 
-// Delegado para OperationalState (0x0060) y RvcOperationalState (0x0061)
+// Delegado para OperationalState (0x0060 - Dishwasher)
 class TvOperationalStateDelegate : public OperationalState::Delegate {
 public:
     TvOperationalStateDelegate(const char * name, std::vector<uint8_t> states) : mName(name), mStates(std::move(states)) {}
@@ -1100,7 +1258,7 @@ public:
 
     CHIP_ERROR GetOperationalStateAtIndex(size_t index, OperationalState::GenericOperationalState & operationalState) override {
         if (index >= mStates.size()) return CHIP_ERROR_NOT_FOUND;
-        operationalState.operationalStateId = mStates[index];
+        operationalState.operationalStateID = mStates[index];
         return CHIP_NO_ERROR;
     }
 
@@ -1137,6 +1295,46 @@ private:
     std::vector<uint8_t> mStates;
 };
 
+// Delegado específico para RvcOperationalState (0x0061 - Robotic Vacuum)
+class TvRvcOperationalStateDelegate : public RvcOperationalState::Delegate {
+public:
+    TvRvcOperationalStateDelegate(const char * name, std::vector<uint8_t> states) : mName(name), mStates(std::move(states)) {}
+
+    DataModel::Nullable<uint32_t> GetCountdownTime() override { return DataModel::NullNullable; }
+
+    CHIP_ERROR GetOperationalStateAtIndex(size_t index, OperationalState::GenericOperationalState & operationalState) override {
+        if (index >= mStates.size()) return CHIP_ERROR_NOT_FOUND;
+        operationalState.operationalStateID = mStates[index];
+        return CHIP_NO_ERROR;
+    }
+
+    CHIP_ERROR GetOperationalPhaseAtIndex(size_t index, MutableCharSpan & operationalPhase) override {
+        return CHIP_ERROR_NOT_FOUND;
+    }
+
+    void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kPaused));
+        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+    }
+
+    void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+    }
+
+    void HandleGoHomeCallback(OperationalState::GenericOperationalError & err) override {
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando GO HOME recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(RvcOperationalState::OperationalStateEnum::kSeekingCharger));
+        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+    }
+
+private:
+    const char * mName;
+    std::vector<uint8_t> mStates;
+};
+
 // Instancias estáticas en Endpoint 1
 GenericTvModeDelegate * gDishwasherDelegate = nullptr;
 ModeBase::Instance * gDishwasherInstance = nullptr;
@@ -1150,7 +1348,7 @@ ModeBase::Instance * gRvcCleanInstance = nullptr;
 TvOperationalStateDelegate * gOpStateDelegate = nullptr;
 OperationalState::Instance * gOpStateInstance = nullptr;
 
-TvOperationalStateDelegate * gRvcOpStateDelegate = nullptr;
+TvRvcOperationalStateDelegate * gRvcOpStateDelegate = nullptr;
 RvcOperationalState::Instance * gRvcOpStateInstance = nullptr;
 
 } // namespace
@@ -1185,11 +1383,12 @@ void InitMiTeleClusters(EndpointId endpoint) {
     gOpStateInstance->Init();
 
     // 5. RvcOperationalState (0x0061)
-    gRvcOpStateDelegate = new TvOperationalStateDelegate("RvcOpState", {0, 1, 2, 3, 0x40, 0x41, 0x42});
+    gRvcOpStateDelegate = new TvRvcOperationalStateDelegate("RvcOpState", {0, 1, 2, 3, 0x40, 0x41, 0x42});
     gRvcOpStateInstance = new RvcOperationalState::Instance(gRvcOpStateDelegate, endpoint);
     gRvcOpStateInstance->Init();
 }
 EOF
+
 
 echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
 ./scripts/tools/zap/generate.py "$ZAP_FILE"
@@ -1270,4 +1469,5 @@ echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y
 
 trap - ERR     # Desactiva el trap (disparador) de error 
 cleanup_files  # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
+
 
