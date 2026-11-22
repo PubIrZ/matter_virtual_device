@@ -785,16 +785,25 @@ zap_obj = {
         {
             "id": 2, "name": "MA-mitele-composite",
             "deviceTypeRef": {"code": 266, "profileId": 259, "label": "MA-onoffpluginunit", "name": "MA-onoffpluginunit"},
-            "deviceTypes": [
-                {"code": 266, "profileId": 259, "label": "MA-onoffpluginunit", "name": "MA-onoffpluginunit"},
-                {"code": 257, "profileId": 259, "label": "MA-dimmablelight", "name": "MA-dimmablelight"},
-                {"code": 514, "profileId": 259, "label": "MA-windowcovering", "name": "MA-windowcovering"},
-                {"code": 117, "profileId": 259, "label": "MA-dishwasher", "name": "MA-dishwasher"},
-                {"code": 116, "profileId": 259, "label": "MA-roboticvacuum", "name": "MA-roboticvacuum"}
-            ],
-            "deviceVersions": [3, 3, 2, 1, 1],
-            "deviceIdentifiers": [266, 257, 514, 117, 116],  # Corresponden a 0x010A Enchufe (On/Off Plug-in Unit), 0x0101 Dimmable Light, 0x0202 Window Covering, 0x0075 Dishwasher y 0x0074 Robotic Vacuum Cleaner
+			
+#            "deviceTypes": [
+#                {"code": 266, "profileId": 259, "label": "MA-onoffpluginunit", "name": "MA-onoffpluginunit"},
+#                {"code": 257, "profileId": 259, "label": "MA-dimmablelight", "name": "MA-dimmablelight"},
+#                {"code": 514, "profileId": 259, "label": "MA-windowcovering", "name": "MA-windowcovering"},
+#                {"code": 117, "profileId": 259, "label": "MA-dishwasher", "name": "MA-dishwasher"},
+#                {"code": 116, "profileId": 259, "label": "MA-roboticvacuum", "name": "MA-roboticvacuum"}
+#            ],
+#            "deviceVersions": [3, 3, 2, 1, 1],
+#            "deviceIdentifiers": [266, 257, 514, 117, 116],  # Corresponden a 0x010A Enchufe (On/Off Plug-in Unit), 0x0101 Dimmable Light, 0x0202 Window Covering, 0x0075 Dishwasher y 0x0074 Robotic Vacuum Cleaner
 
+#           Modificacion: Zap da error si hay mas de un deviceType. En DeviceApp-JNI.cpp, en tiempo de ejecución, se sobrescribe dinámicamente  
+#           la lista completa de los 5 tipos de dispositivo mediante la función oficial del SDK emberAfSetDeviceTypeList
+            "deviceTypes": [
+                {"code": 266, "profileId": 259, "label": "MA-onoffpluginunit", "name": "MA-onoffpluginunit"}
+            ],
+            "deviceVersions": [3],
+            "deviceIdentifiers": [266],  # Corresponde a 0x010A Enchufe (On/Off Plug-in Unit)
+			
             "deviceTypeName": "MA-onoffpluginunit",
 			"deviceTypeCode": 266,
 			"deviceTypeProfileId": 259,
