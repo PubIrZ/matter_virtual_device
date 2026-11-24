@@ -1,6 +1,6 @@
 #!/bin/bash
 
-exit 0 
+#exit 0 
  
 
 # =========================================================================
@@ -705,18 +705,21 @@ c_rvc_stat = extract_cluster(list((rvc_zap_path, all_zap_path)), 97) # 0x0061 RV
 # 3. Ajustar valores iniciales específicos de MiTele en Level Control (8)
 if c_level:
     for attr in c_level.get("attributes", []):
-        if attr.get("code") == 0:      # CurrentLevel = 76 (~30%)
+        if attr.get("code") == 0:        # CurrentLevel = 76 (~30%)
             attr["included"] = 1
             attr["defaultValue"] = "76"
-        elif attr.get("code") == 2:    # MinLevel = 1
+        elif attr.get("code") == 2:      # MinLevel = 1
             attr["included"] = 1
             attr["defaultValue"] = "1"
-        elif attr.get("code") == 3:    # MaxLevel = 254
+        elif attr.get("code") == 3:      # MaxLevel = 254
             attr["included"] = 1
             attr["defaultValue"] = "254"
-        elif attr.get("code") == 15:   # Options = 1 (executeIfOff = true)
+        elif attr.get("code") == 15:     # Options = 1 (executeIfOff = true)
             attr["included"] = 1
             attr["defaultValue"] = "1"
+        elif attr.get("code") == 65532:  # FeatureMap = 0 (Desactiva Lighting/OnOff fade)
+            attr["included"] = 1
+            attr["defaultValue"] = "0"
 
 # 4. Ajustar valores iniciales específicos de MiTele en Window Covering (258)
 if c_wc:
@@ -1472,5 +1475,4 @@ echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y
 
 trap - ERR                  # Desactiva el trap (disparador) de error 
 restore_overwritten_files   # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
-
 
