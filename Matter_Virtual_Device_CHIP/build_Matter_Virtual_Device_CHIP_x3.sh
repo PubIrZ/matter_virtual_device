@@ -316,7 +316,303 @@ find . -name "zap.json" -exec sh -c 'echo "{\"packages\": []}" > "{}"' \;
 echo "INFRA: Parcheando dependencia crítica libgirepository en caliente..."
 sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 
+
+
 ########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v8 (BridgeJNI Dynamic) <<----------------
+																			 
+																					
+																			 
+														
+																	  
+																					 
+																				
+
+
+																						 
+																  
+								
+								
+								  
+								  
+
+																							
+																																																									  
+
+																											
+					
+			 
+
+																					   
+
+																							 
+								
+						 
+
+																							
+													 
+																					   
+												 
+											   
+														   
+		
+											  
+														  
+																	   
+																	  
+			
+											
+													 
+								  
+											   
+											  
+				
+												  
+														
+
+																				   
+								 
+									 
+								   
+								   
+									   
+																								 
+															   
+							   
+										   
+											   
+		   
+													   
+
+																		 
+									  
+																					 
+												  
+
+																		
+								
+								  
+
+																											
+	 
+
+																									   
+																							  
+																						   
+																					   
+																				   
+																			   
+																								  
+																						 
+																					 
+
+							
+																									 
+						   
+							
+					  
+							 
+						   
+														 
+												  
+							   
+													  
+										   
+																 
+				  
+								 
+									   
+										
+										  
+									   
+
+					   
+							
+									  
+									
+									
+									
+
+										   
+																									
+
+								  
+
+																		 
+									   
+
+													   
+   
+																		   
+																											 
+
+																														
+
+													 
+																										  
+
+																						  
+											
+	   
+																				   
+								
+	   
+
+																			 
+									  
+	   
+																			 
+								
+	   
+   
+
+																 
+   
+																		   
+																															  
+																													 
+																														
+
+																											  
+													   
+								
+	   
+																					
+								
+	   
+   
+
+										 
+   
+																		   
+																														
+																													 
+																											
+
+																									 
+								
+	   
+																					
+								
+	   
+   
+
+												
+   
+													   
+   
+
+												  
+   
+														 
+   
+
+													 
+   
+												   
+   
+
+														
+   
+										
+														  
+
+					  
+   
+
+																			
+   
+										
+														   
+
+																																		   
+						 
+	
+																	   
+																				 
+   
+
+																	   
+   
+																		  
+	   
+																														   
+	   
+   
+
+	
+				   
+	 
+																					  
+   
+												  
+   
+
+																				  
+   
+																														 
+						
+   
+
+	
+											   
+	 
+																			   
+																		   
+																				   
+																					
+																							  
+																						 
+																						
+																								  
+																					
+																			  
+																							  
+	 
+
+
+
+																						
+							
+						   
+															
+													  
+													
+										
+											  
+
+					   
+										
+
+																																   
+   
+																	 
+	   
+												 
+																																	 
+																			
+	   
+   
+
+																													   
+														 
+   
+																																	
+																   
+
+												
+	   
+																		  
+	   
+   
+	 
+
+
+																				   
+											 
+
+
+
+																								  
 # =========================================================================
 # 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + PUENTE JNI C++ DESACOPLADO y DINÁMICO C++
 # =========================================================================
@@ -334,6 +630,7 @@ SRC_DELEGATES="examples/virtual-device-app/android/java/MiTeleDelegates.cpp"
 
 echo "INFRA: Creando buffers de respaldo temporales para Git..."
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+
 cp "$GN_FILE" "${GN_FILE}.bak"
 
 cp "$SRC_JNI_H" "${SRC_JNI_H}.bak"
@@ -343,6 +640,10 @@ cp "$SRC_ATTR" "${SRC_ATTR}.bak"
 cp "$LVL_CPP" "${LVL_CPP}.bak"
 
 # 1. Definir función de limpieza unificada para dejar limpio el árbol Git tras compilar o restaurar si la compilación fallar
+																																																									 
+																																																																	 
+
+									 
 restore_overwritten_files() {
     echo "🧹 INFRA: Restaurando archivos originales de Git y eliminando temporales..."
 
@@ -458,7 +759,15 @@ if c_wc:
             attr["included"] = 1
             attr["defaultValue"] = "5"
 
-# 5. Mutar el Endpoint 1 conservando sus clústeres base (Identify=3, Groups=4, On/Off=6, Descriptor=29)
+# 5. Ocultar "Remaining Time In Minutes" en Alexa desactivando el atributo opcional CountdownTime (code = 2) de los clústeres
+#    96 (Operational State) y 97 (RVC Operational State) que viene activo por defecto en los zap dishwasher-app.zap y rvc-app.zap
+for op_cluster in (c_op_stat, c_rvc_stat):
+    if op_cluster:
+        for attr in op_cluster.get("attributes", []):
+            if attr.get("code") == 2:  # CountdownTime
+                attr["included"] = 0
+				
+# 6. Mutar el Endpoint 1 conservando sus clústeres base (Identify=3, Groups=4, On/Off=6, Descriptor=29)
 #    Nota: Se declara un único deviceType (266 = Enchufe) en el .zap para satisfacer la restricción SQLite
 #    de zap-cli, y los 5 deviceTypes compuestos se inyectan dinámicamente en DeviceApp-JNI.cpp.
 for ep_t in zap_obj.get("endpointTypes", []):
@@ -502,7 +811,7 @@ for ep_t in zap_obj.get("endpointTypes", []):
 
         ep_t["clusters"] = base_clusters
 
-# 6. Actualizar el mapeo del Endpoint 1
+# 7. Actualizar el mapeo del Endpoint 1
 for ep in zap_obj.get("endpoints", []):
     if ep.get("endpointId") == 1 or ep.get("endpointTypeName") == "MA-videoplayer":
         ep["endpointTypeName"] = "MA-mitele-composite"
@@ -531,6 +840,7 @@ sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "
 sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
+																			 
 sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 sed -i 's|"java/OnOffManager.cpp",|"java/OnOffManager.cpp", "java/MiTeleDelegates.cpp",|g' "$GN_FILE"
@@ -741,6 +1051,20 @@ JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app)
     PreServerInit();
 }
 
+
+																			 
+	
+										 
+															
+  
+																																			
+						  
+	 
+																		
+																				  
+	
+
+														  
 JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
 {
     chip::DeviceLayer::StackLock lock;
@@ -968,15 +1292,177 @@ void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attrib
     else if (attributePath.mClusterId == LevelControl::Id)
     {
         LevelControlClusterAttributeChangeCallback(attributePath, size, value);
+							   
     }
     else if (attributePath.mClusterId == WindowCovering::Id)
     {
         WindowCoveringClusterAttributeChangeCallback(attributePath, size, value);
+															   
+														 
+																					  
+																											 
     }
 }
 EOF
 
 #MiTeleDelegates.cpp - Delegado dinámico de Modos C++ conectados al puente universal..."
+																									  
+								
+															
+																			
+																		
+												   
+											 
+				  
+ 
+					  
+						   
+									 
+ 
+			
+ 
+				  
+						
+				  
+				  
+   
+ 
+																											 
+															  
+		
+																													 
+ 
+														 
+ 
+																												   
+																							   
+																		 
+	  
+ 
+																						  
+																				   
+																										
+	  
+ 
+																				  
+																				   
+										
+							  
+	  
+ 
+																															  
+																				   
+																 
+											   
+							 
+							  
+	  
+ 
+		 
+						
+								  
+   
+ 
+																		  
+																	   
+		
+																															
+ 
+																								  
+ 
+																																 
+																  
+															  
+							  
+	  
+ 
+																									   
+									 
+	  
+ 
+																							  
+																			 
+																											
+																			
+	  
+ 
+																							   
+																			  
+																											 
+																			
+	  
+ 
+																							  
+																			 
+																											 
+																			
+	  
+ 
+																							 
+																			
+																											 
+																			
+	  
+ 
+		 
+						
+								  
+   
+ 
+									   
+													   
+													
+ 
+												   
+												
+ 
+													 
+												  
+ 
+														 
+														 
+ 
+															
+															   
+ 
+			   
+ 
+											   
+													
+																  
+																								  
+																											   
+		
+																										
+								 
+ 
+												  
+															
+																						   
+																							  
+		
+																							
+							 
+ 
+													
+															  
+																	 
+		
+																								  
+							   
+ 
+									
+																		  
+																				   
+							  
+ 
+									   
+																										
+																							
+								 
+  
+	
+
 echo "INFRA: Creando MiTeleDelegates.cpp - Delegado dinámico de Modos C++ conectados al puente universal..."
 cat << 'EOF' > "$SRC_DELEGATES"
 #include "DeviceApp-JNI.h"
@@ -1146,6 +1632,13 @@ public:
         DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
     }
 
+
+																						   
+																			  
+																													  
+																		   
+	 
+  
 private:
     const char * mName;
     ClusterId mClusterId;
@@ -1246,6 +1739,7 @@ echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio...
 
 
 
+
 #######################################################################################################################################
 
 # Compilación Ninja/Gradle, Optimización llvm-strip y limpieza final
@@ -1317,6 +1811,13 @@ fi
 ####################################################################
 
 echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y cpp's originales de Git... y eliminando los añadidos"
+																																	   
+										 
+ 
+									   
+									   
+										 
+ 
 
 trap - ERR                  # Desactiva el trap (disparador) de error 
 restore_overwritten_files   # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
