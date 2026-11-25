@@ -826,6 +826,7 @@ sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "
 sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
+																								
 sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 sed -i 's|"java/OnOffManager.cpp",|"java/OnOffManager.cpp", "java/MiTeleDelegates.cpp",|g' "$GN_FILE"
@@ -900,6 +901,7 @@ using namespace chip::DeviceLayer;
 
 extern void InitMiTeleClusters(chip::EndpointId endpoint);
 extern void UpdateMiTeleModeOrState(chip::EndpointId endpoint, uint32_t clusterId, uint8_t newValue);
+																		 
 
 EmberAfDeviceType gDeviceTypeIds[] = {
     { 266, 3 }, // 0x010A On/Off Plug-in Unit (Enchufe) (Prioridad visual en Alexa - Permite Identificarlo con el Dispositivo que realmente está enchufado a él -TV-)
@@ -969,7 +971,7 @@ void DeviceAppJNI::PostEvent(int event)
     env->CallVoidMethod(mDeviceAppObject.ObjectRef(), mPostEventMethod, static_cast<jlong>(event));
     if (env->ExceptionCheck())
     {
-        ChipLogError(Zcl, "Failed to call DeviceAppJNI 'postEvent' method");
+        ChipLogError(Zcl, "Failed to call DeviceAppJNI 'postEventMethod' method");
         env->ExceptionClear();
     }
 }
@@ -1014,6 +1016,20 @@ JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app)
 
     PreServerInit();
 }
+
+																			 
+	
+										 
+															
+  
+																																			
+						  
+	 
+																		
+																				  
+	
+
+														  
 
 JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
 {
@@ -1118,6 +1134,17 @@ void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attrib
         ChipLogProgress(Zcl, "[MiTele - POWER] On/Off -> %d", onoff);
         OnOffManager().PostOnOffChanged(attributePath.mEndpointId, onoff);
         DeviceAppJNIMgr().PostMatterEvent(0x0006, 0x0000, onoff ? 1 : 0);
+ 
+
+																													 
+													   
+ 
+																																  
+																 
+
+											  
+	 
+																		
     }
     else if (attributePath.mClusterId == LevelControl::Id && attributePath.mAttributeId == LevelControl::Attributes::CurrentLevel::Id)
     {
@@ -1138,6 +1165,163 @@ void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attrib
 EOF
 
 #Cabecera de MiTeleDelegates.cpp
+								
+															
+																			
+																		
+												   
+											 
+				  
+ 
+					  
+						   
+									 
+ 
+			
+ 
+				  
+						
+				  
+				  
+   
+ 
+																											 
+															  
+		
+																													 
+ 
+														 
+ 
+																												   
+																							   
+																		 
+	  
+ 
+																						  
+																				   
+																										
+	  
+ 
+																				  
+																				   
+										
+							  
+	  
+ 
+																															  
+																				   
+																 
+											   
+							 
+							  
+	  
+ 
+		 
+						
+								  
+   
+ 
+																		  
+																	   
+		
+																															
+ 
+																								  
+ 
+																																 
+																  
+															  
+							  
+	  
+ 
+																									   
+									 
+	  
+ 
+																							  
+																			 
+																											
+																			
+	  
+ 
+																							   
+																			  
+																											 
+																			
+	  
+ 
+																							  
+																			 
+																											 
+																			
+	  
+ 
+																							 
+																			
+																											 
+																			
+	  
+ 
+		 
+						
+								  
+   
+ 
+									   
+													   
+													
+ 
+												   
+												
+ 
+													 
+												  
+ 
+														 
+														 
+ 
+															
+															   
+ 
+			   
+ 
+											   
+													
+																  
+																								  
+																											   
+		
+																										
+								 
+ 
+												  
+															
+																						   
+																							  
+		
+																							
+							 
+ 
+													
+															  
+																	 
+		
+																								  
+							   
+ 
+									
+																		  
+																				   
+							  
+ 
+									   
+																										
+																							
+								 
+  
+	
+
+
 echo "INFRA: Creando MiTeleDelegates.cpp - Creando delegados C++ de Modos, Estados y Persiana para MiTele y conectado al puente universal..."
 cat << 'EOF' > "$SRC_DELEGATES"
 #include "DeviceApp-JNI.h"
@@ -1188,7 +1372,7 @@ public:
     CHIP_ERROR GetModeTagsByIndex(uint8_t modeIndex, DataModel::List<chip::app::Clusters::detail::Structs::ModeTagStruct::Type> & modeTags) override {
         if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
         if (modeTags.size() < 1) return CHIP_ERROR_BUFFER_TOO_SMALL;
-        modeTags.value = mItems[modeIndex].tag;
+        modeTags[0].value = mItems[modeIndex].tag;
         modeTags.reduce_size(1);
         return CHIP_NO_ERROR;
     }
@@ -1219,6 +1403,7 @@ public:
     }
 
     void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
+																			
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kPaused);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1226,6 +1411,7 @@ public:
     }
 
     void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
+																			 
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1233,6 +1419,7 @@ public:
     }
 
     void HandleStartStateCallback(OperationalState::GenericOperationalError & err) override {
+																			
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1240,6 +1427,7 @@ public:
     }
 
     void HandleStopStateCallback(OperationalState::GenericOperationalError & err) override {
+																		   
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kStopped);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1284,7 +1472,13 @@ public:
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
         DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
+
+																						   
+																			  
+																													  
+																		   
     }
+  
 
 private:
     const char * mName;
@@ -1426,6 +1620,19 @@ if [ -x "$STRIP_TOOL" ] && [ -d "$JNI_TARGET_DIR" ]; then
     done
 fi
 
-echo "INFRA: Compilación completada con éxito. Restaurando los archivos originales de Git..."
-trap - ERR
-restore_overwritten_files
+###############################################################################################################
+						 
+																											   
+
+echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y cpp's originales de Git... y eliminando los añadidos"
+#mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
+#
+#mv "${GN_FILE}.bak" "$GN_FILE" || true
+#mv "${SRC_JNI}.bak" "$SRC_JNI" || true
+#mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true
+#
+#rm -f "$SRC_DELEGATES" || true
+
+trap - ERR                  # Desactiva el trap (disparador) de error 
+restore_overwritten_files   # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
+
