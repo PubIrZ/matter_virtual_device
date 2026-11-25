@@ -612,41 +612,52 @@ sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 
 
 
-########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v8 (BridgeJNI) <<----------------
+########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v7 (NodeJSV10) <<----------------
 # =========================================================================
-# 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + PUENTE JNI DESACOPLADO C++
+# 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + DESACOPLAMIENTO DE FUENTES C++
 # =========================================================================
 # Ficheros Sobreescritos
 GN_FILE="examples/virtual-device-app/android/BUILD.gn"
-SRC_JNI_H="examples/virtual-device-app/android/java/DeviceApp-JNI.h"
+
+																	
 SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
 ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 SRC_ATTR="examples/virtual-device-app/android/java/ClusterChangeAttribute.cpp"
+LVL_CPP="src/app/clusters/level-control/level-control.cpp"
 
 # Ficheros Nuevos
 SRC_DELEGATES="examples/virtual-device-app/android/java/MiTeleDelegates.cpp"
 
 echo "INFRA: Creando buffers de respaldo temporales para Git..."
-cp "$GN_FILE" "${GN_FILE}.bak"
-cp "$SRC_JNI_H" "${SRC_JNI_H}.bak"
-cp "$SRC_JNI" "${SRC_JNI}.bak"
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
+
+cp "$GN_FILE" "${GN_FILE}.bak"
+
+								  
+cp "$SRC_JNI" "${SRC_JNI}.bak"
+
 cp "$SRC_ATTR" "${SRC_ATTR}.bak"
+cp "$LVL_CPP" "${LVL_CPP}.bak"
 
 # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
 #trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
 #trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true; rm -f "$SRC_DELEGATES" || true' ERR
 
-# 1. Definir función de limpieza unificada
+# 1. Definir una función de limpieza
 restore_overwritten_files() {
-    echo "🧹 INFRA: Restaurando archivos originales de Git y eliminando temporales..."
-    mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
+    echo "🚨 Revertiendo parches de fuentes nativos..."
 
-    mv "${SRC_JNI_H}.bak" "$SRC_JNI_H" || true
+# Ficheros Sobreescritos
+    mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
+	
+    mv "${GN_FILE}.bak" "$GN_FILE" || true
+	
+											  
     mv "${SRC_JNI}.bak" "$SRC_JNI" || true
     mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true
-    mv "${GN_FILE}.bak" "$GN_FILE" || true
+    mv "${LVL_CPP}.bak" "$LVL_CPP" || true
 
+# Ficheros Nuevos	
     rm -f "$SRC_DELEGATES" || true
 }
 
@@ -654,7 +665,7 @@ restore_overwritten_files() {
 trap restore_overwritten_files ERR
 
 
-#Generación del .zap en Python (con FeatureMap = "0" en Brillo)
+																
 
 echo "INFRA: Generando archivo .zap compuesto para MiTele..."
 echo "INFRA: Fusionando .zap original del SDK con clústeres oficiales para MiTele..."
@@ -721,7 +732,7 @@ if c_level:
         elif attr.get("code") == 15:     # Options = 1 (executeIfOff = true)
             attr["included"] = 1
             attr["defaultValue"] = "1"
-        elif attr.get("code") == 65532:  # FeatureMap = 0 (Desactiva Lighting/OnOff fad :: Evita salto de brillo al encender On/Off)
+        elif attr.get("code") == 65532:  # FeatureMap = 0 (Desactiva Lighting/OnOff fade)
             attr["included"] = 1
             attr["defaultValue"] = "0"
 
@@ -761,13 +772,13 @@ for ep_t in zap_obj.get("endpointTypes", []):
         ep_t["deviceVersions"] = list((3,))
         ep_t["deviceIdentifiers"] = list((266,))
 
-        # Conservar los clústeres válidos originales del Endpoint 1 (3, 4, 6, 29)																		   
+        # Conservar los clústeres válidos originales del Endpoint 1 (3, 4, 6, 29)
         base_clusters = list((
             c for c in ep_t.get("clusters", ())
             if c.get("code") in {3, 4, 6, 29} and c.get("side") == "server"
         ))
 
-        # Encender On/Off (6) por defecto (OnOff = 1)													 
+        # Encender On/Off (6) por defecto (OnOff = 1)
         for c in base_clusters:
             c["enabled"] = 1
             if c.get("code") == 6:
@@ -776,7 +787,7 @@ for ep_t in zap_obj.get("endpointTypes", []):
                         attr["included"] = 1
                         attr["defaultValue"] = "1"
 
-       # Inyectar todos los clústeres extraídos del SDK														  
+        # Inyectar todos los clústeres extraídos del SDK
         extra_list = (c_level, c_wc, c_dw_mode, c_op_stat, c_rvc_run, c_rvc_cln, c_rvc_stat)
         for extra_c in extra_list:
             if extra_c is not None:
@@ -794,69 +805,78 @@ for ep in zap_obj.get("endpoints", []):
 with open(base_zap_path, "w", encoding="utf-8") as f:
     json.dump(zap_obj, f, indent=2)
 
-print("✅ INFRA PYTHON: .zap fusionado con éxito (Endpoint 0 intacto + 11 clústeres en Endpoint 1).")
+print("✅ INFRA PYTHON: .zap fusionado con éxito (Endpoint 0 intacto + 11 clústeres en Endpoint 1) para MiTele.")
 EOF
 
 
-#Limpieza de BUILD.gn 
+#Desacoplando MoveToLevelWithOnOff de OnOffServer en level-control.cpp...
+#El sed en level-control.cpp (setOnOffValue): Evita que subir el brillo toque el switch On/Off 
+if [ -f "$LVL_CPP" ]; then
+    echo "INFRA: Desacoplando MoveToLevelWithOnOff de OnOffServer en level-control.cpp..."
+    git checkout -- "$LVL_CPP" || true
+    # Neutraliza las llamadas internas de LevelControl hacia OnOffServer::Instance().setOnOffValue(...)
+    sed -i 's|OnOffServer::Instance().setOnOffValue|// OnOffServer::Instance().setOnOffValue|g' "$LVL_CPP"
+fi																			 
 
-echo "INFRA: Purgando managers innecesarios e inyectando MiTeleDelegates.cpp en BUILD.gn..."
+#Limpieza de BUILD.gn 					  
+
+echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
 # Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
 sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
-																								
+#sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 sed -i 's|"java/OnOffManager.cpp",|"java/OnOffManager.cpp", "java/MiTeleDelegates.cpp",|g' "$GN_FILE"
 
 
-#Cabecera DeviceApp-JNI.h
-echo "INFRA: Escribiendo DeviceApp-JNI.h con despachador universal PostMatterEvent..."
-cat << 'EOF' > "$SRC_JNI_H"
-#pragma once
+						 
+																					  
+						   
+			
 
-#include <jni.h>
-#include <lib/support/JniReferences.h>
+				
+									  
 
-class DeviceAppJNI
-{
-public:
-    void InitializeWithObjects(jobject app);
-    void PostClusterInit(int clusterId, int endpoint);
-    void PostEvent(int event);
-    void PostMatterEvent(int clusterId, int attributeId, int value);
+				  
+ 
+	   
+											
+													  
+							  
+																	
 
-private:
-    friend DeviceAppJNI & DeviceAppJNIMgr();
+		
+											
 
-    static DeviceAppJNI sInstance;
-    chip::JniGlobalReference mDeviceAppObject;
-    jmethodID mPostClusterInitMethod = nullptr;
-    jmethodID mPostEventMethod       = nullptr;
-    jmethodID mPostMatterEventMethod = nullptr;
-};
+								  
+											  
+											   
+											   
+											   
+  
 
-inline class DeviceAppJNI & DeviceAppJNIMgr()
-{
-    return DeviceAppJNI::sInstance;
-}
-EOF
+											 
+ 
+								   
+ 
+   
 
 
 
-#Implementación bidireccional DeviceApp-JNI.cpp (onMatterEvent + updateAttribute)
+																				  
 
-echo "INFRA: Reescribiendo DeviceApp-JNI.cpp con puente bidireccional desacoplado..."
+echo "INFRA: Reescribiendo DeviceApp-JNI.cpp fiel al original con StackLock y cabeceras exactas..."
 cat << 'EOF' > "$SRC_JNI"
 #include "DeviceApp-JNI.h"
 #include "AppImpl.h"
 #include "JNIDACProvider.h"
 #include "OnOffManager.h"
 #include "credentials/DeviceAttestationCredsProvider.h"
-#include <app-common/zap-generated/attributes/Accessors.h>
-#include <app-common/zap-generated/ids/Clusters.h>
+														  
+												  
 #include <app/app-platform/ContentAppPlatform.h>
 #include <app/server/Dnssd.h>
 #include <app/server/java/AndroidAppServerWrapper.h>
@@ -879,10 +899,10 @@ using namespace chip::DeviceLayer;
 #define JNI_METHOD(RETURN, METHOD_NAME) \
     extern "C" JNIEXPORT RETURN JNICALL Java_com_matter_virtual_device_app_DeviceApp_##METHOD_NAME
 
-extern void InitMiTeleClusters(chip::EndpointId endpoint);
-extern void UpdateMiTeleModeOrState(chip::EndpointId endpoint, uint32_t clusterId, uint8_t newValue);
+#define DEVICE_VERSION_DEFAULT 1
+																									 
 
-																		 
+//EmberAfDeviceType gDeviceTypeIds[] = { { 0, DEVICE_VERSION_DEFAULT } };
 
 EmberAfDeviceType gDeviceTypeIds[] = {
     { 266, 3 }, // 0x010A On/Off Plug-in Unit (Enchufe) (Prioridad visual en Alexa - Permite Identificarlo con el Dispositivo que realmente está enchufado a él -TV-)
@@ -918,13 +938,13 @@ void DeviceAppJNI::InitializeWithObjects(jobject app)
         env->ExceptionClear();
     }
 
-    mPostMatterEventMethod = env->GetMethodID(managerClass, "onMatterEvent", "(III)V");
-    if (mPostMatterEventMethod == nullptr)
-    {
-        ChipLogError(Zcl, "Failed to access DeviceApp 'onMatterEvent(III)V' method");
-        env->ExceptionClear();
-    }
+																					   
+										  
+	 
+																					 
+							  
 }
+ 
 
 void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint)
 {
@@ -946,31 +966,31 @@ void DeviceAppJNI::PostEvent(int event)
 {
     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
     VerifyOrReturn(env != nullptr, ChipLogError(Zcl, "Failed to GetEnvForCurrentThread for DeviceAppJNI::PostEvent"));
-    VerifyOrReturn(mDeviceAppObject.HasValidObjectRef(), ChipLogError(Zcl, "DeviceAppJNI::mDeviceAppObject null"));
+    VerifyOrReturn(mDeviceAppObject.HasValidObjectRef(), ChipLogError(Zcl, "DeviceAppJNI::mPostEventMethod null"));
     VerifyOrReturn(mPostEventMethod != nullptr, ChipLogError(Zcl, "DeviceAppJNI::mPostEventMethod null"));
 
     env->CallVoidMethod(mDeviceAppObject.ObjectRef(), mPostEventMethod, static_cast<jlong>(event));
     if (env->ExceptionCheck())
     {
-        ChipLogError(Zcl, "Failed to call DeviceAppJNI 'postEvent' method");
-        env->ExceptionClear();
-    }
-}
+        ChipLogError(Zcl, "Failed to call DeviceAppJNI 'postEventMethod' method");
+							  
+	 
+ 
 
-void DeviceAppJNI::PostMatterEvent(int clusterId, int attributeId, int value)
-{
-    JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
-    VerifyOrReturn(env != nullptr, ChipLogError(Zcl, "Failed to GetEnvForCurrentThread for DeviceAppJNI::PostMatterEvent"));
-    VerifyOrReturn(mDeviceAppObject.HasValidObjectRef(), ChipLogError(Zcl, "DeviceAppJNI::mDeviceAppObject null"));
-    VerifyOrReturn(mPostMatterEventMethod != nullptr, ChipLogError(Zcl, "DeviceAppJNI::mPostMatterEventMethod null"));
+																			 
+ 
+																		 
+																															
+																												   
+																													  
 
-    env->CallVoidMethod(mDeviceAppObject.ObjectRef(), mPostMatterEventMethod,
-                        static_cast<jint>(clusterId),
-                        static_cast<jint>(attributeId),
-                        static_cast<jint>(value));
-    if (env->ExceptionCheck())
-    {
-        ChipLogError(Zcl, "Failed to call DeviceAppJNI 'onMatterEvent' method");
+																			 
+													 
+													   
+												  
+							  
+	 
+																				
         env->ExceptionClear();
     }
 }
@@ -998,19 +1018,19 @@ JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app)
     PreServerInit();
 }
 
-																			 
-	
-										 
-															
-  
-																																			
-						  
-	 
-																		
-																				  
-	
+// JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
+// {
+//     chip::DeviceLayer::StackLock lock;
+//     ChipLogProgress(Zcl, "DeviceAppJNI::postServerInit");
+//
+//     // Forzamos 256 (0x0100 - On/Off Light) ignorando el parámetro de Java para coincidir con el .zap purgado y pasar el filtro de Alexa
+//     deviceTypeId = 256;
+//   
+//     gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
+//     emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
+// }
 
-														  
+extern void InitMiTeleClusters(chip::EndpointId endpoint);
 
 JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
 {
@@ -1026,43 +1046,43 @@ JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider)
     {
         chip::Credentials::SetDeviceAttestationCredentialsProvider(chip::Credentials::Examples::GetExampleDACProvider());
     }
+ 
+
+
+  
+									  
+   
+																												 
+ 
+																						 
+																	  
+										  
+		 
+														  
+		 
+															   
+		 
+																							
+																 
+		 
+																  
+		 
+																							
+															   
+																					
+																						  
+																						 
+		 
+			
+		 
+																									   
+		 
+	   
 }
 
 
 /*
- * Puente Android UI -> Matter / Alexa
- */
-JNI_METHOD(void, updateAttribute)(JNIEnv *, jobject, jint endpoint, jint clusterId, jint attributeId, jint value)
-{
-    DeviceLayer::SystemLayer().ScheduleLambda([endpoint, clusterId, attributeId, value] {
-        chip::EndpointId ep = static_cast<chip::EndpointId>(endpoint);
-        if (clusterId == 0x0006) // On/Off
-        {
-            OnOff::Attributes::OnOff::Set(ep, value != 0);
-        }
-        else if (clusterId == 0x0008) // Level Control (1..254)
-        {
-            uint8_t lvl = static_cast<uint8_t>(value < 1 ? 1 : (value > 254 ? 254 : value));
-            LevelControl::Attributes::CurrentLevel::Set(ep, lvl);
-        }
-        else if (clusterId == 0x0102) // Window Covering (0..100%)
-        {
-            uint8_t pct = static_cast<uint8_t>(value < 0 ? 0 : (value > 100 ? 100 : value));
-            uint16_t pct100 = static_cast<uint16_t>(pct * 100);
-            WindowCovering::Attributes::CurrentPositionLiftPercentage::Set(ep, pct);
-            WindowCovering::Attributes::CurrentPositionLiftPercent100ths::Set(ep, pct100);
-            WindowCovering::Attributes::TargetPositionLiftPercent100ths::Set(ep, pct100);
-        }
-        else
-        {
-            UpdateMiTeleModeOrState(ep, static_cast<uint32_t>(clusterId), static_cast<uint8_t>(value));
-        }
-    });
-}
-
-
-/*
- * On Off Manager y Stubs de compatibilidad con la plantilla base
+ * On Off Manager
  */
 JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager)
 {
@@ -1092,10 +1112,10 @@ JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint, jint) { re
 EOF
 
 
-#ClusterChangeAttribute.cpp
-echo "INFRA: Escribiendo ClusterChangeAttribute.cpp conectado al puente universal..."
+						   
+echo "INFRA: Escribiendo ClusterChangeAttribute.cpp limpio solo con soporte On/Off..."
 cat << 'EOF' > "$SRC_ATTR"
-#include "DeviceApp-JNI.h"
+						  
 #include "OnOffManager.h"
 #include <app-common/zap-generated/attributes/Accessors.h>
 #include <app-common/zap-generated/ids/Attributes.h>
@@ -1106,32 +1126,33 @@ cat << 'EOF' > "$SRC_ATTR"
 using namespace chip;
 using namespace ::chip::app::Clusters;
 
+static void OnOffClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size, uint8_t * value)
+													   
+{
+    if (attributePath.mAttributeId == OnOff::Attributes::OnOff::Id)
+    {
+        bool onoff = static_cast<bool>(*value);
+        ChipLogProgress(Zcl, "Received on/off command endpoint %d value = %d", static_cast<int>(attributePath.mEndpointId), onoff);
+        OnOffManager().PostOnOffChanged(attributePath.mEndpointId, onoff);
+																		 
+    }
+}
+
 void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
                                        uint8_t * value)
 {
-    if (attributePath.mClusterId == OnOff::Id && attributePath.mAttributeId == OnOff::Attributes::OnOff::Id)
+    ChipLogProgress(Zcl, "[Device] clusterId:%d,attributeId:%d,endpoint:%d", attributePath.mClusterId, attributePath.mAttributeId,
+                    static_cast<int>(attributePath.mEndpointId));
+
+    if (attributePath.mClusterId == OnOff::Id)
     {
-        bool onoff = static_cast<bool>(*value);
-        ChipLogProgress(Zcl, "[MiTele - POWER] On/Off -> %d", onoff);
-        OnOffManager().PostOnOffChanged(attributePath.mEndpointId, onoff);
-        DeviceAppJNIMgr().PostMatterEvent(0x0006, 0x0000, onoff ? 1 : 0);
+        OnOffClusterAttributeChangeCallback(attributePath, size, value);
     }
-
-																													 
-													   
- 
-																																  
-																 
-
-											  
-	 
-																		
-	 
     else if (attributePath.mClusterId == LevelControl::Id && attributePath.mAttributeId == LevelControl::Attributes::CurrentLevel::Id)
     {
         uint8_t level = *value;
         ChipLogProgress(Zcl, "[MiTele - BRILLO] Nivel ajustado -> %u", level);
-        DeviceAppJNIMgr().PostMatterEvent(0x0008, 0x0000, static_cast<int>(level));
+																				   
     }
     else if (attributePath.mClusterId == WindowCovering::Id && attributePath.mAttributeId == WindowCovering::Attributes::TargetPositionLiftPercent100ths::Id)
     {
@@ -1140,172 +1161,172 @@ void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attrib
         ChipLogProgress(Zcl, "[MiTele - VOLUMEN] Ajustado -> %u%% (%u)", pct, target);
         WindowCovering::Attributes::CurrentPositionLiftPercent100ths::Set(attributePath.mEndpointId, target);
         WindowCovering::Attributes::CurrentPositionLiftPercentage::Set(attributePath.mEndpointId, pct);
-        DeviceAppJNIMgr().PostMatterEvent(0x0102, 0x0008, static_cast<int>(pct));
+																				 
     }
 }
 EOF
 
-#Cabecera de MiTeleDelegates.cpp
-								
-															
-																			
-																		
-												   
-											 
-				  
- 
-					  
-						   
-									 
- 
-			
- 
-				  
-						
-				  
-				  
-   
- 
-																											 
-															  
-		
-																													 
- 
-														 
- 
-																												   
-																							   
-																		 
-	  
- 
-																						  
-																				   
-																										
-	  
- 
-																				  
-																				   
-										
-							  
-	  
- 
-																															  
-																				   
-																 
-											   
-							 
-							  
-	  
- 
-		 
-						
-								  
-   
- 
-																		  
-																	   
-		
-																															
- 
-																								  
- 
-																																 
-																  
-															  
-							  
-	  
- 
-																									   
-									 
-	  
- 
-																							  
-																			 
-																											
-																			
-	  
- 
-																							   
-																			  
-																											 
-																			
-	  
- 
-																							  
-																			 
-																											 
-																			
-	  
- 
-																							 
-																			
-																											 
-																			
-	  
- 
-		 
-						
-								  
-   
- 
-									   
-													   
-													
- 
-												   
-												
- 
-													 
-												  
- 
-														 
-														 
- 
-															
-															   
- 
-			   
- 
-											   
-													
-																  
-																								  
-																											   
-		
-																										
-								 
- 
-												  
-															
-																						   
-																							  
-		
-																							
-							 
- 
-													
-															  
-																	 
-		
-																								  
-							   
- 
-									
-																		  
-																				   
-							  
- 
-									   
-																										
-																							
-								 
-  
-	
+#echo "INFRA: MiTeleDelegates.cpp - Creando delegados C++ de Modos, Estados y Persiana para MiTele..."
+#cat << 'EOF' > "$SRC_DELEGATES"
+##include <app/clusters/mode-base-server/mode-base-server.h>
+##include <app/clusters/operational-state-server/operational-state-server.h>
+##include <app/clusters/window-covering-server/window-covering-server.h>
+##include <app-common/zap-generated/ids/Clusters.h>
+##include <lib/support/logging/CHIPLogging.h>
+##include <vector>
+#
+#using namespace chip;
+#using namespace chip::app;
+#using namespace chip::app::Clusters;
+#
+#namespace {
+#
+#struct ModeItem {
+#    const char * label;
+#    uint8_t mode;
+#    uint16_t tag;
+#};
+#
+#// Delegado genérico reutilizable para DishwasherMode (0x0059), RvcRunMode (0x0054) y RvcCleanMode (0x0055)
+#class GenericTvModeDelegate : public ModeBase::DelegateBase {
+#public:
+#    GenericTvModeDelegate(const char * name, std::vector<ModeItem> items) : mName(name), mItems(std::move(items)) {}
+#
+#    CHIP_ERROR Init() override { return CHIP_NO_ERROR; }
+#
+#    void HandleChangeToMode(uint8_t NewMode, ModeBase::Commands::ChangeToModeResponse::Type & response) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Cambio de modo solicitado -> %u", mName, NewMode);
+#        response.status = to_underlying(ModeBase::StatusCode::kSuccess);
+#    }
+#
+#    CHIP_ERROR GetModeLabelByIndex(uint8_t modeIndex, MutableCharSpan & label) override {
+#        if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
+#        return CopyCharSpanToMutableCharSpan(CharSpan::fromCharString(mItems[modeIndex].label), label);
+#    }
+#
+#    CHIP_ERROR GetModeValueByIndex(uint8_t modeIndex, uint8_t & value) override {
+#        if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
+#        value = mItems[modeIndex].mode;
+#        return CHIP_NO_ERROR;
+#    }
+#
+#    CHIP_ERROR GetModeTagsByIndex(uint8_t modeIndex, DataModel::List<detail::Structs::ModeTagStruct::Type> & tags) override {
+#        if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
+#        if (tags.size() < 1) return CHIP_ERROR_BUFFER_TOO_SMALL;
+#        tags[0].value = mItems[modeIndex].tag;
+#        tags.reduce_size(1);
+#        return CHIP_NO_ERROR;
+#    }
+#
+#private:
+#    const char * mName;
+#    std::vector<ModeItem> mItems;
+#};
+#
+#// Delegado para OperationalState (0x0060) y RvcOperationalState (0x0061)
+#class TvOperationalStateDelegate : public OperationalState::Delegate {
+#public:
+#    TvOperationalStateDelegate(const char * name, std::vector<uint8_t> states) : mName(name), mStates(std::move(states)) {}
+#
+#    DataModel::Nullable<uint32_t> GetCountdownTime() override { return DataModel::NullNullable; }
+#
+#    CHIP_ERROR GetOperationalStateAtIndex(size_t index, OperationalState::GenericOperationalState & operationalState) override {
+#        if (index >= mStates.size()) return CHIP_ERROR_NOT_FOUND;
+#        operationalState.operationalStateId = mStates[index];
+#        return CHIP_NO_ERROR;
+#    }
+#
+#    CHIP_ERROR GetOperationalPhaseAtIndex(size_t index, MutableCharSpan & operationalPhase) override {
+#        return CHIP_ERROR_NOT_FOUND;
+#    }
+#
+#    void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kPaused));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#    void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#    void HandleStartStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando START recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#    void HandleStopStateCallback(OperationalState::GenericOperationalError & err) override {
+#        ChipLogProgress(Zcl, "[MiTele - %s] Comando STOP recibido", mName);
+#        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kStopped));
+#        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+#    }
+#
+#private:
+#    const char * mName;
+#    std::vector<uint8_t> mStates;
+#};
+#
+#// Instancias estáticas en Endpoint 1
+#GenericTvModeDelegate * gDishwasherDelegate = nullptr;
+#ModeBase::Instance * gDishwasherInstance = nullptr;
+#
+#GenericTvModeDelegate * gRvcRunDelegate = nullptr;
+#ModeBase::Instance * gRvcRunInstance = nullptr;
+#
+#GenericTvModeDelegate * gRvcCleanDelegate = nullptr;
+#ModeBase::Instance * gRvcCleanInstance = nullptr;
+#
+#TvOperationalStateDelegate * gOpStateDelegate = nullptr;
+#OperationalState::Instance * gOpStateInstance = nullptr;
+#
+#TvOperationalStateDelegate * gRvcOpStateDelegate = nullptr;
+#RvcOperationalState::Instance * gRvcOpStateInstance = nullptr;
+#
+#} // namespace
+#
+#void InitMiTeleClusters(EndpointId endpoint) {
+#    // 1. DishwasherMode (0x0059) - 8 Entradas/Apps
+#    gDishwasherDelegate = new GenericTvModeDelegate("Entradas", {
+#        {"HDMI 1", 0, 0x4000}, {"HDMI 2", 1, 0x4001}, {"TDT", 2, 0x0001}, {"YouTube", 3, 0x4002},
+#        {"Prime Video", 4, 0x4000}, {"Netflix", 5, 0x4000}, {"Disney Plus", 6, 0x4000}, {"Spotify", 7, 0x4000}
+#    });
+#    gDishwasherInstance = new ModeBase::Instance(gDishwasherDelegate, endpoint, DishwasherMode::Id, 0);
+#    gDishwasherInstance->Init();
+#
+#    // 2. RvcRunMode (0x0054) - 6 Modos de Imagen
+#    gRvcRunDelegate = new GenericTvModeDelegate("Imagen", {
+#        {"Modo Cine", 0, 0x4000}, {"Modo Deportes", 1, 0x4001}, {"Modo Juego", 2, 0x4002},
+#        {"Modo Estandar", 3, 0x4000}, {"Modo Noche", 4, 0x4000}, {"Modo Dinamico", 5, 0x4000}
+#    });
+#    gRvcRunInstance = new ModeBase::Instance(gRvcRunDelegate, endpoint, RvcRunMode::Id, 0);
+#    gRvcRunInstance->Init();
+#
+#    // 3. RvcCleanMode (0x0055) - 2 Modos de Sonido
+#    gRvcCleanDelegate = new GenericTvModeDelegate("Sonido", {
+#        {"Sonido Estandar", 0, 0x4000}, {"Sonido Graves", 1, 0x4001}
+#    });
+#    gRvcCleanInstance = new ModeBase::Instance(gRvcCleanDelegate, endpoint, RvcCleanMode::Id, 0);
+#    gRvcCleanInstance->Init();
+#
+#    // 4. OperationalState (0x0060)
+#    gOpStateDelegate = new TvOperationalStateDelegate("OpState", {0, 1});
+#    gOpStateInstance = new OperationalState::Instance(gOpStateDelegate, endpoint);
+#    gOpStateInstance->Init();
+#
+#    // 5. RvcOperationalState (0x0061)
+#    gRvcOpStateDelegate = new TvOperationalStateDelegate("RvcOpState", {0, 1, 2, 3, 0x40, 0x41, 0x42});
+#    gRvcOpStateInstance = new RvcOperationalState::Instance(gRvcOpStateDelegate, endpoint);
+#    gRvcOpStateInstance->Init();
+#}
+#EOF
 
 
-echo "INFRA: Creando MiTeleDelegates.cpp - Creando delegados C++ de Modos, Estados y Persiana para MiTele y conectado al puente universal..."
+echo "INFRA: MiTeleDelegates.cpp - Creando delegados C++ de Modos, Estados y Persiana para MiTele..."
 cat << 'EOF' > "$SRC_DELEGATES"
-#include "DeviceApp-JNI.h"
+						  
 #include <app/clusters/mode-base-server/mode-base-server.h>
 #include <app/clusters/operational-state-server/operational-state-server.h>
 #include <app/clusters/window-covering-server/window-covering-server.h>
@@ -1328,15 +1349,15 @@ struct ModeItem {
 // Delegado genérico para DishwasherMode (0x0059), RvcRunMode (0x0054) y RvcCleanMode (0x0055)
 class GenericTvModeDelegate : public ModeBase::Delegate {
 public:
-    GenericTvModeDelegate(const char * name, ClusterId clusterId, std::vector<ModeItem> items)
-        : mName(name), mClusterId(clusterId), mItems(std::move(items)) {}
+    GenericTvModeDelegate(const char * name, std::vector<ModeItem> items) : mName(name), mItems(std::move(items)) {}
+																		 
 
     CHIP_ERROR Init() override { return CHIP_NO_ERROR; }
 
     void HandleChangeToMode(uint8_t NewMode, ModeBase::Commands::ChangeToModeResponse::Type & response) override {
-        ChipLogProgress(Zcl, "[MiTele - %s] Cambio de modo -> %u", mName, NewMode);
+        ChipLogProgress(Zcl, "[MiTele - %s] Cambio de modo solicitado -> %u", mName, NewMode);
         response.status = to_underlying(ModeBase::StatusCode::kSuccess);
-        DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0001, static_cast<int>(NewMode));
+																										   
     }
 
     CHIP_ERROR GetModeLabelByIndex(uint8_t modeIndex, MutableCharSpan & label) override {
@@ -1353,23 +1374,23 @@ public:
     CHIP_ERROR GetModeTagsByIndex(uint8_t modeIndex, DataModel::List<chip::app::Clusters::detail::Structs::ModeTagStruct::Type> & modeTags) override {
         if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
         if (modeTags.size() < 1) return CHIP_ERROR_BUFFER_TOO_SMALL;
-        modeTags.value = mItems[modeIndex].tag;
+        modeTags[0].value = mItems[modeIndex].tag;
         modeTags.reduce_size(1);
         return CHIP_NO_ERROR;
     }
 
 private:
     const char * mName;
-    ClusterId mClusterId;
+						 
     std::vector<ModeItem> mItems;
 };
 
 
-// Delegado para OperationalState (0x0060 - Dishwasher)													   
+// Delegado para OperationalState (0x0060 - Dishwasher)
 class TvOperationalStateDelegate : public OperationalState::Delegate {
 public:
-    TvOperationalStateDelegate(const char * name, ClusterId clusterId, std::vector<uint8_t> states)
-        : mName(name), mClusterId(clusterId), mStates(std::move(states)) {}
+    TvOperationalStateDelegate(const char * name, std::vector<uint8_t> states) : mName(name), mStates(std::move(states)) {}
+																		   
 
     DataModel::Nullable<uint32_t> GetCountdownTime() override { return DataModel::NullNullable; }
 
@@ -1384,48 +1405,48 @@ public:
     }
 
     void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
-																			
-        uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kPaused);
-        GetInstance()->SetOperationalState(st);
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kPaused));
+											   
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
-        DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
+																									  
     }
 
     void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
-																			 
-        uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
-        GetInstance()->SetOperationalState(st);
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+											   
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
-        DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
+																									  
     }
 
     void HandleStartStateCallback(OperationalState::GenericOperationalError & err) override {
-																			
-        uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
-        GetInstance()->SetOperationalState(st);
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando START recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+											   
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
-        DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
+																									  
     }
 
     void HandleStopStateCallback(OperationalState::GenericOperationalError & err) override {
-																		   
-        uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kStopped);
-        GetInstance()->SetOperationalState(st);
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando STOP recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kStopped));
+											   
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
-        DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
+																									  
     }
 
 private:
     const char * mName;
-    ClusterId mClusterId;
+						 
     std::vector<uint8_t> mStates;
 };
 
 // Delegado específico para RvcOperationalState (0x0061 - Robotic Vacuum)
 class TvRvcOperationalStateDelegate : public RvcOperationalState::Delegate {
 public:
-    TvRvcOperationalStateDelegate(const char * name, ClusterId clusterId, std::vector<uint8_t> states)
-        : mName(name), mClusterId(clusterId), mStates(std::move(states)) {}
+    TvRvcOperationalStateDelegate(const char * name, std::vector<uint8_t> states) : mName(name), mStates(std::move(states)) {}
+																		   
 
     DataModel::Nullable<uint32_t> GetCountdownTime() override { return DataModel::NullNullable; }
 
@@ -1440,30 +1461,30 @@ public:
     }
 
     void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
-		ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);																	
-        uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kPaused);
-        GetInstance()->SetOperationalState(st);
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kPaused));
+											   
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
-        DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
+																									  
     }
 
     void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
-        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);																			 
-        uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
-        GetInstance()->SetOperationalState(st);
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(OperationalState::OperationalStateEnum::kRunning));
+											   
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
-        DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
-
-																						   
-																			  
-																													  
-																		   
     }
-  
+
+/*    void HandleGoHomeCallback(OperationalState::GenericOperationalError & err) override {
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando GO HOME recibido", mName);
+        GetInstance()->SetOperationalState(to_underlying(RvcOperationalState::OperationalStateEnum::kSeekingCharger));
+        err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
+    }
+*/
 
 private:
     const char * mName;
-    ClusterId mClusterId;
+						 
     std::vector<uint8_t> mStates;
 };
 
@@ -1486,8 +1507,8 @@ RvcOperationalState::Instance * gRvcOpStateInstance = nullptr;
 } // namespace
 
 void InitMiTeleClusters(EndpointId endpoint) {
-   // 1. DishwasherMode (0x0059) - 8 Entradas/Apps
-    gDishwasherDelegate = new GenericTvModeDelegate("Entradas", DishwasherMode::Id, {
+    // 1. DishwasherMode (0x0059) - 8 Entradas/Apps
+    gDishwasherDelegate = new GenericTvModeDelegate("Entradas", {
         {"HDMI 1", 0, 0x4000}, {"HDMI 2", 1, 0x4001}, {"TDT", 2, 0x0001}, {"YouTube", 3, 0x4002},
         {"Prime Video", 4, 0x4000}, {"Netflix", 5, 0x4000}, {"Disney Plus", 6, 0x4000}, {"Spotify", 7, 0x4000}
     });
@@ -1495,44 +1516,44 @@ void InitMiTeleClusters(EndpointId endpoint) {
     gDishwasherInstance->Init();
 
     // 2. RvcRunMode (0x0054) - 6 Modos de Imagen
-    gRvcRunDelegate = new GenericTvModeDelegate("Imagen", RvcRunMode::Id, {
+    gRvcRunDelegate = new GenericTvModeDelegate("Imagen", {
         {"Modo Cine", 0, 0x4000}, {"Modo Deportes", 1, 0x4001}, {"Modo Juego", 2, 0x4002},
         {"Modo Estandar", 3, 0x4000}, {"Modo Noche", 4, 0x4000}, {"Modo Dinamico", 5, 0x4000}
     });
     gRvcRunInstance = new ModeBase::Instance(gRvcRunDelegate, endpoint, RvcRunMode::Id, 0);
     gRvcRunInstance->Init();
 
-   // 3. RvcCleanMode (0x0055) - 2 Modos de Sonido
-    gRvcCleanDelegate = new GenericTvModeDelegate("Sonido", RvcCleanMode::Id, {
+    // 3. RvcCleanMode (0x0055) - 2 Modos de Sonido
+    gRvcCleanDelegate = new GenericTvModeDelegate("Sonido", {
         {"Sonido Estandar", 0, 0x4000}, {"Sonido Graves", 1, 0x4001}
     });
     gRvcCleanInstance = new ModeBase::Instance(gRvcCleanDelegate, endpoint, RvcCleanMode::Id, 0);
     gRvcCleanInstance->Init();
 
     // 4. OperationalState (0x0060)
-    gOpStateDelegate = new TvOperationalStateDelegate("OpState", OperationalState::Id, {0, 1});
+    gOpStateDelegate = new TvOperationalStateDelegate("OpState", {0, 1});
     gOpStateInstance = new OperationalState::Instance(gOpStateDelegate, endpoint);
     gOpStateInstance->Init();
 
     // 5. RvcOperationalState (0x0061)
-    gRvcOpStateDelegate = new TvRvcOperationalStateDelegate("RvcOpState", RvcOperationalState::Id, {0, 1, 2, 3, 0x40, 0x41, 0x42});
+    gRvcOpStateDelegate = new TvRvcOperationalStateDelegate("RvcOpState", {0, 1, 2, 3, 0x40, 0x41, 0x42});
     gRvcOpStateInstance = new RvcOperationalState::Instance(gRvcOpStateDelegate, endpoint);
     gRvcOpStateInstance->Init();
 }
 
-void UpdateMiTeleModeOrState(EndpointId endpoint, uint32_t clusterId, uint8_t newValue) {
-    if (clusterId == DishwasherMode::Id && gDishwasherInstance != nullptr) {
-        gDishwasherInstance->UpdateCurrentMode(newValue);
-    } else if (clusterId == RvcRunMode::Id && gRvcRunInstance != nullptr) {
-        gRvcRunInstance->UpdateCurrentMode(newValue);
-    } else if (clusterId == RvcCleanMode::Id && gRvcCleanInstance != nullptr) {
-        gRvcCleanInstance->UpdateCurrentMode(newValue);
-    } else if (clusterId == OperationalState::Id && gOpStateInstance != nullptr) {
-        gOpStateInstance->SetOperationalState(newValue);
-    } else if (clusterId == RvcOperationalState::Id && gRvcOpStateInstance != nullptr) {
-        gRvcOpStateInstance->SetOperationalState(newValue);
-    }
-}
+																						 
+																			
+														 
+																		   
+													 
+																			   
+													   
+																				  
+														
+																						
+														   
+	 
+ 
 EOF
 
 
@@ -1601,19 +1622,19 @@ if [ -x "$STRIP_TOOL" ] && [ -d "$JNI_TARGET_DIR" ]; then
     done
 fi
 
-echo "INFRA: Compilación completada con éxito. Restaurando los archivos originales de Git..."
-trap - ERR
-restore_overwritten_files
 
-																																	   
-										 
- 
-									   
-									   
-										 
- 
-							   
+###############################################################################################################
+						 
 
-																	  
-																															
+echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y cpp's originales de Git... y eliminando los añadidos"
+#mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
+#
+#mv "${GN_FILE}.bak" "$GN_FILE" || true
+#mv "${SRC_JNI}.bak" "$SRC_JNI" || true
+#mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true
+#
+#rm -f "$SRC_DELEGATES" || true
+
+trap - ERR                  # Desactiva el trap (disparador) de error 
+restore_overwritten_files   # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
 
