@@ -144,7 +144,7 @@ echo ""
 
 echo "INFRA: Configurando blindaje de memoria JVM y ruta de telemetría..."
 # 1. Limpieza y preparación del archivo de propiedades global
-# Limpiamos el archivo global para el ciclo incremental
+# Limpiamos el archivo global para el ciclo incremental													   
 mkdir -p ~/.gradle
 rm -f ~/.gradle/gradle.properties || true
 touch ~/.gradle/gradle.properties
@@ -244,9 +244,9 @@ allprojects {
 EOF
 
 echo "✅ Ecosistema de optimización nativa blindado e inyectado en ~/.gradle/init.gradle"
+					  
 
-
-
+																					
 
 # echo "🛡️ INFRA: Añadiendo bloque de compatibilidad Kotlin 1.8 al final de buildSrc..."
 # cat << 'EOF' >> examples/virtual-device-app/android/App/buildSrc/build.gradle.kts
@@ -316,307 +316,11 @@ find . -name "zap.json" -exec sh -c 'echo "{\"packages\": []}" > "{}"' \;
 echo "INFRA: Parcheando dependencia crítica libgirepository en caliente..."
 sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev
 
-
-
-# ########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v6 <<----------------
-# # =========================================================================
-# # 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + DESACOPLAMIENTO DE FUENTES C++
-# # =========================================================================
-# GN_FILE="examples/virtual-device-app/android/BUILD.gn"
-# SRC_JNI="examples/virtual-device-app/android/java/DeviceApp-JNI.cpp"
-# ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
-# SRC_ATTR="examples/virtual-device-app/android/java/ClusterChangeAttribute.cpp"
-
-
-# # (Añade 'mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true' en tu trap y en la limpieza final)
-# echo "INFRA: Creando buffers de respaldo temporales para Git..."
-# cp "$GN_FILE" "${GN_FILE}.bak"
-# cp "$SRC_JNI" "${SRC_JNI}.bak"
-# cp "$ZAP_FILE" "${ZAP_FILE}.bak"
-# cp "$SRC_ATTR" "${SRC_ATTR}.bak"
-
-# # Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
-# trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
-
-# echo "INFRA: Filtrando el .zap original en vuelo para conservar la conformidad de comandos y atributos..."
-# python3 - << 'EOF'
-# import json
-
-# zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
-
-# # 1. Cargar el JSON original del repositorio con todos sus atributos y comandos mandatorios
-# with open(zap_path, 'r') as f:
-#     data = json.load(f)
-
-# # 2. Mutar el Endpoint 1 para que sea una Luz On/Off (0x0100 -> 256) idéntica a matter.js
-# for endpoint_type in data.get("endpointTypes", []):
-#     if endpoint_type.get("id") == 2 or endpoint_type.get("name") == "MA-videoplayer":
-#         endpoint_type["name"] = "MA-onofflight"
-#         endpoint_type["deviceTypeCode"] = 256
-#         endpoint_type["deviceTypeName"] = "MA-onofflight"
-        
-#         if "deviceTypeRef" in endpoint_type:
-#             endpoint_type["deviceTypeRef"]["code"] = 256
-#             endpoint_type["deviceTypeRef"]["label"] = "MA-onofflight"
-#             endpoint_type["deviceTypeRef"]["name"] = "MA-onofflight"
-            
-#         if "deviceTypes" in endpoint_type:
-#             for dt in endpoint_type["deviceTypes"]:
-#                 dt["code"] = 256
-#                 dt["label"] = "MA-onofflight"
-#                 dt["name"] = "MA-onofflight"
-                
-#         if "deviceIdentifiers" in endpoint_type:
-#             endpoint_type["deviceIdentifiers"] = [256]
-
-#         # 3. LISTA BLANCA ESTRICTA (Clon exacto de OnOffLightDevice en matter.js)
-#         # Mantiene únicamente:
-#         #   - 3  (0x0003): Identify
-#         #   - 4  (0x0004): Groups
-#         #   - 6  (0x0006): On/Off
-#         #   - 29 (0x001D): Descriptor
-#         # Elimina: Power Source Config (47), Scenes (98), Door Lock (257) y Color Control (768)
-#         original_clusters = endpoint_type.get("clusters", [])
-#         filtered_clusters = [
-#             c for c in original_clusters 
-#             if c.get("code") in [3, 4, 6, 29]
-#         ]
-#         endpoint_type["clusters"] = filtered_clusters
-
-# # 4. Actualizar el mapeo en el array de instanciación de los Endpoints
-# for ep in data.get("endpoints", []):
-#     if ep.get("endpointId") == 1 or ep.get("endpointTypeName") == "MA-videoplayer":
-#         ep["endpointTypeName"] = "MA-onofflight"
-
-# # 5. Guardar el archivo .zap purgado listo para generar el código C++
-# with open(zap_path, 'w') as f:
-#     json.dump(data, f, indent=2)
-
-# print("✅ INFRA PYTHON: Archivo .zap purgado con lista blanca [3, 4, 6, 29] (Clon exacto de matter.js).")
-# EOF
-
-# echo "INFRA: Purgando UNICAMENTE los archivos que causaban errores de compilación en el BUILD.gn..."
-# # Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
-# sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "$GN_FILE"
-# sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
-# sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
-# sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
-# #sed -i 's|"java/ClusterChangeAttribute.cpp",|# "java/ClusterChangeAttribute.cpp",|g' "$GN_FILE"
-# sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
-# sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
-
-# #include "DeviceApp-JNI.h"
-# echo "INFRA: Reescribiendo DeviceApp-JNI.cpp fiel al original con StackLock y cabeceras exactas..."
-# cat << 'EOF' > "$SRC_JNI"
-# #include "DeviceApp-JNI.h"
-# #include "AppImpl.h"
-# #include "JNIDACProvider.h"
-# #include "OnOffManager.h"
-# #include "credentials/DeviceAttestationCredsProvider.h"
-# #include <app/app-platform/ContentAppPlatform.h>
-# #include <app/server/Dnssd.h>
-# #include <app/server/java/AndroidAppServerWrapper.h>
-# #include <app/util/endpoint-config-api.h>
-# #include <credentials/examples/DeviceAttestationCredsExample.h>
-# #include <jni.h>
-# #include <lib/core/CHIPError.h>
-# #include <lib/support/CHIPJNIError.h>
-# #include <lib/support/JniReferences.h>
-# #include <lib/support/JniTypeWrappers.h>
-# #include <platform/CHIPDeviceLayer.h>
-
-# using namespace chip;
-# using namespace chip::app;
-# using namespace chip::app::Clusters;
-# using namespace chip::AppPlatform;
-# using namespace chip::Credentials;
-# using namespace chip::DeviceLayer;
-
-# #define JNI_METHOD(RETURN, METHOD_NAME) \
-#     extern "C" JNIEXPORT RETURN JNICALL Java_com_matter_virtual_device_app_DeviceApp_##METHOD_NAME
-
-# #define DEVICE_VERSION_DEFAULT 1
-
-# EmberAfDeviceType gDeviceTypeIds[] = { { 0, DEVICE_VERSION_DEFAULT } };
-# DeviceAppJNI DeviceAppJNI::sInstance;
-
-# void DeviceAppJNI::InitializeWithObjects(jobject app)
-# {
-#     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
-#     VerifyOrReturn(env != nullptr, ChipLogError(Zcl, "Failed to GetEnvForCurrentThread for DeviceAppJNI"));
-
-#     VerifyOrReturn(mDeviceAppObject.Init(app) == CHIP_NO_ERROR, ChipLogError(Zcl, "Failed to init mDeviceAppObject"));
-
-#     jclass managerClass = env->GetObjectClass(app);
-#     VerifyOrReturn(managerClass != nullptr, ChipLogError(Zcl, "Failed to get DeviceAppJNI Java class"));
-
-#     mPostClusterInitMethod = env->GetMethodID(managerClass, "postClusterInit", "(JI)V");
-#     if (mPostClusterInitMethod == nullptr)
-#     {
-#         ChipLogError(Zcl, "Failed to access DeviceApp 'postClusterInit' method");
-#         env->ExceptionClear();
-#     }
-
-#     mPostEventMethod = env->GetMethodID(managerClass, "postEvent", "(J)V");
-#     if (mPostEventMethod == nullptr)
-#     {
-#         ChipLogError(Zcl, "Failed to access DeviceApp 'postEvent' method");
-#         env->ExceptionClear();
-#     }
-# }
-
-# void DeviceAppJNI::PostClusterInit(int clusterId, int endpoint)
-# {
-#     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
-#     VerifyOrReturn(env != nullptr, ChipLogError(Zcl, "Failed to GetEnvForCurrentThread for DeviceAppJNI::PostClusterInit"));
-#     VerifyOrReturn(mDeviceAppObject.HasValidObjectRef(), ChipLogError(Zcl, "DeviceAppJNI::mDeviceAppObject null"));
-#     VerifyOrReturn(mPostClusterInitMethod != nullptr, ChipLogError(Zcl, "DeviceAppJNI::mPostClusterInitMethod null"));
-
-#     env->CallVoidMethod(mDeviceAppObject.ObjectRef(), mPostClusterInitMethod, static_cast<jlong>(clusterId),
-#                         static_cast<jint>(endpoint));
-#     if (env->ExceptionCheck())
-#     {
-#         ChipLogError(Zcl, "Failed to call DeviceAppJNI 'postClusterInit' method");
-#         env->ExceptionClear();
-#     }
-# }
-
-# void DeviceAppJNI::PostEvent(int event)
-# {
-#     JNIEnv * env = JniReferences::GetInstance().GetEnvForCurrentThread();
-#     VerifyOrReturn(env != nullptr, ChipLogError(Zcl, "Failed to GetEnvForCurrentThread for DeviceAppJNI::PostEvent"));
-#     VerifyOrReturn(mDeviceAppObject.HasValidObjectRef(), ChipLogError(Zcl, "DeviceAppJNI::mPostEventMethod null"));
-#     VerifyOrReturn(mPostEventMethod != nullptr, ChipLogError(Zcl, "DeviceAppJNI::mPostEventMethod null"));
-
-#     env->CallVoidMethod(mDeviceAppObject.ObjectRef(), mPostEventMethod, static_cast<jlong>(event));
-#     if (env->ExceptionCheck())
-#     {
-#         ChipLogError(Zcl, "Failed to call DeviceAppJNI 'postEventMethod' method");
-#         env->ExceptionClear();
-#     }
-# }
-
-# jint JNI_OnLoad(JavaVM * jvm, void * reserved)
-# {
-#     return AndroidAppServerJNI_OnLoad(jvm, reserved);
-# }
-
-# void JNI_OnUnload(JavaVM * jvm, void * reserved)
-# {
-#     return AndroidAppServerJNI_OnUnload(jvm, reserved);
-# }
-
-# JNI_METHOD(void, nativeInit)(JNIEnv *, jobject app)
-# {
-#     DeviceAppJNIMgr().InitializeWithObjects(app);
-# }
-
-# JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app)
-# {
-#     chip::DeviceLayer::StackLock lock;
-#     ChipLogProgress(Zcl, "DeviceAppJNI::preServerInit");
-
-#     PreServerInit();
-# }
-
-# JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
-# {
-#     chip::DeviceLayer::StackLock lock;
-#     ChipLogProgress(Zcl, "DeviceAppJNI::postServerInit");
-
-#     // Forzamos 256 (0x0100 - On/Off Light) ignorando el parámetro de Java para coincidir con el .zap purgado y pasar el filtro de Alexa
-#     deviceTypeId = 256;
-    
-#     gDeviceTypeIds[0].deviceId = static_cast<uint16_t>(deviceTypeId);
-#     emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
-# }
-
-# JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider)
-# {
-#     if (!chip::Credentials::IsDeviceAttestationCredentialsProviderSet())
-#     {
-#         chip::Credentials::SetDeviceAttestationCredentialsProvider(chip::Credentials::Examples::GetExampleDACProvider());
-#     }
-# }
-
-# /*
-#  * On Off Manager
-#  */
-# JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject manager)
-# {
-#     OnOffManager::NewManager(endpoint, manager);
-# }
-
-# JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value)
-# {
-#     return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { OnOffManager::SetOnOff(endpoint, value); }) ==
-#         CHIP_NO_ERROR;
-# }
-
-# /*
-#  * Stubs seguros para los managers eliminados
-#  */
-# JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint, jobject) {}
-# JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint, jobject) {}
-# JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint, jint) { return true; }
-# JNI_METHOD(jboolean, setLockState)(JNIEnv *, jobject, jint, jint) { return true; }
-# JNI_METHOD(jboolean, setActuatorEnabled)(JNIEnv *, jobject, jint, jboolean) { return true; }
-# JNI_METHOD(jboolean, setAutoRelockTime)(JNIEnv *, jobject, jint, jint) { return true; }
-# JNI_METHOD(jboolean, setOperatingMode)(JNIEnv *, jobject, jint, jint) { return true; }
-# JNI_METHOD(jboolean, setSupportedOperatingModes)(JNIEnv *, jobject, jint, jint) { return true; }
-# JNI_METHOD(jboolean, sendLockAlarmEvent)(JNIEnv *, jobject, jint) { return true; }
-# JNI_METHOD(void, setPowerSourceManager)(JNIEnv *, jobject, jint, jobject) {}
-# JNI_METHOD(jboolean, setBatPercentRemaining)(JNIEnv *, jobject, jint, jint) { return true; }
-# EOF
-
-
-
-# echo "INFRA: Escribiendo ClusterChangeAttribute.cpp limpio solo con soporte On/Off..."
-# cat << 'EOF' > "$SRC_ATTR"
-# #include "OnOffManager.h"
-# #include <app-common/zap-generated/attributes/Accessors.h>
-# #include <app-common/zap-generated/ids/Attributes.h>
-# #include <app-common/zap-generated/ids/Clusters.h>
-# #include <app/ConcreteAttributePath.h>
-# #include <lib/support/logging/CHIPLogging.h>
-
-# using namespace chip;
-# using namespace ::chip::app::Clusters;
-
-# static void OnOffClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size, uint8_t * value)
-# {
-#     if (attributePath.mAttributeId == OnOff::Attributes::OnOff::Id)
-#     {
-#         bool onoff = static_cast<bool>(*value);
-#         ChipLogProgress(Zcl, "Received on/off command endpoint %d value = %d", static_cast<int>(attributePath.mEndpointId), onoff);
-#         OnOffManager().PostOnOffChanged(attributePath.mEndpointId, onoff);
-#     }
-# }
-
-# void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
-#                                        uint8_t * value)
-# {
-#     ChipLogProgress(Zcl, "[Device] clusterId:%d,attributeId:%d,endpoint:%d", attributePath.mClusterId, attributePath.mAttributeId,
-#                     static_cast<int>(attributePath.mEndpointId));
-
-#     if (attributePath.mClusterId == OnOff::Id)
-#     {
-#         OnOffClusterAttributeChangeCallback(attributePath, size, value);
-#     }
-# }
-# EOF
-
-
-# echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
-# ./scripts/tools/zap/generate.py "$ZAP_FILE"
-
-
-
-########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v8 (BridgeJNI) <<----------------
+########## COMPILO LA APP y Funciona el Emparejamiento con Alexa v8 (BridgeJNI Dynamic) <<----------------
 # =========================================================================
-# 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + PUENTE JNI DESACOPLADO C++
+# 🏗️ PIPELINE INTEGRAL: FILTRADO PYTHON .ZAP + PUENTE JNI C++ DESACOPLADO y DINÁMICO C++
 # =========================================================================
-# Ficheros Sobreescritos
+# Ficheros Sobreescritos del SDK original (se respaldan en .bak antes de mutarlos)
 GN_FILE="examples/virtual-device-app/android/BUILD.gn"
 
 SRC_JNI_H="examples/virtual-device-app/android/java/DeviceApp-JNI.h"
@@ -625,39 +329,34 @@ ZAP_FILE="examples/virtual-device-app/virtual-device-common/virtual-device-app.z
 SRC_ATTR="examples/virtual-device-app/android/java/ClusterChangeAttribute.cpp"
 LVL_CPP="src/app/clusters/level-control/level-control.cpp"
 
-# Ficheros Nuevos
+# Ficheros Nuevos inyectados para el televisor virtual (se borran tras compilar)
 SRC_DELEGATES="examples/virtual-device-app/android/java/MiTeleDelegates.cpp"
 
 echo "INFRA: Creando buffers de respaldo temporales para Git..."
 cp "$ZAP_FILE" "${ZAP_FILE}.bak"
-								
 cp "$GN_FILE" "${GN_FILE}.bak"
 
 cp "$SRC_JNI_H" "${SRC_JNI_H}.bak"
 cp "$SRC_JNI" "${SRC_JNI}.bak"
 
 cp "$SRC_ATTR" "${SRC_ATTR}.bak"
-cp "$LVL_CPP" "${LVL_CPP}.bak"							  
+cp "$LVL_CPP" "${LVL_CPP}.bak"
 
-# Disparador de seguridad: Si la compilación falla, se restaura el estado original de Git
-#trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true' ERR
-#trap 'echo "🚨 Revertiendo parches de fuentes nativos..."; mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true; mv "${SRC_JNI}.bak" "$SRC_JNI" || true; mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true; mv "${GN_FILE}.bak" "$GN_FILE" || true; rm -f "$SRC_DELEGATES" || true' ERR
-
-# 1. Definir función de limpieza unificada
+# 1. Definir función de limpieza unificada para dejar limpio el árbol Git tras compilar o restaurar si la compilación fallar
 restore_overwritten_files() {
     echo "🧹 INFRA: Restaurando archivos originales de Git y eliminando temporales..."
 
-# Ficheros Sobreescritos						
+    # Ficheros Sobreescritos
     mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
 
     mv "${GN_FILE}.bak" "$GN_FILE" || true
-	
+
     mv "${SRC_JNI_H}.bak" "$SRC_JNI_H" || true
     mv "${SRC_JNI}.bak" "$SRC_JNI" || true
     mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true
     mv "${LVL_CPP}.bak" "$LVL_CPP" || true
 
-# Ficheros Nuevos				  
+    # Ficheros Nuevos
     rm -f "$SRC_DELEGATES" || true
 }
 
@@ -665,8 +364,7 @@ restore_overwritten_files() {
 trap restore_overwritten_files ERR
 
 
-#Generación del .zap en Python (con FeatureMap = "0" en Brillo)
-
+# Generación del .zap en Python (con FeatureMap = "0" en Brillo para evitar saltos al pasar el switch de Off a On)
 echo "INFRA: Generando archivo .zap compuesto para MiTele..."
 echo "INFRA: Fusionando .zap original del SDK con clústeres oficiales para MiTele..."
 python3 - << 'EOF'
@@ -674,6 +372,7 @@ import json
 import copy
 import os
 
+# Rutas de los archivos .zap oficiales dentro del SDK de Matter (connectedhomeip)
 base_zap_path = "examples/virtual-device-app/virtual-device-common/virtual-device-app.zap"
 all_zap_path  = "examples/all-clusters-app/all-clusters-common/all-clusters-app.zap"
 wc_zap_path   = "examples/window-app/common/window-app.zap"
@@ -684,7 +383,10 @@ with open(base_zap_path, "r", encoding="utf-8") as f:
     zap_obj = json.load(f)
 
 def extract_cluster(zap_files, cluster_code):
-    """Busca un clúster servidor en la lista ordenada de .zap y lo devuelve habilitado."""
+    """
+    Busca la definición completa (atributos + comandos obligatorios) de un clúster
+    en una lista ordenada de archivos .zap oficiales y lo devuelve habilitado.
+    """
     for zfile in zap_files:
         if not os.path.exists(zfile):
             continue
@@ -698,7 +400,8 @@ def extract_cluster(zap_files, cluster_code):
                     return c_copy
     return None
 
-# 1. Mantener INTACTO el Endpoint 0 (Root Device) y fijar ProductName/NodeLabel = "MiTele"
+# 1. Mantener INTACTO el Endpoint 0 (Root Device: Red, Seguridad, Comisionamiento)
+#    y fijar el nombre por defecto del nodo ("MiTele") en Basic Information (0x0028 -> 40)
 for ep_t in zap_obj.get("endpointTypes", []):
     if ep_t.get("deviceTypeCode") == 22 or ep_t.get("id") == 1:
         for c in ep_t.get("clusters", []):
@@ -709,18 +412,18 @@ for ep_t in zap_obj.get("endpointTypes", []):
                         attr["defaultValue"] = "MiTele"
 
 # 2. Extraer cada clúster desde su app dedicada (con fallback a all-clusters-app.zap)
-c_level    = extract_cluster(list((all_zap_path,)), 8)               # 0x0008 Level Control
-c_wc       = extract_cluster(list((wc_zap_path, all_zap_path)), 258) # 0x0102 Window Covering
-c_dw_mode  = extract_cluster(list((dw_zap_path, all_zap_path)), 89)  # 0x0059 Dishwasher Mode
-c_op_stat  = extract_cluster(list((dw_zap_path, all_zap_path)), 96)  # 0x0060 Operational State
-c_rvc_run  = extract_cluster(list((rvc_zap_path, all_zap_path)), 84) # 0x0054 RVC Run Mode
-c_rvc_cln  = extract_cluster(list((rvc_zap_path, all_zap_path)), 85) # 0x0055 RVC Clean Mode
-c_rvc_stat = extract_cluster(list((rvc_zap_path, all_zap_path)), 97) # 0x0061 RVC Operational State
+c_level    = extract_cluster(list((all_zap_path,)), 8)               # 0x0008 Level Control (Nivel 0-10)
+c_wc       = extract_cluster(list((wc_zap_path, all_zap_path)), 258) # 0x0102 Window Covering (Volumen 0-100%)
+c_dw_mode  = extract_cluster(list((dw_zap_path, all_zap_path)), 89)  # 0x0059 Dishwasher Mode (Lista 1: Apps/HDMI)
+c_op_stat  = extract_cluster(list((dw_zap_path, all_zap_path)), 96)  # 0x0060 Operational State (Estado 1)
+c_rvc_run  = extract_cluster(list((rvc_zap_path, all_zap_path)), 84) # 0x0054 RVC Run Mode (Lista 2: Imagen)
+c_rvc_cln  = extract_cluster(list((rvc_zap_path, all_zap_path)), 85) # 0x0055 RVC Clean Mode (Lista 3: Sonido)
+c_rvc_stat = extract_cluster(list((rvc_zap_path, all_zap_path)), 97) # 0x0061 RVC Operational State (Estado 2)
 
 # 3. Ajustar valores iniciales específicos de MiTele en Level Control (8)
 if c_level:
     for attr in c_level.get("attributes", []):
-        if attr.get("code") == 0:        # CurrentLevel = 76 (~30%)
+        if attr.get("code") == 0:        # CurrentLevel = 76 (~30% / Nivel 3 de 10)
             attr["included"] = 1
             attr["defaultValue"] = "76"
         elif attr.get("code") == 2:      # MinLevel = 1
@@ -729,23 +432,23 @@ if c_level:
         elif attr.get("code") == 3:      # MaxLevel = 254
             attr["included"] = 1
             attr["defaultValue"] = "254"
-        elif attr.get("code") == 15:     # Options = 1 (executeIfOff = true)
+        elif attr.get("code") == 15:     # Options = 1 (executeIfOff = true: permite ajustar estando apagado)
             attr["included"] = 1
             attr["defaultValue"] = "1"
-        elif attr.get("code") == 65532:  # FeatureMap = 0 (Desactiva Lighting/OnOff fad :: Evita salto de brillo al encender On/Off)
+        elif attr.get("code") == 65532:  # FeatureMap = 0 (Desactiva Lighting fade: evita salto de brillo al encender On/Off)
             attr["included"] = 1
             attr["defaultValue"] = "0"
 
-# 4. Ajustar valores iniciales específicos de MiTele en Window Covering (258)
+# 4. Ajustar valores iniciales específicos de MiTele en Window Covering (258 -> Volumen)
 if c_wc:
     for attr in c_wc.get("attributes", []):
         if attr.get("code") == 0:            # Type = 0 (Rollershade)
             attr["included"] = 1
             attr["defaultValue"] = "0"
-        elif attr.get("code") == 7:          # ConfigStatus = 11
+        elif attr.get("code") == 7:          # ConfigStatus = 11 (Operational + Online + LiftPositionAware)
             attr["included"] = 1
             attr["defaultValue"] = "11"
-        elif attr.get("code") == 8:          # CurrentPositionLiftPercentage = 70
+        elif attr.get("code") == 8:          # CurrentPositionLiftPercentage = 70 (70% volumen inicial)
             attr["included"] = 1
             attr["defaultValue"] = "70"
         elif attr.get("code") in {11, 14}:   # Target & Current Lift 100ths = 7000
@@ -756,6 +459,8 @@ if c_wc:
             attr["defaultValue"] = "5"
 
 # 5. Mutar el Endpoint 1 conservando sus clústeres base (Identify=3, Groups=4, On/Off=6, Descriptor=29)
+#    Nota: Se declara un único deviceType (266 = Enchufe) en el .zap para satisfacer la restricción SQLite
+#    de zap-cli, y los 5 deviceTypes compuestos se inyectan dinámicamente en DeviceApp-JNI.cpp.
 for ep_t in zap_obj.get("endpointTypes", []):
     if ep_t.get("id") == 2 or ep_t.get("name") == "MA-videoplayer":
         ep_t["name"] = "MA-mitele-composite"
@@ -772,13 +477,13 @@ for ep_t in zap_obj.get("endpointTypes", []):
         ep_t["deviceVersions"] = list((3,))
         ep_t["deviceIdentifiers"] = list((266,))
 
-        # Conservar los clústeres válidos originales del Endpoint 1 (3, 4, 6, 29)																		   
+        # Conservar los clústeres válidos originales del Endpoint 1 (3, 4, 6, 29)
         base_clusters = list((
             c for c in ep_t.get("clusters", ())
             if c.get("code") in {3, 4, 6, 29} and c.get("side") == "server"
         ))
 
-        # Encender On/Off (6) por defecto (OnOff = 1)													 
+        # Encender On/Off (6) por defecto (OnOff = 1)
         for c in base_clusters:
             c["enabled"] = 1
             if c.get("code") == 6:
@@ -787,7 +492,7 @@ for ep_t in zap_obj.get("endpointTypes", []):
                         attr["included"] = 1
                         attr["defaultValue"] = "1"
 
-       # Inyectar todos los clústeres extraídos del SDK														  
+        # Inyectar todos los clústeres extraídos del SDK
         extra_list = (c_level, c_wc, c_dw_mode, c_op_stat, c_rvc_run, c_rvc_cln, c_rvc_stat)
         for extra_c in extra_list:
             if extra_c is not None:
@@ -809,8 +514,8 @@ print("✅ INFRA PYTHON: .zap fusionado con éxito (Endpoint 0 intacto + 11 clú
 EOF
 
 
-#Desacoplando MoveToLevelWithOnOff de OnOffServer en level-control.cpp...
-#El sed en level-control.cpp (setOnOffValue): Evita que subir el brillo toque el switch On/Off 
+# Desacoplando MoveToLevelWithOnOff de OnOffServer en level-control.cpp...
+# El sed en level-control.cpp (setOnOffValue): Evita que deslizar la barra de brillo en Alexa encienda automáticamente el switch On/Off
 if [ -f "$LVL_CPP" ]; then
     echo "INFRA: Desacoplando MoveToLevelWithOnOff de OnOffServer en level-control.cpp..."
     git checkout -- "$LVL_CPP" || true
@@ -818,7 +523,7 @@ if [ -f "$LVL_CPP" ]; then
     sed -i 's|OnOffServer::Instance().setOnOffValue|// OnOffServer::Instance().setOnOffValue|g' "$LVL_CPP"
 fi	
 
-#Limpieza de BUILD.gn 
+#Limpieza de BUILD.gn
 
 echo "INFRA: Purgando managers innecesarios e inyectando MiTeleDelegates.cpp en BUILD.gn..."
 # Mantenemos AppImpl.cpp activo para que el servidor de red pueda arrancar de forma conforme
@@ -826,26 +531,32 @@ sed -i 's|"java/ColorControlManager.cpp",|# "java/ColorControlManager.cpp",|g' "
 sed -i 's|"java/ColorControlManager.h",|# "java/ColorControlManager.h",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.cpp",|# "java/DoorLockManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/DoorLockManager.h",|# "java/DoorLockManager.h",|g' "$GN_FILE"
-																								
 sed -i 's|"java/PowerSourceManager.cpp",|# "java/PowerSourceManager.cpp",|g' "$GN_FILE"
 sed -i 's|"java/PowerSourceManager.h",|# "java/PowerSourceManager.h",|g' "$GN_FILE"
 sed -i 's|"java/OnOffManager.cpp",|"java/OnOffManager.cpp", "java/MiTeleDelegates.cpp",|g' "$GN_FILE"
 
 
-#Cabecera DeviceApp-JNI.h
+# Cabecera DeviceApp-JNI.h
 echo "INFRA: Escribiendo DeviceApp-JNI.h con despachador universal PostMatterEvent..."
 cat << 'EOF' > "$SRC_JNI_H"
+
 #pragma once
 
 #include <jni.h>
 #include <lib/support/JniReferences.h>
 
+/**
+ * Puente singleton entre el stack nativo de Matter (C++) y la capa Java/Kotlin de Android.
+ * Encapsula la referencia global al objeto DeviceApp y los identificadores de métodos JNI.
+ */
 class DeviceAppJNI
 {
 public:
     void InitializeWithObjects(jobject app);
     void PostClusterInit(int clusterId, int endpoint);
     void PostEvent(int event);
+
+    // Despachador universal Matter -> Android: notifica cualquier cambio de atributo, modo o estado Matter a la app Android
     void PostMatterEvent(int clusterId, int attributeId, int value);
 
 private:
@@ -866,7 +577,7 @@ EOF
 
 
 
-#Implementación bidireccional DeviceApp-JNI.cpp (onMatterEvent + updateAttribute)
+# Implementación bidireccional DeviceApp-JNI.cpp (onMatterEvent + updateAttribute + Configuración Dinámica)																		  
 
 echo "INFRA: Reescribiendo DeviceApp-JNI.cpp con puente bidireccional desacoplado..."
 cat << 'EOF' > "$SRC_JNI"
@@ -888,6 +599,8 @@ cat << 'EOF' > "$SRC_JNI"
 #include <lib/support/JniReferences.h>
 #include <lib/support/JniTypeWrappers.h>
 #include <platform/CHIPDeviceLayer.h>
+#include <string>
+#include <vector>
 
 using namespace chip;
 using namespace chip::app;
@@ -899,16 +612,22 @@ using namespace chip::DeviceLayer;
 #define JNI_METHOD(RETURN, METHOD_NAME) \
     extern "C" JNIEXPORT RETURN JNICALL Java_com_matter_virtual_device_app_DeviceApp_##METHOD_NAME
 
+// Funciones externas implementadas en MiTeleDelegates.cpp
 extern void InitMiTeleClusters(chip::EndpointId endpoint);
 extern void UpdateMiTeleModeOrState(chip::EndpointId endpoint, uint32_t clusterId, uint8_t newValue);
-																		 
+extern void SetDynamicMiTeleModes(uint32_t clusterId, std::vector<std::string> labels, std::vector<uint16_t> tags);
+extern void SetDynamicMiTeleStates(uint32_t clusterId, std::vector<uint8_t> states);
 
+// Nombre personalizado del nodo Matter (Endpoint 0) configurable desde Android antes de postServerInit
+static std::string gCustomNodeLabel = "MiTele";
+
+// Lista compuesta de 5 tipos de dispositivo Matter declarados en el Descriptor del Endpoint 1
 EmberAfDeviceType gDeviceTypeIds[] = {
     { 266, 3 }, // 0x010A On/Off Plug-in Unit (Enchufe) (Prioridad visual en Alexa - Permite Identificarlo con el Dispositivo que realmente está enchufado a él -TV-)
-    { 257, 3 }, // 0x0101 Dimmable Light
-    { 514, 2 }, // 0x0202 Window Covering
-    { 117, 1 }, // 0x0075 Dishwasher
-    { 116, 1 }  // 0x0074 Robotic Vacuum Cleaner
+    { 257, 3 }, // 0x0101 Dimmable Light  (Habilita LevelControl 0-10)
+    { 514, 2 }, // 0x0202 Window Covering (Habilita barra porcentual pura 0-100% para Volumen)
+    { 117, 1 }, // 0x0075 Dishwasher      (Habilita Lista 1 de modos personalizados + Estado 1)
+    { 116, 1 }  // 0x0074 Robotic Vacuum Cleaner (Habilita Listas 2 y 3 de modos + Estado 2)
 };
 
 DeviceAppJNI DeviceAppJNI::sInstance;
@@ -937,6 +656,8 @@ void DeviceAppJNI::InitializeWithObjects(jobject app)
         env->ExceptionClear();
     }
 
+//onMatterEvent: Callback Matter -> Android)
+// Firma JNI: void onMatterEvent(int clusterId, int attributeId, int value)
     mPostMatterEventMethod = env->GetMethodID(managerClass, "onMatterEvent", "(III)V");
     if (mPostMatterEventMethod == nullptr)
     {
@@ -994,6 +715,9 @@ void DeviceAppJNI::PostMatterEvent(int clusterId, int attributeId, int value)
     }
 }
 
+//Métodos JNI nativos invocables desde Android)
+//Añade métodos nativos JNI Android -> Matter en DeviceApp-JNI.cpp..."
+
 jint JNI_OnLoad(JavaVM * jvm, void * reserved)
 {
     return AndroidAppServerJNI_OnLoad(jvm, reserved);
@@ -1017,24 +741,17 @@ JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app)
     PreServerInit();
 }
 
-																			 
-	
-										 
-															
-  
-																																			
-						  
-	 
-																		
-																				  
-	
-
-														  
-
 JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
 {
     chip::DeviceLayer::StackLock lock;
-    ChipLogProgress(Zcl, "DeviceAppJNI::postServerInit - MiTele Compuesto");
+    ChipLogProgress(Zcl, "DeviceAppJNI::postServerInit - MiTele Device Compuesto Dinámico");
+
+    // Aplicar NodeLabel personalizado en Endpoint 0 (Basic Information)
+    if (!gCustomNodeLabel.empty())
+    {
+        BasicInformation::Attributes::NodeLabel::Set(0, CharSpan(gCustomNodeLabel.data(), gCustomNodeLabel.size()));
+    }
+
     emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
     InitMiTeleClusters(1);
 }
@@ -1047,9 +764,74 @@ JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider)
     }
 }
 
+/**
+ * Configura dinámicamente el nombre del dispositivo Matter (Endpoint 0 - NodeLabel) desde Android.
+ * Debe invocarse antes de postServerInit().
+ */
+JNI_METHOD(void, setNodeLabel)(JNIEnv * env, jobject, jstring label)
+{
+    VerifyOrReturn(label != nullptr);
+    const char * utf = env->GetStringUTFChars(label, nullptr);
+    if (utf != nullptr)
+    {
+        gCustomNodeLabel = std::string(utf);
+        env->ReleaseStringUTFChars(label, utf);
+    }
+}
 
-/*
- * Puente Android UI -> Matter / Alexa
+/**
+ * Configura dinámicamente las etiquetas y tags de los modos de un clúster (0x0059, 0x0054, 0x0055).
+ * Debe invocarse antes de postServerInit().
+ */
+JNI_METHOD(void, setClusterModes)(JNIEnv * env, jobject, jint clusterId, jobjectArray labels, jintArray tags)
+{
+    VerifyOrReturn(labels != nullptr && tags != nullptr);
+    jsize count = env->GetArrayLength(labels);
+    jint * tagElements = env->GetIntArrayElements(tags, nullptr);
+
+    std::vector<std::string> labelVec;
+    std::vector<uint16_t> tagVec;
+    labelVec.reserve(count);
+    tagVec.reserve(count);
+
+    for (jsize i = 0; i < count; i++)
+    {
+        jstring jstr = static_cast<jstring>(env->GetObjectArrayElement(labels, i));
+        const char * utf = env->GetStringUTFChars(jstr, nullptr);
+        labelVec.emplace_back(utf != nullptr ? utf : "");
+        tagVec.push_back(static_cast<uint16_t>(tagElements[i]));
+        if (utf != nullptr) env->ReleaseStringUTFChars(jstr, utf);
+        env->DeleteLocalRef(jstr);
+    }
+    env->ReleaseIntArrayElements(tags, tagElements, JNI_ABORT);
+
+    SetDynamicMiTeleModes(static_cast<uint32_t>(clusterId), std::move(labelVec), std::move(tagVec));
+}
+
+/**
+ * Configura dinámicamente la lista de IDs de estado permitidos en OperationalState (0x0060 / 0x0061).
+ * Debe invocarse antes de postServerInit().
+ */
+JNI_METHOD(void, setClusterStates)(JNIEnv * env, jobject, jint clusterId, jintArray stateIds)
+{
+    VerifyOrReturn(stateIds != nullptr);
+    jsize count = env->GetArrayLength(stateIds);
+    jint * elements = env->GetIntArrayElements(stateIds, nullptr);
+
+    std::vector<uint8_t> stateVec;
+    stateVec.reserve(count);
+    for (jsize i = 0; i < count; i++)
+    {
+        stateVec.push_back(static_cast<uint8_t>(elements[i]));
+    }
+    env->ReleaseIntArrayElements(stateIds, elements, JNI_ABORT);
+
+    SetDynamicMiTeleStates(static_cast<uint32_t>(clusterId), std::move(stateVec));
+}
+
+/**
+ * Puente Android UI -> Matter / Alexa:
+ * Actualiza cualquier atributo, modo o estado en el servidor Matter desde la interfaz Android.
  */
 JNI_METHOD(void, updateAttribute)(JNIEnv *, jobject, jint endpoint, jint clusterId, jint attributeId, jint value)
 {
@@ -1096,7 +878,7 @@ JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value)
 
 /*
  * Stubs seguros para los managers eliminados
- */
+ */  
 JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint, jobject) {}
 JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint, jobject) {}
 JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint, jint) { return true; }
@@ -1125,34 +907,41 @@ cat << 'EOF' > "$SRC_ATTR"
 using namespace chip;
 using namespace ::chip::app::Clusters;
 
-void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
-                                       uint8_t * value)
+/**
+ * Procesa los cambios de encendido/apagado (0x0006) y los notifica tanto al manager nativo
+ * como al despachador universal JNI hacia Android.
+ */
+static void OnOffClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size, uint8_t * value)
 {
-    if (attributePath.mClusterId == OnOff::Id && attributePath.mAttributeId == OnOff::Attributes::OnOff::Id)
+    if (attributePath.mAttributeId == OnOff::Attributes::OnOff::Id)
     {
         bool onoff = static_cast<bool>(*value);
-        ChipLogProgress(Zcl, "[MiTele - POWER] On/Off -> %d", onoff);
+        ChipLogProgress(Zcl, "Received on/off command endpoint %d value = %d", static_cast<int>(attributePath.mEndpointId), onoff);
         OnOffManager().PostOnOffChanged(attributePath.mEndpointId, onoff);
         DeviceAppJNIMgr().PostMatterEvent(0x0006, 0x0000, onoff ? 1 : 0);
- 
-
-																													 
-													   
- 
-																																  
-																 
-
-											  
-	 
-																		
     }
-    else if (attributePath.mClusterId == LevelControl::Id && attributePath.mAttributeId == LevelControl::Attributes::CurrentLevel::Id)
+}
+
+/**
+ * Procesa los cambios de nivel discreto (0x0008 - Brillo/Nivel 0-10) sin alterar On/Off.
+ */
+static void LevelControlClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size, uint8_t * value)
+{
+    if (attributePath.mAttributeId == LevelControl::Attributes::CurrentLevel::Id)
     {
         uint8_t level = *value;
         ChipLogProgress(Zcl, "[MiTele - BRILLO] Nivel ajustado -> %u", level);
         DeviceAppJNIMgr().PostMatterEvent(0x0008, 0x0000, static_cast<int>(level));
     }
-    else if (attributePath.mClusterId == WindowCovering::Id && attributePath.mAttributeId == WindowCovering::Attributes::TargetPositionLiftPercent100ths::Id)
+}
+
+/**
+ * Procesa los cambios porcentuales (0x0102 - Window Covering -> Volumen 0-100%)
+ * sincronizando la posición actual con la objetivo y notificándolo a Android.
+ */
+static void WindowCoveringClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size, uint8_t * value)
+{
+    if (attributePath.mAttributeId == WindowCovering::Attributes::TargetPositionLiftPercent100ths::Id)
     {
         uint16_t target = *reinterpret_cast<uint16_t *>(value);
         uint8_t pct = static_cast<uint8_t>(target / 100);
@@ -1162,167 +951,33 @@ void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attrib
         DeviceAppJNIMgr().PostMatterEvent(0x0102, 0x0008, static_cast<int>(pct));
     }
 }
+
+/**
+ * Punto de entrada global del stack ZCL de Matter cada vez que se modifica un atributo.
+ */
+void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
+                                       uint8_t * value)
+{
+    ChipLogProgress(Zcl, "[Device] clusterId:%d,attributeId:%d,endpoint:%d", attributePath.mClusterId, attributePath.mAttributeId,
+                    static_cast<int>(attributePath.mEndpointId));
+
+    if (attributePath.mClusterId == OnOff::Id)
+    {
+        OnOffClusterAttributeChangeCallback(attributePath, size, value);
+    }
+    else if (attributePath.mClusterId == LevelControl::Id)
+    {
+        LevelControlClusterAttributeChangeCallback(attributePath, size, value);
+    }
+    else if (attributePath.mClusterId == WindowCovering::Id)
+    {
+        WindowCoveringClusterAttributeChangeCallback(attributePath, size, value);
+    }
+}
 EOF
 
-#Cabecera de MiTeleDelegates.cpp
-								
-															
-																			
-																		
-												   
-											 
-				  
- 
-					  
-						   
-									 
- 
-			
- 
-				  
-						
-				  
-				  
-   
- 
-																											 
-															  
-		
-																													 
- 
-														 
- 
-																												   
-																							   
-																		 
-	  
- 
-																						  
-																				   
-																										
-	  
- 
-																				  
-																				   
-										
-							  
-	  
- 
-																															  
-																				   
-																 
-											   
-							 
-							  
-	  
- 
-		 
-						
-								  
-   
- 
-																		  
-																	   
-		
-																															
- 
-																								  
- 
-																																 
-																  
-															  
-							  
-	  
- 
-																									   
-									 
-	  
- 
-																							  
-																			 
-																											
-																			
-	  
- 
-																							   
-																			  
-																											 
-																			
-	  
- 
-																							  
-																			 
-																											 
-																			
-	  
- 
-																							 
-																			
-																											 
-																			
-	  
- 
-		 
-						
-								  
-   
- 
-									   
-													   
-													
- 
-												   
-												
- 
-													 
-												  
- 
-														 
-														 
- 
-															
-															   
- 
-			   
- 
-											   
-													
-																  
-																								  
-																											   
-		
-																										
-								 
- 
-												  
-															
-																						   
-																							  
-		
-																							
-							 
- 
-													
-															  
-																	 
-		
-																								  
-							   
- 
-									
-																		  
-																				   
-							  
- 
-									   
-																										
-																							
-								 
-  
-	
-
-
-echo "INFRA: Creando MiTeleDelegates.cpp - Creando delegados C++ de Modos, Estados y Persiana para MiTele y conectado al puente universal..."
+#MiTeleDelegates.cpp - Delegado dinámico de Modos C++ conectados al puente universal..."
+echo "INFRA: Creando MiTeleDelegates.cpp - Delegado dinámico de Modos C++ conectados al puente universal..."
 cat << 'EOF' > "$SRC_DELEGATES"
 #include "DeviceApp-JNI.h"
 #include <app/clusters/mode-base-server/mode-base-server.h>
@@ -1330,6 +985,8 @@ cat << 'EOF' > "$SRC_DELEGATES"
 #include <app/clusters/window-covering-server/window-covering-server.h>
 #include <app-common/zap-generated/ids/Clusters.h>
 #include <lib/support/logging/CHIPLogging.h>
+#include <map>
+#include <string>
 #include <vector>
 
 using namespace chip;
@@ -1339,12 +996,21 @@ using namespace chip::app::Clusters;
 namespace {
 
 struct ModeItem {
-    const char * label;
+    std::string label;
     uint8_t mode;
     uint16_t tag;
 };
 
-// Delegado genérico para DishwasherMode (0x0059), RvcRunMode (0x0054) y RvcCleanMode (0x0055)
+// Mapas globales rellenables dinámicamente desde Android antes de invocar postServerInit()
+std::map<uint32_t, std::vector<ModeItem>> gDynamicModes;
+std::map<uint32_t, std::vector<uint8_t>> gDynamicStates;
+
+/**
+ * Delegado genérico reutilizable para los 3 selectores de modos personalizados:
+ *   - DishwasherMode (0x0059): Entradas HDMI y Aplicaciones
+ *   - RvcRunMode     (0x0054): Modos de Imagen
+ *   - RvcCleanMode   (0x0055): Modos de Sonido
+ */
 class GenericTvModeDelegate : public ModeBase::Delegate {
 public:
     GenericTvModeDelegate(const char * name, ClusterId clusterId, std::vector<ModeItem> items)
@@ -1360,7 +1026,7 @@ public:
 
     CHIP_ERROR GetModeLabelByIndex(uint8_t modeIndex, MutableCharSpan & label) override {
         if (modeIndex >= mItems.size()) return CHIP_ERROR_PROVIDER_LIST_EXHAUSTED;
-        return CopyCharSpanToMutableCharSpan(CharSpan::fromCharString(mItems[modeIndex].label), label);
+        return CopyCharSpanToMutableCharSpan(CharSpan(mItems[modeIndex].label.data(), mItems[modeIndex].label.size()), label);
     }
 
     CHIP_ERROR GetModeValueByIndex(uint8_t modeIndex, uint8_t & value) override {
@@ -1384,7 +1050,11 @@ private:
 };
 
 
-// Delegado para OperationalState (0x0060 - Dishwasher)													   
+//Estados operativos e inicialización dinámica:
+
+/**
+ * Delegado específico para OperationalState (0x0060 - Dishwasher)
+ */
 class TvOperationalStateDelegate : public OperationalState::Delegate {
 public:
     TvOperationalStateDelegate(const char * name, ClusterId clusterId, std::vector<uint8_t> states)
@@ -1403,7 +1073,7 @@ public:
     }
 
     void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
-																			
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kPaused);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1411,7 +1081,7 @@ public:
     }
 
     void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
-																			 
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1419,7 +1089,7 @@ public:
     }
 
     void HandleStartStateCallback(OperationalState::GenericOperationalError & err) override {
-																			
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando START recibido", mName);
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1427,7 +1097,7 @@ public:
     }
 
     void HandleStopStateCallback(OperationalState::GenericOperationalError & err) override {
-																		   
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando STOP recibido", mName);
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kStopped);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1440,7 +1110,9 @@ private:
     std::vector<uint8_t> mStates;
 };
 
-// Delegado específico para RvcOperationalState (0x0061 - Robotic Vacuum)
+/**
+ * Delegado específico para RvcOperationalState (0x0061 - Robotic Vacuum)
+ */
 class TvRvcOperationalStateDelegate : public RvcOperationalState::Delegate {
 public:
     TvRvcOperationalStateDelegate(const char * name, ClusterId clusterId, std::vector<uint8_t> states)
@@ -1459,7 +1131,7 @@ public:
     }
 
     void HandlePauseStateCallback(OperationalState::GenericOperationalError & err) override {
-		ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);																	
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando PAUSE recibido", mName);
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kPaused);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
@@ -1467,18 +1139,12 @@ public:
     }
 
     void HandleResumeStateCallback(OperationalState::GenericOperationalError & err) override {
-        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);																			 
+        ChipLogProgress(Zcl, "[MiTele - %s] Comando RESUME recibido", mName);
         uint8_t st = to_underlying(OperationalState::OperationalStateEnum::kRunning);
         GetInstance()->SetOperationalState(st);
         err.Set(to_underlying(OperationalState::ErrorStateEnum::kNoError));
         DeviceAppJNIMgr().PostMatterEvent(static_cast<int>(mClusterId), 0x0004, static_cast<int>(st));
-
-																						   
-																			  
-																													  
-																		   
     }
-  
 
 private:
     const char * mName;
@@ -1504,37 +1170,55 @@ RvcOperationalState::Instance * gRvcOpStateInstance = nullptr;
 
 } // namespace
 
+void SetDynamicMiTeleModes(uint32_t clusterId, std::vector<std::string> labels, std::vector<uint16_t> tags) {
+    std::vector<ModeItem> items;
+    for (size_t i = 0; i < labels.size(); i++) {
+        uint16_t tag = (i < tags.size()) ? tags[i] : 0x4000;
+        items.push_back({ std::move(labels[i]), static_cast<uint8_t>(i), tag });
+    }
+    gDynamicModes[clusterId] = std::move(items);
+}
+
+void SetDynamicMiTeleStates(uint32_t clusterId, std::vector<uint8_t> states) {
+    gDynamicStates[clusterId] = std::move(states);
+}
+
 void InitMiTeleClusters(EndpointId endpoint) {
-   // 1. DishwasherMode (0x0059) - 8 Entradas/Apps
-    gDishwasherDelegate = new GenericTvModeDelegate("Entradas", DishwasherMode::Id, {
+    // 1. DishwasherMode (0x0059) - Usa lista dinámica de Android o valores por defecto
+    auto dwModes = gDynamicModes.count(DishwasherMode::Id) ? gDynamicModes[DishwasherMode::Id] : std::vector<ModeItem>{
         {"HDMI 1", 0, 0x4000}, {"HDMI 2", 1, 0x4001}, {"TDT", 2, 0x0001}, {"YouTube", 3, 0x4002},
         {"Prime Video", 4, 0x4000}, {"Netflix", 5, 0x4000}, {"Disney Plus", 6, 0x4000}, {"Spotify", 7, 0x4000}
-    });
+    };
+    gDishwasherDelegate = new GenericTvModeDelegate("Entradas", DishwasherMode::Id, std::move(dwModes));
     gDishwasherInstance = new ModeBase::Instance(gDishwasherDelegate, endpoint, DishwasherMode::Id, 0);
     gDishwasherInstance->Init();
 
-    // 2. RvcRunMode (0x0054) - 6 Modos de Imagen
-    gRvcRunDelegate = new GenericTvModeDelegate("Imagen", RvcRunMode::Id, {
+    // 2. RvcRunMode (0x0054) - Usa lista dinámica de Android o valores por defecto
+    auto runModes = gDynamicModes.count(RvcRunMode::Id) ? gDynamicModes[RvcRunMode::Id] : std::vector<ModeItem>{
         {"Modo Cine", 0, 0x4000}, {"Modo Deportes", 1, 0x4001}, {"Modo Juego", 2, 0x4002},
         {"Modo Estandar", 3, 0x4000}, {"Modo Noche", 4, 0x4000}, {"Modo Dinamico", 5, 0x4000}
-    });
+    };
+    gRvcRunDelegate = new GenericTvModeDelegate("Imagen", RvcRunMode::Id, std::move(runModes));
     gRvcRunInstance = new ModeBase::Instance(gRvcRunDelegate, endpoint, RvcRunMode::Id, 0);
     gRvcRunInstance->Init();
 
-   // 3. RvcCleanMode (0x0055) - 2 Modos de Sonido
-    gRvcCleanDelegate = new GenericTvModeDelegate("Sonido", RvcCleanMode::Id, {
+    // 3. RvcCleanMode (0x0055) - Usa lista dinámica de Android o valores por defecto
+    auto cleanModes = gDynamicModes.count(RvcCleanMode::Id) ? gDynamicModes[RvcCleanMode::Id] : std::vector<ModeItem>{
         {"Sonido Estandar", 0, 0x4000}, {"Sonido Graves", 1, 0x4001}
-    });
+    };
+    gRvcCleanDelegate = new GenericTvModeDelegate("Sonido", RvcCleanMode::Id, std::move(cleanModes));
     gRvcCleanInstance = new ModeBase::Instance(gRvcCleanDelegate, endpoint, RvcCleanMode::Id, 0);
     gRvcCleanInstance->Init();
 
-    // 4. OperationalState (0x0060)
-    gOpStateDelegate = new TvOperationalStateDelegate("OpState", OperationalState::Id, {0, 1});
+    // 4. OperationalState (0x0060) - Usa estados dinámicos de Android o {0, 1} por defecto
+    auto opStates = gDynamicStates.count(OperationalState::Id) ? gDynamicStates[OperationalState::Id] : std::vector<uint8_t>{0, 1};
+    gOpStateDelegate = new TvOperationalStateDelegate("OpState", OperationalState::Id, std::move(opStates));
     gOpStateInstance = new OperationalState::Instance(gOpStateDelegate, endpoint);
     gOpStateInstance->Init();
 
-    // 5. RvcOperationalState (0x0061)
-    gRvcOpStateDelegate = new TvRvcOperationalStateDelegate("RvcOpState", RvcOperationalState::Id, {0, 1, 2, 3, 0x40, 0x41, 0x42});
+    // 5. RvcOperationalState (0x0061) - Usa estados dinámicos de Android o lista completa por defecto
+    auto rvcStates = gDynamicStates.count(RvcOperationalState::Id) ? gDynamicStates[RvcOperationalState::Id] : std::vector<uint8_t>{0, 1, 2, 3, 0x40, 0x41, 0x42};
+    gRvcOpStateDelegate = new TvRvcOperationalStateDelegate("RvcOpState", RvcOperationalState::Id, std::move(rvcStates));
     gRvcOpStateInstance = new RvcOperationalState::Instance(gRvcOpStateDelegate, endpoint);
     gRvcOpStateInstance->Init();
 }
@@ -1555,14 +1239,20 @@ void UpdateMiTeleModeOrState(EndpointId endpoint, uint32_t clusterId, uint8_t ne
 EOF
 
 
+#Generación ZAP
+
 echo "INFRA: Invocando la CLI de ZAP para compilar el nuevo Data Model limpio..."
 ./scripts/tools/zap/generate.py "$ZAP_FILE"
 
 
 
-
 #######################################################################################################################################
 
+# Compilación Ninja/Gradle, Optimización llvm-strip y limpieza final
+
+####################################################################
+# Compilación Ninja/Gradle
+####################################################################
 
 # INICIALIZACIÓN DEL ENTORNO DE COMPILACIÓN DE MATTER
 echo "INFRA: Inicializando el entorno virtual aislado de Pigweed..."
@@ -1622,16 +1312,11 @@ fi
 
 ###############################################################################################################
 						 
-																											   
+####################################################################
+# Limpieza final
+####################################################################
 
 echo "INFRA: Compilación completada con éxito. Restaurando los archivos .zap y cpp's originales de Git... y eliminando los añadidos"
-#mv "${ZAP_FILE}.bak" "$ZAP_FILE" || true
-#
-#mv "${GN_FILE}.bak" "$GN_FILE" || true
-#mv "${SRC_JNI}.bak" "$SRC_JNI" || true
-#mv "${SRC_ATTR}.bak" "$SRC_ATTR" || true
-#
-#rm -f "$SRC_DELEGATES" || true
 
 trap - ERR                  # Desactiva el trap (disparador) de error 
 restore_overwritten_files   # Restaurando los archivos .zap y cpp's originales de Git... y eliminando los archivos añadidos
