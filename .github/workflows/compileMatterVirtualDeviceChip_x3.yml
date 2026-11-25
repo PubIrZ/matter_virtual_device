@@ -203,7 +203,13 @@ jobs:
           # Clonamos de forma aislada en una subcarpeta privada para proteger el script de compilación
           git clone --depth 1 --branch v1.3-branch "${URL_github}" matter-sdk
           cd matter-sdk
-          git submodule update --init --recursive --depth 1
+
+          #git submodule update descarga absolutamente todos los repositorios externos enlazados en connectedhomeip sin filtrar
+          #git submodule update --init --recursive --depth 1
+
+          # Alternativa rapida a "git submodule update" Descargamos ÚNICAMENTE los submódulos necesarios para Android
+          # (evita Silicon Labs, ESP32, Nordic, etc.)
+          python3 scripts/checkout_submodules.py --shallow --platform android
           
           # Nos saltamos la descarga CIPD manual creando zap.json si no existe ya 
           if [ -f "scripts/setup/zap.json" ]; then echo '{"packages": []}' > scripts/setup/zap.json; fi
